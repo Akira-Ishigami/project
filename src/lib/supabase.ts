@@ -41,5 +41,9 @@ export interface Message {
   sender: string | null;
   apikey_instancia: string | null;
   caption: string | null;
+  message_type?: 'user' | 'system_transfer' | null;
+  contact_id?: string | null;
+  reaction_target_id?: string | null;
+  reactions?: Array<{ emoji: string; count: number }>;
   created_at: string;
 }

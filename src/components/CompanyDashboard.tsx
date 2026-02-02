@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Smile, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Smile, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, Send as SendIcon } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
 import TagsManagement from './TagsManagement';
 import Toast from './Toast';
+import SystemMessage from './SystemMessage';
+import { EmojiPicker } from './EmojiPicker';
+import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
+import { useDeteccaoTransferencia } from '../hooks/useDeteccaoTransferencia';
+import { registrarTransferencia } from '../lib/mensagemTransferencia';
 
 interface Contact {
   phoneNumber: string;
@@ -39,6 +44,7 @@ interface ContactDB {
 interface Department {
   id: string;
   name: string;
+  company_id: string | null; // ✅ global quando NULL
 }
 
 interface Sector {
@@ -95,6 +101,7 @@ export default function CompanyDashboard() {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalSrc, setImageModalSrc] = useState('');
+  const [imageModalType, setImageModalType] = useState<'image' | 'sticker' | 'video'>('image');
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -102,8 +109,24 @@ export default function CompanyDashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedSector, setSelectedSector] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
+  const [transferindo, setTransferindo] = useState(false);
+  const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
+  const [transferSuccessData, setTransferSuccessData] = useState<{
+    id?: string;
+    api_key?: string;
+    numero_contato?: number;
+    nome_contato?: string;
+    departamento_origem?: string;
+    departamento_destino?: string;
+    data_transferencia?: string;
+    nomedept?: string;
+    nomecontato?: string;
+  } | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [iaGlobalAtivada, setIaGlobalAtivada] = useState(true);
+  const [togglingIaGlobal, setTogglingIaGlobal] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
@@ -115,6 +138,47 @@ export default function CompanyDashboard() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePasteContent = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // Se for imagem
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            setSelectedFile(file);
+            setFilePreview(base64);
+            console.log('✅ Imagem colada via Ctrl+V anexada para envio');
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+      // Se for arquivo
+      else if (item.kind === 'file') {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file && !file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            setSelectedFile(file);
+            setFilePreview(base64);
+            console.log('✅ Arquivo colado via Ctrl+V convertido para base64');
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+  };
   const isUserScrollingRef = useRef(false);
   const lastSectorRef = useRef<{ [key: string]: string | null }>({});
 
@@ -152,7 +216,7 @@ export default function CompanyDashboard() {
     return 'document';
   };
 
-  const getMessageTypeFromTipomessage = (tipomessage?: string): 'image' | 'audio' | 'document' | null => {
+  const getMessageTypeFromTipomessage = (tipomessage?: string): 'image' | 'audio' | 'document' | 'sticker' | 'video' | null => {
     if (!tipomessage) return null;
 
     const tipo = tipomessage.toLowerCase();
@@ -169,10 +233,18 @@ export default function CompanyDashboard() {
       return 'document';
     }
 
+    if (tipo === 'stickermessage' || tipo === 'sticker') {
+      return 'sticker';
+    }
+
+    if (tipo === 'videomessage' || tipo === 'video') {
+      return 'video';
+    }
+
     return null;
   };
 
-  const normalizeBase64 = (base64: string, type: 'image' | 'audio' | 'document'): string => {
+  const normalizeBase64 = (base64: string, type: 'image' | 'audio' | 'document' | 'sticker' | 'video'): string => {
     if (base64.startsWith('data:')) {
       return base64;
     }
@@ -180,7 +252,9 @@ export default function CompanyDashboard() {
     const mimeTypes = {
       image: 'data:image/jpeg;base64,',
       audio: 'data:audio/mpeg;base64,',
-      document: 'data:application/pdf;base64,'
+      document: 'data:application/pdf;base64,',
+      sticker: 'data:image/webp;base64,',
+      video: 'data:video/mp4;base64,'
     };
 
     return mimeTypes[type] + base64;
@@ -217,8 +291,9 @@ export default function CompanyDashboard() {
     document.body.removeChild(link);
   };
 
-  const openImageModal = (src: string) => {
+  const openImageModal = (src: string, type: 'image' | 'sticker' | 'video' = 'image') => {
     setImageModalSrc(src);
+    setImageModalType(type);
     setImageModalOpen(true);
   };
 
@@ -240,6 +315,94 @@ export default function CompanyDashboard() {
     return 0;
   };
 
+  const processReactions = (messages: any[]) => {
+    try {
+      // Extrair reações
+      const reactions = messages.filter(m => m?.tipomessage === 'reactionMessage');
+
+      if (reactions.length === 0) return messages;
+
+      console.log('😊 Reações encontradas:', reactions.length);
+
+      // Mapear reações por ID da mensagem alvo
+      const reactionMap = new Map<string, Array<{ emoji: string; count: number }>>();
+
+      const looksLikeEmoji = (v?: string | null) =>
+        !!v && v.length <= 6 && /[^\w\d]/.test(v);
+
+      reactions.forEach(reaction => {
+        try {
+          let targetId = reaction?.reaction_target_id as string | null;
+          let emoji = reaction?.message as string | null;
+
+          // ✅ Fallback: se emoji tá em reaction_target_id, swap
+          if (looksLikeEmoji(targetId) && !looksLikeEmoji(emoji)) {
+            const tmp = targetId;
+            targetId = emoji;
+            emoji = tmp;
+          }
+
+          // ✅ Outros fallbacks
+          if (!emoji && looksLikeEmoji(reaction?.caption)) emoji = reaction.caption;
+          if (!targetId && reaction?.idmessage) targetId = reaction.idmessage;
+
+          console.log(`😊 Reação: targetId=${targetId}, emoji=${emoji}`);
+
+          if (!targetId || !emoji) {
+            console.warn('⚠️ Reação inválida: falta reaction_target_id ou message', reaction);
+            return;
+          }
+
+          if (!reactionMap.has(targetId)) {
+            reactionMap.set(targetId, []);
+          }
+
+          const reactionList = reactionMap.get(targetId)!;
+          const existing = reactionList.find(r => r.emoji === emoji);
+
+          if (existing) {
+            existing.count++;
+          } else {
+            reactionList.push({ emoji, count: 1 });
+          }
+        } catch (err) {
+          console.error('❌ Erro ao processar reação:', err, reaction);
+        }
+      });
+
+      console.log('🔍 Mapa de reações:', reactionMap);
+
+      // Adicionar reações às mensagens originais
+      const filtered = messages.filter(m => m?.tipomessage !== 'reactionMessage');
+
+      return filtered.map(msg => {
+        try {
+          const msgReactions = (reactionMap.get(msg?.idmessage) || reactionMap.get(msg?.message) || reactionMap.get(msg?.id) || []) as Array<{ emoji: string; count: number }>;
+
+          if (msgReactions.length > 0) {
+            console.log(`✨ Mensagem ${msg?.idmessage} tem ${msgReactions.length} reações:`, msgReactions);
+          } else if (reactionMap.size > 0) {
+            console.log(`❌ Mensagem ${msg?.idmessage} NÃO tem reações. Chaves disponíveis:`, Array.from(reactionMap.keys()));
+          }
+
+          return {
+            ...msg,
+            reactions: msgReactions
+          };
+        } catch (err) {
+          console.error('❌ Erro ao adicionar reações à mensagem:', err);
+          return {
+            ...msg,
+            reactions: []
+          };
+        }
+      });
+    } catch (err) {
+      console.error('❌ Erro geral ao processar reações:', err);
+      return messages;
+    }
+  };
+
   const fetchMessages = useCallback(async () => {
     if (!company) {
       setLoading(false);
@@ -250,7 +413,7 @@ export default function CompanyDashboard() {
 
     const timeout = setTimeout(() => {
       setLoading(false);
-      setError('Tempo esgotado ao carregar mensagens');
+      // Silenciosamente timeout, sem mostrar erro no front
     }, 10000);
 
     try {
@@ -284,13 +447,46 @@ export default function CompanyDashboard() {
         return getMessageTimestamp(a) - getMessageTimestamp(b);
       });
 
-      console.log('📩 Mensagens recebidas:', receivedResult.data?.length || 0);
-      console.log('� Dados recebidas:', receivedResult.data);
-      console.log('📤 Mensagens enviadas:', sentResult.data?.length || 0);
-      console.log('🔍 Dados enviadas:', sentResult.data);
-      console.log('✉️ Total de mensagens:', allMessages.length);
+      // Processar reações
+      const messagesWithReactions = processReactions(allMessages);
 
-      setMessages(allMessages);
+      console.log('📩 Mensagens recebidas:', receivedResult.data?.length || 0);
+      console.log('Dados recebidas:', receivedResult.data);
+
+      // Log para debugar reactionMessage
+      const reactionMessages = allMessages.filter(m => m.tipomessage === 'reactionMessage');
+      if (reactionMessages.length > 0) {
+        console.log('😊 REACTION MESSAGES ENCONTRADAS:', reactionMessages);
+        reactionMessages.forEach((rm, idx) => {
+          console.log(`  [${idx}] reaction_target_id="${rm.reaction_target_id}", message="${rm.message}", idmessage="${rm.idmessage}", id="${rm.id}"`);
+        });
+      }
+
+      // Log para mostrar IDs das mensagens normais
+      const normalMessages = allMessages.filter(m => m.tipomessage !== 'reactionMessage');
+      console.log('📨 MENSAGENS NORMAIS:');
+      normalMessages.slice(0, 5).forEach((msg, idx) => {
+        console.log(`  [${idx}] idmessage="${msg.idmessage}", message="${msg.message?.substring(0, 30)}", id="${msg.id}"`);
+      });
+
+      // Log para verificar captions
+      const messagesWithCaption = messagesWithReactions?.filter(m => m.caption);
+      if (messagesWithCaption && messagesWithCaption.length > 0) {
+        console.log('📝 Mensagens com caption encontradas:', messagesWithCaption);
+      }
+      console.log('📤 Mensagens enviadas:', sentResult.data?.length || 0);
+      console.log('Dados enviadas:', sentResult.data);
+      console.log('✉️ Total de mensagens:', messagesWithReactions.length);
+
+      // Log para mensagens de sistema
+      const systemMessages = messagesWithReactions.filter(m => m.message_type === 'system_transfer');
+      if (systemMessages.length > 0) {
+        console.log('🎫 MENSAGENS DE SISTEMA ENCONTRADAS:', systemMessages);
+      } else {
+        console.log('⚠️ Nenhuma mensagem de sistema encontrada');
+      }
+
+      setMessages(messagesWithReactions);
     } catch (err: any) {
       clearTimeout(timeout);
       setError(`Erro ao carregar mensagens: ${err.message}`);
@@ -334,19 +530,22 @@ export default function CompanyDashboard() {
 
   const fetchDepartments = async () => {
     if (!company?.id) return;
+
     try {
       const { data, error } = await supabase
         .from('departments')
-        .select('*')
-        .eq('company_id', company.id)
+        .select('id,name,company_id')
+        .or(`company_id.eq.${company.id},company_id.is.null`)
         .order('name');
 
       if (error) throw error;
+
       setDepartments(data || []);
     } catch (error) {
       console.error('Erro ao carregar departamentos:', error);
     }
   };
+
 
   const fetchSectors = async () => {
     if (!company?.id) return;
@@ -412,6 +611,34 @@ export default function CompanyDashboard() {
     }
   };
 
+  const handleToggleIaGlobal = async () => {
+    if (!company?.id) return;
+    try {
+      setTogglingIaGlobal(true);
+      const newStatus = !iaGlobalAtivada;
+
+      // Update no banco de dados
+      const { error } = await supabase
+        .from('companies')
+        .update({ ia_ativada: newStatus })
+        .eq('id', company.id);
+
+      if (error) throw error;
+
+      setIaGlobalAtivada(newStatus);
+      setToastMessage(`✅ IA ${newStatus ? 'Ativada' : 'Desativada'} para toda a empresa`);
+      setShowToast(true);
+    } catch (err) {
+      console.error('Erro ao toggle IA global:', err);
+      setToastMessage('❌ Erro ao alterar IA');
+      setShowToast(true);
+      // Revert state on error
+      setIaGlobalAtivada(iaGlobalAtivada);
+    } finally {
+      setTogglingIaGlobal(false);
+    }
+  };
+
   const checkPaymentNotifications = async () => {
     try {
       const {
@@ -450,35 +677,54 @@ export default function CompanyDashboard() {
     try {
       const updates: any = {};
 
-      updates.department_id = selectedDepartment || null;
+      // ✅ Validar department_id: se tem valor, deve ser UUID válido
+      if (selectedDepartment && selectedDepartment.trim()) {
+        // Verificar se é um UUID válido na lista de departamentos
+        const deptValido = departments.find(d => d.id === selectedDepartment);
+        if (deptValido) {
+          updates.department_id = selectedDepartment;
+        } else {
+          throw new Error(`Departamento inválido: ${selectedDepartment}`);
+        }
+      } else {
+        updates.department_id = null;  // Recepção (padrão)
+      }
+      
       updates.sector_id = selectedSector || null;
 
-      // Buscar tags atuais do contato para verificar se houve mudança
-      const currentContact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
-      const currentTags = currentContact?.tag_ids || [];
+      const currentContact = contactsDB.find(
+        c => normalizePhone(c.phone_number) === normalizePhone(selectedContact)
+      );
 
+      if (!currentContact?.id) throw new Error('Contato não encontrado');
+      const contactId = currentContact.id;
+
+      // Tags atuais
+      const currentTags = currentContact?.tag_ids || [];
       const tagsChanged =
         selectedTags.length !== currentTags.length ||
         !selectedTags.every(tag => currentTags.includes(tag));
 
-      // Verificar se houve mudança de setor (null ou valor diferente)
-      const oldSectorId = currentContact?.sector_id || null;
+      // Detecta mudança dept
+      const oldDepartmentId = currentContact.department_id || null;
+      const newDepartmentId = selectedDepartment || null;
+      // ✅ Mudança detectada se old !== new (e não é null→null)
+      const departmentChanged =
+        oldDepartmentId !== newDepartmentId &&
+        !(oldDepartmentId === null && newDepartmentId === null);
+
+      // Detecta mudança setor
+      const oldSectorId = currentContact.sector_id || null;
       const newSectorId = selectedSector || null;
       const sectorChanged = oldSectorId !== newSectorId;
 
-      if (Object.keys(updates).length === 0 && !tagsChanged) {
+      if (Object.keys(updates).length === 0 && !tagsChanged && !departmentChanged) {
         setToastMessage('Nenhuma alteração foi feita');
         setShowToast(true);
         return;
       }
 
-      // ✅ Usa o contato já carregado do estado (evita mismatch por @s.whatsapp.net)
-      if (!currentContact?.id) {
-        throw new Error('Contato não encontrado');
-      }
-      const contactId = currentContact.id;
-
-      // Atualizar a tabela contacts
+      // ✅ Atualiza contato
       if (Object.keys(updates).length > 0) {
         const { error: contactError } = await supabase
           .from('contacts')
@@ -491,31 +737,62 @@ export default function CompanyDashboard() {
         }
       }
 
-      // Atualizar as tags do contato (sempre, mesmo se for vazio para permitir remoção)
-      // Remover tags antigas
-      await supabase
-        .from('contact_tags')
-        .delete()
-        .eq('contact_id', contactId);
+      // ✅ Registra transferência se mudou dept
+      if (departmentChanged) {
+        console.log('🔄 [AUTO-TRANSFER] Mudança de departamento detectada, registrando...');
+        console.log('  De:', oldDepartmentId || 'Recepção', '→ Para:', newDepartmentId || 'Recepção');
 
-      // Adicionar novas tags (máximo 5) se houver
-      if (selectedTags.length > 0) {
-        const tagsToInsert = selectedTags.slice(0, 5).map(tagId => ({
-          contact_id: contactId,
-          tag_id: tagId
-        }));
+        try {
+          // ✅ Se for Recepção (null), buscar o ID real do departamento "Recepção"
+          let deptOrigemId = oldDepartmentId;
+          let deptDestinoId = newDepartmentId;
 
-        const { error: tagsError } = await supabase
-          .from('contact_tags')
-          .insert(tagsToInsert);
+          if (!deptOrigemId) {
+            const recepccaoDept = departments.find(d => d.name.includes('Recepção'));
+            deptOrigemId = recepccaoDept?.id || null;
+          }
 
-        if (tagsError) {
-          console.error('Erro ao atualizar tags:', tagsError);
-          throw tagsError;
+          if (!deptDestinoId) {
+            const recepccaoDept = departments.find(d => d.name.includes('Recepção'));
+            deptDestinoId = recepccaoDept?.id || null;
+          }
+
+          const resultadoTransf = await registrarTransferencia({
+            api_key: company.api_key,
+            contact_id: contactId,
+            departamento_origem_id: deptOrigemId,
+            departamento_destino_id: deptDestinoId,
+          });
+
+          if (!resultadoTransf?.sucesso) {
+            console.error('⚠️ [AUTO-TRANSFER] Erro ao registrar transferência:', resultadoTransf?.erro);
+          } else {
+            console.log('✅ [AUTO-TRANSFER] Transferência registrada com sucesso');
+          }
+        } catch (erroTransf) {
+          console.error('❌ [AUTO-TRANSFER] Erro exceção ao registrar transferência:', erroTransf);
         }
       }
 
-      // Atualizar ambas as tabelas: messages e sent_messages
+      // ✅ Atualiza tags: remove tudo e reinsere (só se mudou)
+      if (tagsChanged) {
+        await supabase.from('contact_tags').delete().eq('contact_id', contactId);
+
+        if (selectedTags.length > 0) {
+          const tagsToInsert = selectedTags.slice(0, 5).map(tagId => ({
+            contact_id: contactId,
+            tag_id: tagId,
+          }));
+
+          const { error: tagsError } = await supabase.from('contact_tags').insert(tagsToInsert);
+          if (tagsError) {
+            console.error('Erro ao atualizar tags:', tagsError);
+            throw tagsError;
+          }
+        }
+      }
+
+      // ✅ Atualiza messages e sent_messages (mantém coerência)
       if (Object.keys(updates).length > 0) {
         const [messagesResult, sentMessagesResult] = await Promise.all([
           supabase
@@ -523,29 +800,24 @@ export default function CompanyDashboard() {
             .update(updates)
             .eq('apikey_instancia', company.api_key)
             .eq('numero', selectedContact),
+
           supabase
             .from('sent_messages')
             .update(updates)
             .eq('apikey_instancia', company.api_key)
-            .eq('numero', selectedContact)
+            .eq('numero', selectedContact),
         ]);
 
-        if (messagesResult.error) {
-          console.error('Erro ao atualizar mensagens recebidas:', messagesResult.error);
-        }
-
-        if (sentMessagesResult.error) {
-          console.error('Erro ao atualizar mensagens enviadas:', sentMessagesResult.error);
-        }
+        if (messagesResult.error) console.error('Erro ao atualizar messages:', messagesResult.error);
+        if (sentMessagesResult.error) console.error('Erro ao atualizar sent_messages:', sentMessagesResult.error);
       }
 
-      // Se houve mudança de setor, criar notificação no chat
+      // ✅ Notificação no chat quando muda setor
       if (sectorChanged) {
         const oldSectorName = sectors.find(s => s.id === oldSectorId)?.name || 'Desconhecido';
         const newSectorName = newSectorId ? sectors.find(s => s.id === newSectorId)?.name : 'Sem setor';
         const phoneDisplay = getPhoneNumber(selectedContact);
 
-        // Criar uma mensagem de sistema no banco (não enviada ao cliente)
         const systemMessage = {
           numero: selectedContact,
           sender: null,
@@ -564,21 +836,105 @@ export default function CompanyDashboard() {
         await supabase.from('messages').insert([systemMessage]);
       }
 
-      console.log('Atualização bem-sucedida');
       setToastMessage('Informações atualizadas com sucesso!');
       setShowToast(true);
+
       setShowOptionsMenu(false);
       setSelectedDepartment('');
       setSelectedSector('');
       setSelectedTags([]);
+
       fetchMessages();
       fetchContacts();
     } catch (error: any) {
       console.error('Erro ao atualizar informações:', error);
-      setToastMessage(`Erro: ${error.message || 'Não foi possível atualizar as informações'}`);
+      setToastMessage(`Erro: ${error?.message || 'Não foi possível atualizar as informações'}`);
       setShowToast(true);
     }
   };
+
+
+  const handleTransferir = async () => {
+    if (!selectedContact || !company?.api_key) {
+      setToastMessage('❌ Erro: Contato ou empresa não identificados');
+      setShowToast(true);
+      return;
+    }
+
+    // ✅ agora departamentoTransferencia precisa ser UUID
+    if (!departamentoTransferencia) {
+      setToastMessage('⚠️ Selecione um departamento de destino');
+      setShowToast(true);
+      return;
+    }
+
+    const currentContact = contactsDB.find(
+      c => normalizePhone(c.phone_number) === normalizePhone(selectedContact)
+    );
+
+    if (!currentContact?.id) {
+      setToastMessage('❌ Erro: Contato não encontrado');
+      setShowToast(true);
+      return;
+    }
+
+    const deptDestino = departments.find(d => d.id === departamentoTransferencia);
+    if (!deptDestino?.id) {
+      setToastMessage('❌ Erro: Departamento destino inválido');
+      setShowToast(true);
+      return;
+    }
+
+    // ✅ evita transferir para o mesmo dept atual
+    const oldDeptId = currentContact.department_id || null;
+    if (oldDeptId === deptDestino.id) {
+      setToastMessage('⚠️ Selecione um departamento diferente do atual');
+      setShowToast(true);
+      return;
+    }
+
+    setTransferindo(true);
+
+    try {
+      const payload = {
+        api_key: company.api_key,
+        contact_id: currentContact.id,
+        departamento_origem_id: oldDeptId,
+        departamento_destino_id: deptDestino.id,
+      };
+
+      const resultado = await registrarTransferencia(payload);
+
+      if (resultado?.sucesso) {
+        setTransferSuccessData({
+          ...resultado.data,
+          nomedept: deptDestino.name,
+          nomecontato: currentContact.name,
+        });
+
+        setShowTransferSuccessModal(true);
+
+        setToastMessage(`✅ Contato transferido para ${deptDestino.name}`);
+        setShowToast(true);
+
+        setDepartamentoTransferencia('');
+        setShowOptionsMenu(false);
+
+        fetchMessages();
+        fetchContacts();
+      } else {
+        setToastMessage(`❌ Erro: ${resultado?.erro || 'Erro desconhecido'}`);
+        setShowToast(true);
+      }
+    } catch (error: any) {
+      console.error('[TRANSFERÊNCIA] Erro:', error);
+      setToastMessage(`❌ Erro ao transferir: ${error?.message || 'Erro desconhecido'}`);
+      setShowToast(true);
+    } finally {
+      setTransferindo(false);
+    }
+  };
+
 
   useEffect(() => {
     fetchMessages();
@@ -650,7 +1006,72 @@ export default function CompanyDashboard() {
     };
   }, [company?.api_key, fetchMessages]);
 
+  // Hook para monitorar mudanças em tempo real nas mensagens
+  // Hook para monitorar mudanças em tempo real nas mensagens
+  useRealtimeMessages({
+    apiKey: company?.api_key,
+    enabled: activeTab === 'mensagens',
+    onMessagesChange: (message: Message) => {
+      // Atualizar apenas a lista de mensagens
+      setMessages((prevMessages) => {
+        const messageExists = prevMessages.some(m => m.id === message.id);
+        if (messageExists) {
+          return prevMessages.map(m => m.id === message.id ? message : m);
+        }
+        return [...prevMessages, message].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+      });
+    },
+    onNewMessage: (message: Message, type: 'received' | 'sent') => {
+      console.log(`📨 Nova mensagem ${type}:`, message);
+
+      // Scroll automático apenas (sem fetchContacts para não alterar nomes)
+      if (isUserScrollingRef.current) {
+        setPendingMessagesCount(prev => prev + 1);
+      } else {
+        scrollToBottom();
+      }
+    }
+  });
+
+  // Hook para monitorar mudanças em tempo real nos contatos
+  useRealtimeContacts({
+    companyId: company?.id,
+    enabled: activeTab === 'mensagens',
+    onContactsChange: (contact: any, type: 'INSERT' | 'UPDATE' | 'DELETE') => {
+      console.log(`👥 Contato ${type}:`, contact);
+      setContactsDB((prevContacts) => {
+        const contactExists = prevContacts.some(c => c.id === contact.id);
+        if (type === 'DELETE') {
+          return prevContacts.filter(c => c.id !== contact.id);
+        }
+        if (contactExists) {
+          return prevContacts.map(c => c.id === contact.id ? contact : c);
+        }
+        return [...prevContacts, contact];
+      });
+    }
+  });
+
+  // Polling automático como fallback - verifica a cada 3 segundos
+  useEffect(() => {
+    if (activeTab !== 'mensagens' || !company?.api_key) return;
+
+    console.log('⏱️ Iniciando polling de mensagens a cada 3 segundos');
+
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Verificando novas mensagens...');
+      fetchMessages();
+      fetchContacts();
+    }, 3000); // 3 segundos
+
+    return () => {
+      clearInterval(pollingInterval);
+      console.log('⏹️ Parando polling de mensagens');
+    };
+  }, [activeTab, company?.api_key, fetchMessages]);
+
   const formatTime = (msgOrTimestamp: any) => {
+
     if (!msgOrTimestamp) return '';
     try {
       let timestamp: number;
@@ -752,7 +1173,7 @@ export default function CompanyDashboard() {
 
       const lastMsgTime = getMessageTimestamp(lastMsg);
       contact.lastMessageTime = lastMsgTime > 0 ? new Date(lastMsgTime).toISOString() : '';
-      
+
       // CRÍTICO: O nome SEMPRE vem do banco de dados
       // NUNCA usar pushname da mensagem - isto causa o problema de nome mudando
       const dbContact = contactsDB.find(c => normalizePhone(c.phone_number) === contact.phoneNumber);
@@ -765,13 +1186,13 @@ export default function CompanyDashboard() {
       // Contar mensagens pendentes (do cliente, não respondidas pela empresa)
       const lastViewedTime = lastViewedMessageTime[contact.phoneNumber] || 0;
       contact.unreadCount = 0;
-      
+
       // Procurar por mensagens não lidas do cliente que não foram respondidas
       for (let i = contact.messages.length - 1; i >= 0; i--) {
         const msg = contact.messages[i];
         const isSent = msg['minha?'] === 'true';
         const msgTime = getMessageTimestamp(msg);
-        
+
         // Se é mensagem do cliente (não enviada pela empresa)
         if (!isSent && msgTime > lastViewedTime) {
           // Verificar se há resposta DEPOIS dessa mensagem
@@ -784,7 +1205,7 @@ export default function CompanyDashboard() {
               break;
             }
           }
-          
+
           // Só contar como pendente se não tem resposta
           if (!hasResponse) {
             contact.unreadCount++;
@@ -889,7 +1310,7 @@ export default function CompanyDashboard() {
 
       const newMessage = {
         numero: selectedContact,
-        sender: selectedContact,
+        sender: null,
         'minha?': 'true',
         pushname: attendantName,
         apikey_instancia: company.api_key,
@@ -906,18 +1327,17 @@ export default function CompanyDashboard() {
         caption: rawCaption,
       };
 
-      const { error } = await supabase
-        .from('sent_messages')
-        .insert([newMessage]);
+      // salva no sent_messages (porque é "minha? true")
+      const { error: insertErr } = await supabase.from('sent_messages').insert([newMessage]);
+      if (insertErr) console.error('Erro ao salvar sent_messages:', insertErr);
 
-      if (error) {
-        console.error('Erro ao enviar mensagem:', error);
-        alert('Erro ao enviar mensagem');
-        return;
-      }
 
       try {
         const timestamp = new Date().toISOString();
+
+        // Buscar nomes reais de dept/setor
+        const deptName = departments.find(d => d.id === departmentId)?.name || 'Recepção';
+        const sectorName = sectors.find(s => s.id === sectorId)?.name || 'Recepção';
 
         const webhookPayload = {
           numero: selectedContact,
@@ -930,9 +1350,9 @@ export default function CompanyDashboard() {
           idmessage: generatedIdMessage,
           pushname: company.name,
 
-          // 🔹 FORÇADO
-          department_name: 'Recepção',
-          sector_name: 'Recepção',
+          // ✅ Usando valores reais do dept/setor
+          department_name: deptName,
+          sector_name: sectorName,
 
           timestamp: new Date().toISOString(),
           instancia: instanciaValue,
@@ -995,7 +1415,7 @@ export default function CompanyDashboard() {
         };
 
         if (isImage) {
-          messageData.message = imageCaption || messageText.trim() || 'Imagem';
+          messageData.message = messageText.trim() || 'Imagem';
           if (imageCaption) {
             messageData.caption = imageCaption;
           }
@@ -1090,7 +1510,7 @@ export default function CompanyDashboard() {
       )}
 
       {/* Fixed Header with Navigation */}
-      <header className="bg-white border-b border-gray-200 z-50">
+      <header className="bg-white border-b-2 border-gray-300 z-50">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-sky-500 rounded-lg flex items-center justify-center">
@@ -1105,58 +1525,69 @@ export default function CompanyDashboard() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('mensagens')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'mensagens'
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'mensagens'
+                ? 'bg-sky-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <MessageSquare className="w-4 h-4" />
               Mensagens
             </button>
             <button
               onClick={() => setActiveTab('departamentos')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'departamentos'
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'departamentos'
+                ? 'bg-sky-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <Briefcase className="w-4 h-4" />
               Departamentos
             </button>
             <button
               onClick={() => setActiveTab('setores')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'setores'
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'setores'
+                ? 'bg-sky-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <FolderTree className="w-4 h-4" />
               Setores
             </button>
             <button
               onClick={() => setActiveTab('atendentes')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'atendentes'
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'atendentes'
+                ? 'bg-sky-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <UserCircle2 className="w-4 h-4" />
               Atendentes
             </button>
             <button
               onClick={() => setActiveTab('tags')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                activeTab === 'tags'
-                  ? 'bg-sky-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'tags'
+                ? 'bg-sky-500 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+                }`}
             >
               <Tag className="w-4 h-4" />
               Tags
+            </button>
+            <button
+              onClick={handleToggleIaGlobal}
+              disabled={togglingIaGlobal}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${iaGlobalAtivada
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                } disabled:opacity-50`}
+              title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
+            >
+              {togglingIaGlobal ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <span className="text-lg">⚡</span>
+              )}
+              IA: {iaGlobalAtivada ? 'Ativada' : 'Desativada'}
             </button>
             <div className="relative ml-2">
               <button
@@ -1173,7 +1604,7 @@ export default function CompanyDashboard() {
               </button>
               {showNotifications && (
                 <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-hidden flex flex-col">
-                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="p-4 border-b-2 border-gray-300 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Notificações</h3>
                     <button
                       onClick={() => setShowNotifications(false)}
@@ -1202,9 +1633,8 @@ export default function CompanyDashboard() {
                         return (
                           <div
                             key={notif.id}
-                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${
-                              !notif.is_read ? 'bg-blue-50/30' : ''
-                            }`}
+                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${!notif.is_read ? 'bg-blue-50/30' : ''
+                              }`}
                             onClick={() => !notif.is_read && markNotificationAsRead(notif.id)}
                           >
                             <div className="flex gap-3">
@@ -1253,560 +1683,607 @@ export default function CompanyDashboard() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - Contacts List */}
         <div
-          className={`${
-            sidebarOpen ? 'flex' : 'hidden'
-          } md:flex w-full md:w-[320px] bg-white border-r border-gray-200 flex-col`}
+          className={`${sidebarOpen ? 'flex' : 'hidden'
+            } md:flex w-full md:w-[320px] bg-white border-r-2 border-gray-300 flex-col`}
         >
 
-        {error && activeTab === 'mensagens' && (
-          <div className="bg-red-50/80 backdrop-blur-sm border-b border-red-200/50 px-5 py-3 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-            <p className="text-red-700 text-sm flex-1">{error}</p>
-          </div>
-        )}
-
-        {activeTab === 'mensagens' && (
-          <div className="px-4 py-3 border-b border-gray-200">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Pesquisar contato"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-50 text-gray-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-sky-500 focus:bg-white transition-all placeholder-gray-400"
-            />
-          </div>
-        </div>
-        )}
-
-        {activeTab === 'mensagens' && (
-        <div className="flex-1 overflow-y-auto bg-transparent">
-          {filteredContacts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4">
-                <MessageSquare className="w-10 h-10 text-blue-500" />
-              </div>
-              <p className="text-gray-500 text-sm text-center font-medium">
-                {searchTerm ? 'Nenhum contato encontrado' : 'Nenhuma conversa ainda'}
-              </p>
+          {error && activeTab === 'mensagens' && (
+            <div className="bg-red-50/80 backdrop-blur-sm border-b border-red-200/50 px-5 py-3 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-red-700 text-sm flex-1">{error}</p>
             </div>
-          ) : (
-            <div className="p-2 space-y-1">
-              {filteredContacts.map((contact) => (
-                <button
-                  key={contact.phoneNumber}
-                  onClick={() => {
-                    setSelectedContact(contact.phoneNumber);
-                    if (window.innerWidth < 768) {
-                      setSidebarOpen(false);
-                    }
-                  }}
-                  className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${
-                    selectedContact === contact.phoneNumber
-                      ? 'bg-sky-50 border border-sky-400'
-                      : 'hover:bg-gray-50 border border-transparent'
-                  }`}
-                >
-                  <div className="w-11 h-11 bg-sky-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-white" />
+          )}
+
+          {activeTab === 'mensagens' && (
+            <div className="px-4 py-3 border-b-2 border-gray-300">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar contato"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-gray-50 text-gray-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-sky-500 focus:bg-white transition-all placeholder-gray-400"
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'mensagens' && (
+            <div className="flex-1 overflow-y-auto bg-transparent">
+              {filteredContacts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full p-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4">
+                    <MessageSquare className="w-10 h-10 text-blue-500" />
                   </div>
-                  <div className="flex-1 text-left overflow-hidden">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-gray-900 font-semibold text-sm truncate">{contact.name}</h3>
-                      <span className="text-xs text-gray-400 ml-2">
-                        {formatTime(contact.lastMessageTime)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-gray-500 text-xs truncate flex-1">{contact.lastMessage}</p>
-                      {contact.unreadCount > 0 && (
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center ml-2">
-                          <span className="text-[10px] font-bold text-white">{contact.unreadCount}</span>
-                        </div>
-                      )}
-                    </div>
-                    {contact.tag_ids && contact.tag_ids.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {contact.tag_ids.map((tagId) => {
-                          const tag = tags.find(t => t.id === tagId);
-                          return tag ? (
-                            <span
-                              key={tagId}
-                              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
-                              style={{ backgroundColor: tag.color }}
-                            >
-                              <Tag className="w-2.5 h-2.5" />
-                              {tag.name}
-                            </span>
-                          ) : null;
-                        })}
+                  <p className="text-gray-500 text-sm text-center font-medium">
+                    {searchTerm ? 'Nenhum contato encontrado' : 'Nenhuma conversa ainda'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {filteredContacts.map((contact) => (
+                    <button
+                      key={contact.phoneNumber}
+                      onClick={() => {
+                        setSelectedContact(contact.phoneNumber);
+                        if (window.innerWidth < 768) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${selectedContact === contact.phoneNumber
+                        ? 'bg-sky-50 border-2 border-sky-500 shadow-md'
+                        : 'hover:bg-gray-50 border border-gray-200'
+                        }`}
+                    >
+                      <div className="w-11 h-11 bg-sky-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-white" />
                       </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+                      <div className="flex-1 text-left overflow-hidden">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-gray-900 font-semibold text-sm truncate">{contact.name}</h3>
+                          <span className="text-xs text-gray-400 ml-2">
+                            {formatTime(contact.lastMessageTime)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-gray-500 text-xs truncate flex-1">{contact.lastMessage}</p>
+                          {contact.unreadCount > 0 && (
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center ml-2">
+                              <span className="text-[10px] font-bold text-white">{contact.unreadCount}</span>
+                            </div>
+                          )}
+                        </div>
+                        {contact.tag_ids && contact.tag_ids.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {contact.tag_ids.map((tagId) => {
+                              const tag = tags.find(t => t.id === tagId);
+                              return tag ? (
+                                <span
+                                  key={tagId}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
+                                  style={{ backgroundColor: tag.color }}
+                                >
+                                  <Tag className="w-2.5 h-2.5" />
+                                  {tag.name}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-        )}
-      </div>
 
-      <div className={`flex-1 flex-col ${sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
-        {activeTab === 'mensagens' && selectedContactData ? (
-          <>
-            <header className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-200">
-              <div className="flex items-center gap-3 flex-1">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="md:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-                <div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
-                  <User className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h1 className="text-gray-900 font-bold text-base tracking-tight">{selectedContactData.name}</h1>
-                  <p className="text-gray-500 text-xs mb-1">{getPhoneNumber(selectedContactData.phoneNumber)}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedContactData.department_id && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-sky-700 rounded text-xs font-medium">
-                        <Briefcase className="w-3 h-3" />
-                        {departments.find(d => d.id === selectedContactData.department_id)?.name || 'Departamento'}
-                      </span>
-                    )}
-                    {selectedContactData.sector_id && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                        <FolderTree className="w-3 h-3" />
-                        {sectors.find(s => s.id === selectedContactData.sector_id)?.name || 'Setor'}
-                      </span>
-                    )}
-                    {selectedContactData.tag_ids && selectedContactData.tag_ids.length > 0 && (
-                      <>
-                        {selectedContactData.tag_ids.map((tagId) => {
-                          const tag = tags.find(t => t.id === tagId);
-                          return tag ? (
-                            <span
-                              key={tagId}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                              style={{ backgroundColor: tag.color }}
-                            >
-                              <Tag className="w-3 h-3" />
-                              {tag.name}
-                            </span>
-                          ) : null;
-                        })}
-                      </>
-                    )}
+        <div className={`flex-1 flex-col ${sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
+          {activeTab === 'mensagens' && selectedContactData ? (
+            <>
+              <header className="bg-white px-6 py-4 flex items-center justify-between border-b-2 border-gray-300">
+                <div className="flex items-center gap-3 flex-1">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="md:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
+                  <div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h1 className="text-gray-900 font-bold text-base tracking-tight">{selectedContactData.name}</h1>
+                    <p className="text-gray-500 text-xs mb-1">{getPhoneNumber(selectedContactData.phoneNumber)}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedContactData.department_id && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-sky-700 rounded text-xs font-medium">
+                          <Briefcase className="w-3 h-3" />
+                          {departments.find(d => d.id === selectedContactData.department_id)?.name || 'Departamento'}
+                        </span>
+                      )}
+                      {selectedContactData.sector_id && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                          <FolderTree className="w-3 h-3" />
+                          {sectors.find(s => s.id === selectedContactData.sector_id)?.name || 'Setor'}
+                        </span>
+                      )}
+                      {selectedContactData.tag_ids && selectedContactData.tag_ids.length > 0 && (
+                        <>
+                          {selectedContactData.tag_ids.map((tagId) => {
+                            const tag = tags.find(t => t.id === tagId);
+                            return tag ? (
+                              <span
+                                key={tagId}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                                style={{ backgroundColor: tag.color }}
+                              >
+                                <Tag className="w-3 h-3" />
+                                {tag.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <button
-                onClick={() => {
-                  // Carregar informações atuais do contato
-                  const currentContact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
-                  setSelectedDepartment(currentContact?.department_id || '');
-                  setSelectedSector(currentContact?.sector_id || '');
-                  setSelectedTags(currentContact?.tag_ids || []);
-                  setShowOptionsMenu(true);
-                }}
-                className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100/50 rounded-xl transition-all relative z-10"
-                title="Mais opções"
-              >
-                <MoreVertical className="w-5 h-5" />
-              </button>
-            </header>
+                <button
+                  onClick={() => {
+                    // Carregar informações atuais do contato
+                    const currentContact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
+                    setSelectedDepartment(currentContact?.department_id || '');
+                    setSelectedSector(currentContact?.sector_id || '');
+                    setSelectedTags(currentContact?.tag_ids || []);
+                    setShowOptionsMenu(true);
+                  }}
+                  className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100/50 rounded-xl transition-all relative z-10"
+                  title="Mais opções"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </header>
 
-            <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
-              <div className="max-w-4xl mx-auto">
-                {Object.entries(messageGroups).map(([date, msgs]) => (
-                  <div key={date} className="mb-6">
-                    <div className="flex justify-center mb-4">
-                      <div className="bg-white px-3 py-1 rounded-full border border-gray-200">
-                        <p className="text-xs text-gray-600 font-medium">{date}</p>
+              <div className="flex-1 overflow-y-auto bg-gray-50 px-3 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
+                <div className="w-full">
+                  {Object.entries(messageGroups).map(([date, msgs]) => (
+                    <div key={date} className="mb-6">
+                      <div className="flex justify-center mb-4">
+                        <div className="bg-white px-3 py-1 rounded-full border border-gray-200">
+                          <p className="text-xs text-gray-600 font-medium">{date}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3">
-                      {msgs.map((msg) => {
-                        // Renderizar notificações de sistema (troca de setor)
-                        if (msg.tipomessage === 'system_notification') {
-                          return (
-                            <div key={msg.id} className="flex justify-center my-4">
-                              <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-center">
-                                <p className="text-sm text-blue-700 font-medium">{msg.message}</p>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        const isSentMessage = msg['minha?'] === 'true';
-                        const senderLabel = isSentMessage ? (msg.pushname || company?.name || 'Atendente') : (msg.pushname || getPhoneNumber(getContactId(msg)));
-                        const deptName = msg.department_id ? (departments.find((d) => d.id === msg.department_id)?.name || null) : null;
-                        const base64Type = msg.base64 ? detectBase64Type(msg.base64) : null;
-                        const tipoFromField = getMessageTypeFromTipomessage(msg.tipomessage);
-                        const hasBase64Content = msg.base64 && base64Type;
-
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex ${isSentMessage ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-[70%] rounded-2xl ${
-                                isSentMessage
-                                  ? 'bg-sky-500 text-white rounded-br-sm'
-                                  : 'bg-white text-gray-900 rounded-bl-sm border border-gray-200'
-                              }`}
-                            >
-                              {/* TOPO DO BALÃO: NOME + (DEPARTAMENTO/SETOR) */}
-                              <div className="px-3 pt-2 flex items-center justify-between gap-2">
-                                <span className={`text-xs font-semibold ${isSentMessage ? 'text-white' : 'text-gray-900'}`}>
-                                  {senderLabel}
-                                </span>
-
-                                <div className="flex items-center gap-1.5">
-                                  {deptName && (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isSentMessage ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                                      {deptName}
-                                    </span>
-                                  )}
-                                  {/* Setor padronizado como Recepção */}
-                                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${isSentMessage ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                                    Recepção
-                                  </span>
-                                </div>
-                              </div>
-
-                              {msg.urlimagem && !hasBase64Content && (
-                                <div className="p-1">
-                                  <img
-                                    src={msg.urlimagem}
-                                    alt="Imagem"
-                                    className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
-                                    style={{ maxHeight: '300px' }}
-                                    onClick={() => openImageModal(msg.urlimagem!)}
-                                  />
-                                </div>
-                              )}
-
-                              {hasBase64Content && (base64Type === 'image' || tipoFromField === 'image') && (
-                                <div className="p-1">
-                                  <img
-                                    src={normalizeBase64(msg.base64!, 'image')}
-                                    alt="Imagem"
-                                    className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
-                                    style={{ maxHeight: '300px' }}
-                                    onClick={() => openImageModal(normalizeBase64(msg.base64!, 'image'))}
-                                  />
-                                  {msg.caption && (
-                                    <div className="mt-2 px-2 text-sm">
-                                      {msg.caption}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {hasBase64Content && (base64Type === 'audio' || tipoFromField === 'audio') &&
-                                base64Type !== 'image' && tipoFromField !== 'image' && (
-                                <div className="p-3">
-                                  <div className={`flex items-center gap-3 p-3 rounded-xl ${
-                                    isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
-                                  }`}>
-                                    <button
-                                      onClick={() => handleAudioPlay(msg.id, msg.base64!)}
-                                      className={`p-2 rounded-full ${
-                                        isSentMessage ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'
-                                      } transition`}
-                                    >
-                                      {playingAudio === msg.id ? (
-                                        <Pause className="w-5 h-5 text-white" />
-                                      ) : (
-                                        <Play className="w-5 h-5 text-white" />
-                                      )}
-                                    </button>
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium">
-                                        {msg.message || 'Áudio'}
-                                      </p>
-                                      <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        Clique para {playingAudio === msg.id ? 'pausar' : 'reproduzir'}
-                                      </p>
-                                    </div>
-                                    <Mic className={`w-5 h-5 ${isSentMessage ? 'text-blue-100' : 'text-blue-500'}`} />
-                                  </div>
-                                </div>
-                              )}
-
-                              {hasBase64Content && (base64Type === 'document' || tipoFromField === 'document') &&
-                                base64Type !== 'audio' && tipoFromField !== 'audio' &&
-                                base64Type !== 'image' && tipoFromField !== 'image' && (
-                                <div className="p-2">
-                                  <button
-                                    onClick={() => downloadBase64File(msg.base64!, msg.message || 'documento.pdf')}
-                                    className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${
-                                      isSentMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'
-                                    } transition`}
-                                  >
-                                    <FileText className="w-8 h-8 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0 text-left">
-                                      <p className="text-sm font-medium truncate">
-                                        {msg.message || 'Documento'}
-                                      </p>
-                                      <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        Clique para baixar
-                                      </p>
-                                    </div>
-                                    <Download className="w-5 h-5 flex-shrink-0" />
-                                  </button>
-                                </div>
-                              )}
-
-                              {msg.urlpdf && !hasBase64Content && (
-                                <div className="p-2">
-                                  <a
-                                    href={msg.urlpdf}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 p-2.5 rounded-xl ${
-                                      isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
-                                    } hover:opacity-90 transition`}
-                                  >
-                                    <FileText className="w-8 h-8 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium truncate">
-                                        {msg.message || 'Documento'}
-                                      </p>
-                                      <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                                        Clique para abrir
-                                      </p>
-                                    </div>
-                                  </a>
-                                </div>
-                              )}
-
-                              {msg.message && !msg.urlpdf && !hasBase64Content && (
-                                <div className="px-3.5 py-2">
-                                  <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
-                                    {msg.message}
+                      <div className="space-y-3">
+                        {msgs.map((msg) => {
+                          // Renderizar mensagens de sistema (transferência de departamento)
+                          if (msg.message_type === 'system_transfer') {
+                            console.log('📋 Renderizando mensagem de transferência:', msg);
+                            return (
+                              <div key={msg.id} className="flex justify-center my-4">
+                                <div className="bg-gray-100 rounded-lg px-4 py-2 text-center max-w-sm">
+                                  <p className="text-gray-600 text-sm font-medium">
+                                    📋 {msg.message}
+                                  </p>
+                                  <p className="text-gray-400 text-xs mt-1">
+                                    {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
                                   </p>
                                 </div>
-                              )}
+                              </div>
+                            );
+                          }
 
-                              <div className="px-3.5 pb-1.5 flex items-center justify-end gap-1">
-                                <span className={`text-[10px] ${isSentMessage ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  {formatTime(msg)}
-                                </span>
-                                {isSentMessage && (
-                                  <CheckCheck className="w-3.5 h-3.5 text-blue-50" />
+                          // Renderizar notificações de sistema antigas (troca de setor)
+                          if (msg.tipomessage === 'system_notification') {
+                            return (
+                              <div key={msg.id} className="flex justify-center my-4">
+                                <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-center">
+                                  <p className="text-sm text-blue-700 font-medium">{msg.message}</p>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          const isSentMessage = msg['minha?'] === 'true';
+                          const senderLabel = isSentMessage ? (msg.pushname || company?.name || 'Atendente') : (msg.pushname || getPhoneNumber(getContactId(msg)));
+                          const base64Type = msg.base64 ? detectBase64Type(msg.base64) : null;
+                          const tipoFromField = getMessageTypeFromTipomessage(msg.tipomessage);
+                          const hasBase64Content = msg.base64 && base64Type;
+
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`flex ${isSentMessage ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[70%] rounded-2xl ${isSentMessage
+                                  ? 'bg-sky-500 text-white rounded-br-sm shadow-md'
+                                  : 'bg-white text-gray-900 rounded-bl-sm border-2 border-gray-300 shadow-md'
+                                  }`}
+                              >
+                                {/* TOPO DO BALÃO: APENAS NOME DO REMETENTE */}
+                                <div className="px-3 pt-2 pb-1">
+                                  <span className={`text-xs font-semibold ${isSentMessage ? 'text-white' : 'text-gray-900'}`}>
+                                    {senderLabel}
+                                  </span>
+                                </div>
+
+                                {msg.urlimagem && !hasBase64Content && (
+                                  <div className="p-1">
+                                    <img
+                                      src={msg.urlimagem}
+                                      alt="Imagem"
+                                      className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
+                                      style={{ maxHeight: '300px' }}
+                                      onClick={() => openImageModal(msg.urlimagem!)}
+                                    />
+                                  </div>
+                                )}
+
+                                {hasBase64Content && (base64Type === 'image' || tipoFromField === 'image') && (base64Type !== 'sticker' && tipoFromField !== 'sticker') && (
+                                  <div className="p-1">
+                                    <img
+                                      src={normalizeBase64(msg.base64!, 'image')}
+                                      alt="Imagem"
+                                      className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
+                                      style={{ maxHeight: '300px' }}
+                                      onClick={() => openImageModal(normalizeBase64(msg.base64!, 'image'), 'image')}
+                                    />
+                                    {msg.caption && (
+                                      <div className="mt-2 px-2 text-sm">
+                                        {msg.caption}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {hasBase64Content && (base64Type === 'sticker' || tipoFromField === 'sticker') && (
+                                  <div className="p-2">
+                                    <img
+                                      src={normalizeBase64(msg.base64!, 'sticker')}
+                                      alt="Figurinha"
+                                      className="rounded-lg max-w-[250px] h-auto cursor-pointer hover:opacity-90 transition"
+                                      style={{ maxHeight: '250px' }}
+                                      onClick={() => openImageModal(normalizeBase64(msg.base64!, 'sticker'), 'sticker')}
+                                    />
+                                  </div>
+                                )}
+
+                                {hasBase64Content && (base64Type === 'video' || tipoFromField === 'video') && (
+                                  <div
+                                    className="p-1 relative group cursor-pointer"
+                                    onClick={() => openImageModal(normalizeBase64(msg.base64!, 'video'), 'video')}
+                                  >
+                                    <video
+                                      src={normalizeBase64(msg.base64!, 'video')}
+                                      className="rounded-xl max-w-full h-auto"
+                                      style={{ maxHeight: '300px' }}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                                        <Play className="w-6 h-6 text-blue-500 ml-1" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {hasBase64Content && (base64Type === 'audio' || tipoFromField === 'audio') &&
+                                  base64Type !== 'image' && tipoFromField !== 'image' && (
+                                    <div className="p-3">
+                                      <div className={`flex items-center gap-3 p-3 rounded-xl ${isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
+                                        }`}>
+                                        <button
+                                          onClick={() => handleAudioPlay(msg.id, msg.base64!)}
+                                          className={`p-2 rounded-full ${isSentMessage ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'
+                                            } transition`}
+                                        >
+                                          {playingAudio === msg.id ? (
+                                            <Pause className="w-5 h-5 text-white" />
+                                          ) : (
+                                            <Play className="w-5 h-5 text-white" />
+                                          )}
+                                        </button>
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium">
+                                            {msg.message || 'Áudio'}
+                                          </p>
+                                          <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                                            Clique para {playingAudio === msg.id ? 'pausar' : 'reproduzir'}
+                                          </p>
+                                        </div>
+                                        <Mic className={`w-5 h-5 ${isSentMessage ? 'text-blue-100' : 'text-blue-500'}`} />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {hasBase64Content && (base64Type === 'document' || tipoFromField === 'document') &&
+                                  base64Type !== 'audio' && tipoFromField !== 'audio' &&
+                                  base64Type !== 'image' && tipoFromField !== 'image' &&
+                                  base64Type !== 'sticker' && tipoFromField !== 'sticker' &&
+                                  base64Type !== 'video' && tipoFromField !== 'video' && (
+                                    <div className="p-2">
+                                      <button
+                                        onClick={() => downloadBase64File(msg.base64!, msg.message || 'documento.pdf')}
+                                        className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${isSentMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'
+                                          } transition`}
+                                      >
+                                        <FileText className="w-8 h-8 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                          <p className="text-sm font-medium truncate">
+                                            {msg.message || 'Documento'}
+                                          </p>
+                                          <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                                            Clique para baixar
+                                          </p>
+                                        </div>
+                                        <Download className="w-5 h-5 flex-shrink-0" />
+                                      </button>
+                                    </div>
+                                  )}
+
+                                {msg.urlpdf && !hasBase64Content && (
+                                  <div className="p-2">
+                                    <a
+                                      href={msg.urlpdf}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`flex items-center gap-2 p-2.5 rounded-xl ${isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
+                                        } hover:opacity-90 transition`}
+                                    >
+                                      <FileText className="w-8 h-8 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">
+                                          {msg.message || 'Documento'}
+                                        </p>
+                                        <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                                          Clique para abrir
+                                        </p>
+                                      </div>
+                                    </a>
+                                  </div>
+                                )}
+
+                                {msg.message && !msg.urlpdf && !hasBase64Content && (
+                                  <div className="px-3.5 py-2">
+                                    <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
+                                      {msg.message}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="px-3.5 pb-1.5 flex items-center justify-end gap-1">
+                                  <span className={`text-[10px] ${isSentMessage ? 'text-blue-100' : 'text-gray-400'}`}>
+                                    {formatTime(msg)}
+                                  </span>
+                                  {isSentMessage && (
+                                    <CheckCheck className="w-3.5 h-3.5 text-blue-50" />
+                                  )}
+                                </div>
+
+                                {msg.reactions && msg.reactions.length > 0 && (
+                                  <div className="px-3.5 pb-2 flex flex-wrap gap-1">
+                                    {msg.reactions.map((reaction, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="bg-gray-100 rounded-full px-2 py-1 flex items-center gap-1 text-sm"
+                                      >
+                                        <span>{reaction.emoji}</span>
+                                        {reaction.count > 1 && (
+                                          <span className="text-xs text-gray-600 font-medium">{reaction.count}</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-            </div>
 
-            {/* Botão flutuante para ir para baixo com contador de mensagens pendentes */}
-            {showScrollButton && (
-              <button
-                onClick={() => {
-                  scrollToBottom(true);
-                  setPendingMessagesCount(0);
-                  // Marcar como visto
-                  if (selectedContactData?.messages) {
-                    const lastMsgTime = selectedContactData.messages.reduce((max, msg) => {
-                      return Math.max(max, getMessageTimestamp(msg));
-                    }, 0);
-                    setLastViewedMessageTime(prev => ({
-                      ...prev,
-                      [selectedContact!]: lastMsgTime
-                    }));
-                  }
-                }}
-                className="fixed bottom-24 right-8 bg-sky-500 hover:bg-sky-600 text-white rounded-full p-3 shadow-lg transition-all flex items-center justify-center"
-                style={{ zIndex: 40 }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                  {pendingMessagesCount > 0 && (
-                    <span className="text-xs font-bold bg-red-500 rounded-full w-5 h-5 flex items-center justify-center">
-                      {pendingMessagesCount > 9 ? '9+' : pendingMessagesCount}
-                    </span>
-                  )}
-                </div>
-              </button>
-            )}
+              {/* Botão flutuante para ir para baixo com contador de mensagens pendentes */}
+              {showScrollButton && (
+                <button
+                  onClick={() => {
+                    scrollToBottom(true);
+                    setPendingMessagesCount(0);
+                    // Marcar como visto
+                    if (selectedContactData?.messages) {
+                      const lastMsgTime = selectedContactData.messages.reduce((max, msg) => {
+                        return Math.max(max, getMessageTimestamp(msg));
+                      }, 0);
+                      setLastViewedMessageTime(prev => ({
+                        ...prev,
+                        [selectedContact!]: lastMsgTime
+                      }));
+                    }
+                  }}
+                  className="fixed bottom-24 right-8 bg-sky-500 hover:bg-sky-600 text-white rounded-full p-3 shadow-lg transition-all flex items-center justify-center"
+                  style={{ zIndex: 40 }}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    {pendingMessagesCount > 0 && (
+                      <span className="text-xs font-bold bg-red-500 rounded-full w-5 h-5 flex items-center justify-center">
+                        {pendingMessagesCount > 9 ? '9+' : pendingMessagesCount}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )}
 
-            <div className="bg-white px-6 py-4 border-t border-gray-200">
-              {filePreview && (
-                <div className="mb-3 px-4 py-3 bg-blue-50/80 backdrop-blur-sm border border-blue-200/50 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <img src={filePreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
-                    <div className="flex-1">
-                      <p className="text-xs text-blue-600 mb-1 font-medium">Imagem selecionada</p>
-                      <p className="text-xs text-gray-600">{selectedFile?.name}</p>
-                      <button
-                        onClick={clearSelectedFile}
-                        className="text-xs text-red-500 hover:text-red-700 mt-2 font-medium"
-                      >
-                        Remover imagem
-                      </button>
+              <div className="bg-white px-6 py-4 border-t border-gray-200">
+                {filePreview && (
+                  <div className="mb-3 px-4 py-3 bg-blue-50/80 backdrop-blur-sm border border-blue-200/50 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <img src={filePreview} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
+                      <div className="flex-1">
+                        <p className="text-xs text-blue-600 mb-1 font-medium">Imagem selecionada</p>
+                        <p className="text-xs text-gray-600">{selectedFile?.name}</p>
+                        <button
+                          onClick={clearSelectedFile}
+                          className="text-xs text-red-500 hover:text-red-700 mt-2 font-medium"
+                        >
+                          Remover imagem
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {selectedFile && selectedFile.type.startsWith('image/') && (
-                <div className="mb-3">
-                  <input
-                    type="text"
-                    value={imageCaption}
-                    onChange={(e) => setImageCaption(e.target.value)}
-                    placeholder="Legenda para imagem (opcional)"
-                    className="w-full px-4 py-2.5 text-sm bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all placeholder-gray-400"
-                  />
-                </div>
-              )}
+                {selectedFile && selectedFile.type.startsWith('image/') && (
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      value={imageCaption}
+                      onChange={(e) => setImageCaption(e.target.value)}
+                      placeholder="Legenda para imagem (opcional)"
+                      className="w-full px-4 py-2.5 text-sm bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all placeholder-gray-400"
+                    />
+                  </div>
+                )}
 
-              {selectedFile && !selectedFile.type.startsWith('image/') && (
-                <div className="mb-3 px-4 py-3 bg-gray-50/80 backdrop-blur-sm border border-gray-200/50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-gray-400" />
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-600 mb-1 font-medium">Arquivo selecionado</p>
-                      <p className="text-xs text-gray-600">{selectedFile?.name}</p>
-                      <button
-                        onClick={clearSelectedFile}
-                        className="text-xs text-red-500 hover:text-red-700 mt-2 font-medium"
-                      >
-                        Remover arquivo
-                      </button>
+                {selectedFile && !selectedFile.type.startsWith('image/') && (
+                  <div className="mb-3 px-4 py-3 bg-gray-50/80 backdrop-blur-sm border border-gray-200/50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-8 h-8 text-gray-400" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-600 mb-1 font-medium">Arquivo selecionado</p>
+                        <p className="text-xs text-gray-600">{selectedFile?.name}</p>
+                        <button
+                          onClick={clearSelectedFile}
+                          className="text-xs text-red-500 hover:text-red-700 mt-2 font-medium"
+                        >
+                          Remover arquivo
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="file"
-                  ref={imageInputRef}
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-
-                <button
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={sending || !!selectedFile}
-                  className="p-2.5 text-gray-400 hover:text-sky-500 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50"
-                  title="Enviar imagem"
-                >
-                  <ImageIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={sending || !!selectedFile}
-                  className="p-2.5 text-gray-400 hover:text-sky-500 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50"
-                  title="Enviar arquivo"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-
-                <div className="flex-1 bg-gray-50 rounded-lg flex items-center px-4 py-2.5 border border-gray-200 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                <div className="flex items-center gap-3">
                   <input
-                    type="text"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="Digite uma mensagem"
-                    disabled={sending}
-                    className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none disabled:opacity-50 text-sm"
+                    type="file"
+                    ref={imageInputRef}
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
                   />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+
                   <button
-                    className="p-1.5 text-gray-400 hover:text-sky-500 transition-all"
-                    title="Emoji"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={sending || !!selectedFile}
+                    className="p-2.5 text-gray-400 hover:text-sky-500 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50"
+                    title="Enviar imagem"
                   >
-                    <Smile className="w-5 h-5" />
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending || !!selectedFile}
+                    className="p-2.5 text-gray-400 hover:text-sky-500 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50"
+                    title="Enviar arquivo"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex-1 bg-gray-50 rounded-lg flex items-center px-4 py-2.5 border border-gray-200 focus-within:border-sky-500 focus-within:bg-white transition-all">
+                    <input
+                      ref={messageInputRef}
+                      type="text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      onPaste={handlePasteContent}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="Digite uma mensagem (ou cole imagem/arquivo)"
+                      disabled={sending}
+                      className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none disabled:opacity-50 text-sm"
+                    />
+                    <EmojiPicker
+                      onSelect={(emoji) => setMessageText(prev => prev + emoji)}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={(!messageText.trim() && !selectedFile) || sending}
+                    className="p-3 bg-sky-500 hover:bg-sky-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Enviar mensagem"
+                  >
+                    {sending || uploadingFile ? (
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5 text-white" />
+                    )}
                   </button>
                 </div>
 
-                <button
-                  onClick={handleSendMessage}
-                  disabled={(!messageText.trim() && !selectedFile) || sending}
-                  className="p-3 bg-sky-500 hover:bg-sky-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Enviar mensagem"
-                >
-                  {sending || uploadingFile ? (
-                    <Loader2 className="w-5 h-5 text-white animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5 text-white" />
-                  )}
-                </button>
+                {uploadingFile && (
+                  <div className="mt-3 text-center">
+                    <p className="text-sm text-gray-500 font-medium">Enviando arquivo...</p>
+                  </div>
+                )}
               </div>
-
-              {uploadingFile && (
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-gray-500 font-medium">Enviando arquivo...</p>
+            </>
+          ) : activeTab === 'mensagens' ? (
+            <div className="flex-1 flex items-center justify-center bg-transparent">
+              <div className="text-center p-8">
+                <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <MessageSquare className="w-16 h-16 text-blue-500" />
                 </div>
-              )}
-            </div>
-          </>
-        ) : activeTab === 'mensagens' ? (
-          <div className="flex-1 flex items-center justify-center bg-transparent">
-            <div className="text-center p-8">
-              <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <MessageSquare className="w-16 h-16 text-blue-500" />
+                <h3 className="text-2xl font-bold text-gray-700 mb-3 tracking-tight">Selecione uma conversa para começar</h3>
+                <p className="text-gray-500 text-sm">Escolha um contato na lista à esquerda</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-700 mb-3 tracking-tight">Selecione uma conversa para começar</h3>
-              <p className="text-gray-500 text-sm">Escolha um contato na lista à esquerda</p>
             </div>
-          </div>
-        ) : activeTab === 'departamentos' ? (
-          <div className="flex-1 bg-transparent overflow-y-auto">
-            <DepartmentsManagement />
-          </div>
-        ) : activeTab === 'setores' ? (
-          <div className="flex-1 bg-transparent overflow-y-auto">
-            <SectorsManagement />
-          </div>
-        ) : activeTab === 'atendentes' ? (
-          <div className="flex-1 bg-transparent overflow-y-auto">
-            <AttendantsManagement />
-          </div>
-        ) : activeTab === 'tags' ? (
-          <div className="flex-1 bg-transparent overflow-y-auto">
-            <TagsManagement />
-          </div>
-        ) : null}
+          ) : activeTab === 'departamentos' ? (
+            <div className="flex-1 bg-transparent overflow-y-auto">
+              <DepartmentsManagement />
+            </div>
+          ) : activeTab === 'setores' ? (
+            <div className="flex-1 bg-transparent overflow-y-auto">
+              <SectorsManagement />
+            </div>
+          ) : activeTab === 'atendentes' ? (
+            <div className="flex-1 bg-transparent overflow-y-auto">
+              <AttendantsManagement />
+            </div>
+          ) : activeTab === 'tags' ? (
+            <div className="flex-1 bg-transparent overflow-y-auto">
+              <TagsManagement />
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
 
       {imageModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4 cursor-pointer"
           onClick={closeImageModal}
         >
-          <div className="relative max-w-5xl max-h-[90vh]">
+          <div className="relative max-w-5xl max-h-[90vh] cursor-default" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeImageModal}
               className="absolute -top-10 right-0 text-white hover:text-gray-300 transition"
@@ -1814,12 +2291,20 @@ export default function CompanyDashboard() {
             >
               <X className="w-8 h-8" />
             </button>
-            <img
-              src={imageModalSrc}
-              alt="Imagem ampliada"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {imageModalType === 'video' ? (
+              <video
+                src={imageModalSrc}
+                controls
+                autoPlay
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+            ) : (
+              <img
+                src={imageModalSrc}
+                alt="Imagem ampliada"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+            )}
           </div>
         </div>
       )}
@@ -1861,22 +2346,17 @@ export default function CompanyDashboard() {
                     onChange={(e) => setSelectedDepartment(e.target.value)}
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-900"
                   >
-                    <option value="">Selecione um departamento</option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
+                    <option value="">Recepção (Padrão)</option>
+
+                    {/* Mostrar departamentos reais (excluir Recepção) */}
+                    {departments
+                      .filter(dept => !dept.name.startsWith('Recepção'))
+                      .map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
                   </select>
-                  {selectedDepartment && (
-                    <button
-                      onClick={() => setSelectedDepartment('')}
-                      className="px-3 py-3 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                      title="Remover departamento"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -1962,6 +2442,7 @@ export default function CompanyDashboard() {
                     setSelectedDepartment('');
                     setSelectedSector('');
                     setSelectedTags([]);
+                    setDepartamentoTransferencia('');
                   }}
                   className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all"
                 >
@@ -1975,6 +2456,78 @@ export default function CompanyDashboard() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Success Modal */}
+      {showTransferSuccessModal && transferSuccessData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8 p-8">
+            <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">
+              Transferência Registrada! ✅
+            </h2>
+
+            <p className="text-sm text-gray-600 mb-6 text-center">Dados salvos no banco de dados</p>
+
+            <div className="bg-gray-50 rounded-xl p-4 space-y-4 mb-6 border border-gray-200">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Contato</p>
+                <p className="text-base font-bold text-gray-900">{transferSuccessData.nomecontato}</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Número do Contato</p>
+                <p className="text-base font-mono text-gray-900">{transferSuccessData.numero_contato || transferSuccessData.nome_contato}</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Departamento De Origem</p>
+                <p className="text-base font-bold text-gray-700">{transferSuccessData.departamento_origem}</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-3 bg-green-50 p-3 rounded-lg">
+                <p className="text-xs font-semibold text-green-700 uppercase mb-1">Departamento Destino</p>
+                <p className="text-lg font-bold text-green-700">{transferSuccessData.departamento_destino || transferSuccessData.nomedept}</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Data da Transferência</p>
+                <p className="text-sm text-gray-600">
+                  {transferSuccessData.data_transferencia
+                    ? new Date(transferSuccessData.data_transferencia).toLocaleString('pt-BR')
+                    : new Date().toLocaleString('pt-BR')
+                  }
+                </p>
+              </div>
+
+              {transferSuccessData.id && (
+                <div className="border-t border-gray-200 pt-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">ID do Registro</p>
+                  <p className="text-xs font-mono text-gray-500 break-all">{transferSuccessData.id}</p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-600 mb-6 text-center bg-blue-50 border border-blue-200 rounded-lg p-3">
+              📊 Todos os dados foram salvos na tabela <strong>transferencias</strong> para análise futura.
+            </p>
+
+            <button
+              onClick={() => {
+                setShowTransferSuccessModal(false);
+                setTransferSuccessData(null);
+              }}
+              className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

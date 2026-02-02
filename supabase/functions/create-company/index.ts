@@ -190,9 +190,13 @@ Deno.serve(async (req: Request) => {
 
     console.log("Company data to insert:", JSON.stringify(companyData));
 
-    const { error: insertError } = await supabaseAdmin.from("companies").insert(companyData);
+    const { error: insertError, data: insertedCompany } = await supabaseAdmin
+      .from("companies")
+      .insert(companyData)
+      .select("id, name, api_key, user_id")
+      .single();
 
-    console.log("Company insertion result:", { insertError });
+    console.log("Company insertion result:", { insertError, insertedCompany });
 
     if (insertError) {
       console.error("Company insertion failed:", insertError);
@@ -212,7 +216,30 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("Company inserted successfully");
+    console.log("Company inserted successfully with ID:", insertedCompany.id);
+
+    // ✅ NOVO: Criar departamento "Recepção (Global)" automaticamente
+    console.log("Creating default Reception department for company:", insertedCompany.id);
+    const { error: receptionError, data: receptionData } = await supabaseAdmin
+      .from("departments")
+      .insert({
+        company_id: insertedCompany.id,
+        name: "Recepção (Global)",
+      })
+      .select()
+      .single();
+
+    if (receptionError) {
+      console.error("Warning: Failed to create Reception department:", receptionError);
+      // Não faz rollback, pois a empresa foi criada com sucesso
+      // O usuário pode criar manualmente se necessário
+    } else {
+      console.log("✅ Reception department created successfully:", {
+        department_id: receptionData?.id,
+        company_id: receptionData?.company_id,
+        name: receptionData?.name,
+      });
+    }
 
     return new Response(
       JSON.stringify({

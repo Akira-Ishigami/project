@@ -52,6 +52,15 @@ export default function DepartmentsManagement() {
     e.preventDefault();
     if (!company?.id) return;
 
+    // ✅ Bloquear edição da Recepção
+    if (editingId) {
+      const editingDept = departments.find(d => d.id === editingId);
+      if (editingDept?.name === 'Recepção (Global)') {
+        alert('❌ Não é permitido editar o departamento "Recepção (Global)"');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       if (editingId) {
@@ -99,6 +108,12 @@ export default function DepartmentsManagement() {
   };
 
   const handleDelete = async (id: string, name: string) => {
+    // ✅ Bloquear deleção da Recepção
+    if (name === 'Recepção (Global)') {
+      alert('❌ Não é permitido deletar o departamento "Recepção (Global)"');
+      return;
+    }
+
     if (!confirm(`Tem certeza que deseja excluir o departamento "${name}"?`)) {
       return;
     }
@@ -241,15 +256,25 @@ export default function DepartmentsManagement() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(dept)}
-                    className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
-                    title="Editar"
+                    disabled={dept.name === 'Recepção (Global)'}
+                    className={`p-2 rounded-lg transition-all ${
+                      dept.name === 'Recepção (Global)'
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-gray-400 hover:text-teal-600 hover:bg-teal-50'
+                    }`}
+                    title={dept.name === 'Recepção (Global)' ? '🔒 Recepção não pode ser editada' : 'Editar'}
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(dept.id, dept.name)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                    title="Excluir"
+                    disabled={dept.name === 'Recepção (Global)'}
+                    className={`p-2 rounded-lg transition-all ${
+                      dept.name === 'Recepção (Global)'
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                    }`}
+                    title={dept.name === 'Recepção (Global)' ? '🔒 Recepção não pode ser deletada' : 'Excluir'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
