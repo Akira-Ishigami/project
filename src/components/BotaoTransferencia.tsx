@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTransferencia } from '../hooks/useTransferencia';
+import { supabase } from '../lib/supabase';
 
 interface BotaoTransferenciaProps {
-  numeroContato: number;
+  /** Número do contato (pode vir como number ou string). */
+  numeroContato: number | string;
   nomeContato: string;
   departamentoAtual: string;
+  /** Lista de departamentos (apenas nomes) - modo legado */
   departamentos: string[];
   apiKey: string;
+
+  /**
+   * (Recomendado) IDs reais para gravar no banco.
+   * Se estes campos existirem, o botão usa RPC `transfer_contact_department`
+   * para atualizar `contacts.department_id` e inserir em `transferencias`.
+   */
+  companyId?: string;
+  contactId?: string;
+  departamentoAtualId?: string | null;
+  departamentosMeta?: Array<{ id: string; name: string }>;
+
   onSucesso?: () => void;
 }
 
@@ -16,11 +30,18 @@ export function BotaoTransferencia({
   departamentoAtual,
   departamentos,
   apiKey,
+  companyId,
+  contactId,
+  departamentoAtualId,
+  departamentosMeta,
   onSucesso
 }: BotaoTransferenciaProps) {
   const [mostraOpcoes, setMostraOpcoes] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const { adicionarTransferencia } = useTransferencia(apiKey);
+
+  const numeroNormalizado = useMemo(() => String(numeroContato ?? '').replace(/\D/g, ''), [numeroContato]);
+  const podeUsarRpc = Boolean(companyId && contactId && departamentosMeta?.length);
 
   const handleTransferir = async (departamentoDestino: string) => {
     // Validações
@@ -30,7 +51,7 @@ export function BotaoTransferencia({
       return;
     }
 
-    if (!numeroContato || numeroContato === 0) {
+    if (!numeroNormalizado) {
       alert('❌ Erro: Número do contato inválido!');
       return;
     }
@@ -57,31 +78,66 @@ export function BotaoTransferencia({
 
     setCarregando(true);
 
-    const dados = {
-      api_key: apiKey,
-      numero_contato: numeroContato,
-      nome_contato: nomeContato,
-      departamento_origem: departamentoAtual,
-      departamento_destino: departamentoDestino
-    };
+    try {
+      // ✅ Caminho recomendado: usa IDs reais e faz tudo em 1 chamada (update + insert)
+      if (podeUsarRpc) {
+        const deptDestino = departamentosMeta!.find((d) => d.name === departamentoDestino);
+        if (!deptDestino?.id) {
+          alert('❌ Erro: não consegui resolver o ID do departamento de destino.');
+          console.error('departamentosMeta sem match para:', departamentoDestino, departamentosMeta);
+          return;
+        }
 
-    console.log('🔄 Enviando transferência:', dados);
+        console.log('🔄 Transferência (RPC):', {
+          companyId,
+          contactId,
+          fromDepartmentId: departamentoAtualId ?? null,
+          toDepartmentId: deptDestino.id,
+          numero: numeroNormalizado,
+        });
 
-    const resultado = await adicionarTransferencia(dados);
+        const { error } = await supabase.rpc('transfer_contact_department', {
+          p_company_id: companyId,
+          p_contact_id: contactId,
+          p_to_department_id: deptDestino.id,
+        });
 
-    console.log('📨 Resposta:', resultado);
+        if (error) {
+          console.error('❌ RPC transfer_contact_department falhou:', error);
+          alert(`❌ Erro ao transferir (RPC): ${error.message}`);
+          return;
+        }
 
-    if (resultado.sucesso) {
-      console.log('✅ Sucesso - Dados:', resultado.data);
-      setMostraOpcoes(false);
-      alert(`✅ Contato #${numeroContato} transferido com sucesso para ${departamentoDestino}!`);
-      onSucesso?.();
-    } else {
-      console.error('❌ Erro completo:', resultado);
-      alert(`❌ Erro ao transferir: ${resultado.erro}\n\nAbra o console (F12) para mais detalhes.`);
+        setMostraOpcoes(false);
+        alert(`✅ Contato #${numeroNormalizado} transferido com sucesso para ${departamentoDestino}!`);
+        onSucesso?.();
+        return;
+      }
+
+      // 🧩 Caminho legado: mantém seu hook (pode ser RPC antiga). Pelo menos agora loga e não quebra.
+      const dados = {
+        api_key: apiKey,
+        numero_contato: numeroNormalizado,
+        nome_contato: nomeContato,
+        departamento_origem: departamentoAtual,
+        departamento_destino: departamentoDestino,
+      };
+
+      console.log('🔄 Enviando transferência (legado):', dados);
+      const resultado = await adicionarTransferencia(dados as any);
+      console.log('📨 Resposta (legado):', resultado);
+
+      if ((resultado as any)?.sucesso) {
+        setMostraOpcoes(false);
+        alert(`✅ Contato #${numeroNormalizado} transferido com sucesso para ${departamentoDestino}!`);
+        onSucesso?.();
+      } else {
+        console.error('❌ Erro completo (legado):', resultado);
+        alert(`❌ Erro ao transferir: ${(resultado as any)?.erro || 'desconhecido'}\n\nAbra o console (F12) para mais detalhes.`);
+      }
+    } finally {
+      setCarregando(false);
     }
-
-    setCarregando(false);
   };
 
   return (
@@ -112,7 +168,10 @@ export function BotaoTransferencia({
                 .map((dept) => (
                   <button
                     key={dept}
-                    onClick={() => handleTransferir(dept)}
+                    onClick={() => {
+                      console.log('🖱️ Clique em dept destino:', dept);
+                      handleTransferir(dept);
+                    }}
                     disabled={carregando}
                     className="w-full text-left px-4 py-2 hover:bg-blue-50 transition text-sm text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

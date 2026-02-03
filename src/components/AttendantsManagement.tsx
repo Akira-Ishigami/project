@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit2, X, Loader2, UserCircle2, CheckCircle, XCircle, Users } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Loader2, UserCircle2, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Department {
@@ -231,10 +231,10 @@ export default function AttendantsManagement() {
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', email: '', phone: '', password: '', department_id: '', sector_id: '', is_active: true });
+    setFormData({ name: '', email: '', phone: '', function: '', password: '', department_id: '', sector_id: '', is_active: true });
     setShowForm(false);
     setEditingId(null);
-  };
+  }; 
 
   const formatPhoneNumber = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -508,14 +508,14 @@ export default function AttendantsManagement() {
           {attendants.map((attendant, index) => (
             <div
               key={attendant.id}
-              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-in fade-in slide-in-from-bottom"
+              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group animate-in fade-in slide-in-from-bottom"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
                   <UserCircle2 className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(attendant)}
                     className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
@@ -536,11 +536,17 @@ export default function AttendantsManagement() {
               <div className="flex items-start gap-2 mb-2">
                 <h3 className="text-lg font-bold text-gray-900 flex-1">{attendant.name}</h3>
                 {attendant.is_active ? (
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" title="Ativo" />
+                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                    <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    Ativo
+                  </span>
                 ) : (
-                  <XCircle className="w-5 h-5 text-gray-400 flex-shrink-0" title="Inativo" />
+                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full" />
+                    Inativo
+                  </span>
                 )}
-              </div>
+              </div> 
 
               <div className="space-y-1 mb-3">
                 <p className="text-sm text-gray-600 truncate">{attendant.email}</p>

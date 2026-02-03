@@ -317,11 +317,11 @@ export default function SectorsManagement() {
                 {deptSectors.map((sector) => (
                   <div
                     key={sector.id}
-                    className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all"
+                    className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group hover:-translate-y-0.5 border-l-4 border-teal-100"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="text-base font-bold text-gray-900">{sector.name}</h4>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEdit(sector)}
                           className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"

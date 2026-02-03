@@ -1,17 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Smile, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, Send as SendIcon } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
 import TagsManagement from './TagsManagement';
 import Toast from './Toast';
-import SystemMessage from './SystemMessage';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
-import { useDeteccaoTransferencia } from '../hooks/useDeteccaoTransferencia';
-import { registrarTransferencia } from '../lib/mensagemTransferencia';
 
 interface Contact {
   phoneNumber: string;
@@ -45,6 +42,8 @@ interface Department {
   id: string;
   name: string;
   company_id: string | null; // ✅ global quando NULL
+  is_reception?: boolean | null;
+  is_default?: boolean | null;
 }
 
 interface Sector {
@@ -74,11 +73,13 @@ function normalizePhone(input?: string | null): string {
   return noJid.replace(/\D/g, '');
 }
 
-function safeISO(dateStr?: string | null): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return isNaN(d.getTime()) ? '' : d.toISOString();
+// Para consultas no banco (se o número vier sem DDI 55 ou com sufixo @...)
+function normalizeDbPhone(input?: string | null): string {
+  const digits = normalizePhone(input);
+  if (!digits) return '';
+  return digits.startsWith('55') ? digits : `55${digits}`;
 }
+
 
 type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags';
 
@@ -90,6 +91,66 @@ export default function CompanyDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+
+  // Cache para evitar múltiplas buscas no fallback de contatos
+  const fetchedPhonesRef = useRef<Set<string>>(new Set());
+
+  const fetchAndCacheContactByPhone = useCallback(async (phone: string) => {
+    const phoneNormalized = normalizeDbPhone(phone);
+    if (!phoneNormalized) return;
+    if (fetchedPhonesRef.current.has(phoneNormalized)) return;
+    fetchedPhonesRef.current.add(phoneNormalized);
+
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('phone_number', phoneNormalized)
+        .maybeSingle();
+
+      if (fetchErr) {
+        console.error('Erro ao buscar contato (fallback):', fetchErr);
+        return;
+      }
+
+      if (data) {
+        console.log('Fallback contact found:', data.phone_number, data.name, data.company_id);
+        setContactsDB(prev => {
+          if (prev.some(c => c.id === data.id)) return prev;
+          return [...prev, { ...data, tag_ids: data.tag_ids || [] } as any];
+        });
+      }
+    } catch (e) {
+      console.error('Erro inesperado ao buscar contato (fallback):', e);
+    }
+  }, []);
+
+
+  // Mensagem de sistema no meio do chat (UI)
+  const addInlineSystemMessage = useCallback((messageText: string, type: "system_transfer" | "system_notification" = "system_notification") => {
+    const nowIso = new Date().toISOString();
+    const uiMsg: any = {
+      id: `ui_${type}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      numero: selectedContact || null,
+      sender: null,
+      minha: "false",
+      pushname: "SISTEMA",
+      tipomessage: type,
+      message: messageText,
+      date_time: nowIso,
+      created_at: nowIso,
+      apikey_instancia: company?.api_key,
+      company_id: company?.id,
+    };
+
+    const toTs = (m: any) => {
+      const raw = m?.date_time || m?.created_at || m?.timestamp;
+      const t = raw ? new Date(raw).getTime() : 0;
+      return Number.isFinite(t) ? t : 0;
+    };
+
+    setMessages((prev) => [...prev, uiMsg].sort((a, b) => toTs(a) - toTs(b)));
+  }, [selectedContact, company?.api_key, company?.id]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
@@ -97,20 +158,45 @@ export default function CompanyDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadingFile] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalSrc, setImageModalSrc] = useState('');
   const [imageModalType, setImageModalType] = useState<'image' | 'sticker' | 'video'>('image');
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
+
+  // ✅ ID do departamento "Recepção" (criado automaticamente no banco)
+  const receptionDeptId = useMemo(() => {
+    const recepcao = departments.find(
+      (d) => d.is_reception === true || String(d.name ?? '').toLowerCase().startsWith('recep')
+    );
+    return recepcao?.id ?? '';
+  }, [departments]);
+
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedSector, setSelectedSector] = useState<string>('');
+
+  // Mostra apenas setores do departamento selecionado
+  const sectorsFiltered = useMemo(() => {
+    const deptId = (selectedDepartment || '').trim();
+    if (!deptId) return []; // sem dept => não mostra setor
+    return sectors.filter((s: any) => s.department_id === deptId);
+  }, [sectors, selectedDepartment]);
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // ✅ Ao abrir o modal, se o contato não tiver departamento, já seleciona a Recepção
+  useEffect(() => {
+    if (!showOptionsMenu) return;
+    if (selectedDepartment) return;
+    if (!receptionDeptId) return;
+    setSelectedDepartment(receptionDeptId);
+  }, [showOptionsMenu, selectedDepartment, receptionDeptId]);
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
-  const [transferindo, setTransferindo] = useState(false);
+  const [, setTransferindo] = useState(false);
   const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
   const [transferSuccessData, setTransferSuccessData] = useState<{
     id?: string;
@@ -138,9 +224,9 @@ export default function CompanyDashboard() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
 
-  const handlePasteContent = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
     if (!items) return;
 
@@ -180,7 +266,6 @@ export default function CompanyDashboard() {
     }
   };
   const isUserScrollingRef = useRef(false);
-  const lastSectorRef = useRef<{ [key: string]: string | null }>({});
 
   const scrollToBottom = (smooth = true) => {
     requestAnimationFrame(() => {
@@ -216,7 +301,7 @@ export default function CompanyDashboard() {
     return 'document';
   };
 
-  const getMessageTypeFromTipomessage = (tipomessage?: string): 'image' | 'audio' | 'document' | 'sticker' | 'video' | null => {
+  const getMessageTypeFromTipomessage = (tipomessage?: string | null): 'image' | 'audio' | 'document' | 'sticker' | 'video' | null => {
     if (!tipomessage) return null;
 
     const tipo = tipomessage.toLowerCase();
@@ -672,186 +757,247 @@ export default function CompanyDashboard() {
   };
 
   const handleUpdateContactInfo = async () => {
-    if (!selectedContact || !company?.api_key || !company?.id) return;
+  if (!selectedContact || !company?.api_key || !company?.id) return;
 
-    try {
-      const updates: any = {};
+  try {
+    // Helpers locais (garante que existem)
+    const normalizePhone = (v: string) => (v || "").toString().replace(/\D/g, "").replace(/@.*$/, "");
+    const normalizeDbPhone = (v: string) => {
+      const digits = normalizePhone(v);
+      if (!digits) return digits;
+      return digits.startsWith("55") ? digits : `55${digits}`;
+    };
 
-      // ✅ Validar department_id: se tem valor, deve ser UUID válido
-      if (selectedDepartment && selectedDepartment.trim()) {
-        // Verificar se é um UUID válido na lista de departamentos
-        const deptValido = departments.find(d => d.id === selectedDepartment);
-        if (deptValido) {
-          updates.department_id = selectedDepartment;
+    const selectedPhoneDb = normalizeDbPhone(selectedContact);
+
+    // =========================
+    // 1) Pegar contato atual (state -> banco fallback)
+    // =========================
+    let currentContact: any =
+      contactsDB.find((c) => normalizeDbPhone(c.phone_number) === selectedPhoneDb) || null;
+
+    // Se não achou no state OU achou sem id, busca no banco por phone_number
+    if (!currentContact?.id) {
+      console.warn("⚠️ Contato não encontrado no state, buscando no banco...", selectedPhoneDb);
+
+      // Primeiro busca só por phone_number (evita company.id errado)
+      const { data: byPhone, error: byPhoneErr } = await supabase
+        .from("contacts")
+        .select("id, company_id, phone_number, name, department_id, sector_id")
+        .eq("phone_number", selectedPhoneDb)
+        .maybeSingle();
+
+      if (byPhoneErr) console.error("❌ Erro ao buscar contato no banco (phone_number):", byPhoneErr);
+      if (byPhone?.id) currentContact = byPhone;
+
+      // Se ainda não achou, tenta fallback removendo 55 (caso DB esteja sem 55)
+      if (!currentContact?.id) {
+        const without55 = selectedPhoneDb.startsWith("55") ? selectedPhoneDb.slice(2) : selectedPhoneDb;
+        const { data: byPhone2, error: byPhone2Err } = await supabase
+          .from("contacts")
+          .select("id, company_id, phone_number, name, department_id, sector_id")
+          .eq("phone_number", without55)
+          .maybeSingle();
+
+        if (byPhone2Err) console.error("❌ Erro ao buscar contato no banco (phone sem 55):", byPhone2Err);
+        if (byPhone2?.id) currentContact = byPhone2;
+      }
+    }
+
+    if (!currentContact?.id) {
+      console.error("❌ Contato não encontrado nem no state nem no banco:", selectedPhoneDb);
+      setToastMessage("Contato não encontrado");
+      setShowToast(true);
+      return;
+    }
+
+    const contactId = currentContact.id;
+
+    // =========================
+    // 2) Resolver Departamento (ID real)
+    // =========================
+    const receptionDept =
+      departments.find((d) => (d as any).is_reception) ||
+      departments.find((d) => d.name?.toLowerCase().startsWith("recep"));
+
+    if (!receptionDept?.id) {
+      throw new Error("Departamento Recepção não encontrado (is_reception ou nome começando com 'recep').");
+    }
+
+    // selectedDepartment precisa ser ID (uuid). Se vier vazio -> Recepção
+    const newDepartmentId =
+      selectedDepartment && selectedDepartment.trim() ? selectedDepartment : receptionDept.id;
+
+    // valida se existe na lista carregada
+    if (!departments.some((d) => d.id === newDepartmentId)) {
+      throw new Error(`Departamento inválido (não está na lista carregada): ${newDepartmentId}`);
+    }
+
+    // Setor (não gera mensagem/evento, só atualiza se quiser)
+    const newSectorId = selectedSector && selectedSector.trim() ? selectedSector : null;
+
+    // =========================
+    // 3) Detectar mudanças
+    // =========================
+    const oldDepartmentId = currentContact.department_id || receptionDept.id;
+    const oldSectorId = currentContact.sector_id || null;
+
+    const departmentChanged = oldDepartmentId !== newDepartmentId;
+    const sectorChanged = oldSectorId !== newSectorId;
+
+    // Tags: aqui o state real é selectedTags. Mas o contato no banco não tem tag_ids.
+    // A referência correta é a tabela contact_tags. Então consideramos "mudou" sempre que selectedTags for diferente do estado selecionado atual da UI.
+    // (Se você já carrega selectedTags a partir do banco ao selecionar o contato, isso fica correto.)
+
+    if (!departmentChanged && !sectorChanged && selectedTags.length === 0) {
+      setToastMessage("Nenhuma alteração foi feita");
+      setShowToast(true);
+      return;
+    }
+
+    // =========================
+    // 4) Atualizar CONTACT
+    // =========================
+    const updates: Record<string, any> = {};
+    if (departmentChanged) updates.department_id = newDepartmentId;
+    if (sectorChanged) updates.sector_id = newSectorId;
+
+    if (Object.keys(updates).length > 0) {
+      const { error: contactError } = await supabase
+        .from("contacts")
+        .update(updates)
+        .eq("id", contactId);
+
+      if (contactError) {
+        console.error("❌ Erro ao atualizar contato:", contactError);
+        throw contactError;
+      }
+    }
+
+    // =========================
+    // 5) Registrar transferência + mensagem UI (somente se mudou dept)
+    // =========================
+    if (departmentChanged) {
+      const oldDeptName = departments.find((d: any) => d.id === oldDepartmentId)?.name || "Desconhecido";
+      const newDeptName = departments.find((d: any) => d.id === newDepartmentId)?.name || "Desconhecido";
+
+      console.log("🔄 [TRANSFER] De:", oldDepartmentId, "→ Para:", newDepartmentId);
+
+      // 5.1) Tenta RPC (se existir)
+      let transferOk = false;
+      try {
+        const { error: rpcErr } = await supabase.rpc("transfer_contact_department", {
+          p_company_id: company.id,
+          p_contact_id: contactId,
+          p_to_department_id: newDepartmentId,
+        });
+
+        if (rpcErr) {
+          console.warn("⚠️ RPC transfer_contact_department falhou, vai para fallback:", rpcErr);
         } else {
-          throw new Error(`Departamento inválido: ${selectedDepartment}`);
+          transferOk = true;
         }
-      } else {
-        updates.department_id = null;  // Recepção (padrão)
-      }
-      
-      updates.sector_id = selectedSector || null;
-
-      const currentContact = contactsDB.find(
-        c => normalizePhone(c.phone_number) === normalizePhone(selectedContact)
-      );
-
-      if (!currentContact?.id) throw new Error('Contato não encontrado');
-      const contactId = currentContact.id;
-
-      // Tags atuais
-      const currentTags = currentContact?.tag_ids || [];
-      const tagsChanged =
-        selectedTags.length !== currentTags.length ||
-        !selectedTags.every(tag => currentTags.includes(tag));
-
-      // Detecta mudança dept
-      const oldDepartmentId = currentContact.department_id || null;
-      const newDepartmentId = selectedDepartment || null;
-      // ✅ Mudança detectada se old !== new (e não é null→null)
-      const departmentChanged =
-        oldDepartmentId !== newDepartmentId &&
-        !(oldDepartmentId === null && newDepartmentId === null);
-
-      // Detecta mudança setor
-      const oldSectorId = currentContact.sector_id || null;
-      const newSectorId = selectedSector || null;
-      const sectorChanged = oldSectorId !== newSectorId;
-
-      if (Object.keys(updates).length === 0 && !tagsChanged && !departmentChanged) {
-        setToastMessage('Nenhuma alteração foi feita');
-        setShowToast(true);
-        return;
+      } catch (e) {
+        console.warn("⚠️ Exceção ao chamar RPC transfer_contact_department:", e);
       }
 
-      // ✅ Atualiza contato
-      if (Object.keys(updates).length > 0) {
-        const { error: contactError } = await supabase
-          .from('contacts')
-          .update(updates)
-          .eq('id', contactId);
-
-        if (contactError) {
-          console.error('Erro ao atualizar contato:', contactError);
-          throw contactError;
-        }
-      }
-
-      // ✅ Registra transferência se mudou dept
-      if (departmentChanged) {
-        console.log('🔄 [AUTO-TRANSFER] Mudança de departamento detectada, registrando...');
-        console.log('  De:', oldDepartmentId || 'Recepção', '→ Para:', newDepartmentId || 'Recepção');
-
-        try {
-          // ✅ Se for Recepção (null), buscar o ID real do departamento "Recepção"
-          let deptOrigemId = oldDepartmentId;
-          let deptDestinoId = newDepartmentId;
-
-          if (!deptOrigemId) {
-            const recepccaoDept = departments.find(d => d.name.includes('Recepção'));
-            deptOrigemId = recepccaoDept?.id || null;
-          }
-
-          if (!deptDestinoId) {
-            const recepccaoDept = departments.find(d => d.name.includes('Recepção'));
-            deptDestinoId = recepccaoDept?.id || null;
-          }
-
-          const resultadoTransf = await registrarTransferencia({
-            api_key: company.api_key,
+      // 5.2) Fallback: INSERT direto em transferencias (se RPC não existir)
+      if (!transferOk) {
+        const { error: fallbackErr } = await supabase.from("transferencias").insert([
+          {
+            company_id: company.id,
             contact_id: contactId,
-            departamento_origem_id: deptOrigemId,
-            departamento_destino_id: deptDestinoId,
-          });
-
-          if (!resultadoTransf?.sucesso) {
-            console.error('⚠️ [AUTO-TRANSFER] Erro ao registrar transferência:', resultadoTransf?.erro);
-          } else {
-            console.log('✅ [AUTO-TRANSFER] Transferência registrada com sucesso');
-          }
-        } catch (erroTransf) {
-          console.error('❌ [AUTO-TRANSFER] Erro exceção ao registrar transferência:', erroTransf);
-        }
-      }
-
-      // ✅ Atualiza tags: remove tudo e reinsere (só se mudou)
-      if (tagsChanged) {
-        await supabase.from('contact_tags').delete().eq('contact_id', contactId);
-
-        if (selectedTags.length > 0) {
-          const tagsToInsert = selectedTags.slice(0, 5).map(tagId => ({
-            contact_id: contactId,
-            tag_id: tagId,
-          }));
-
-          const { error: tagsError } = await supabase.from('contact_tags').insert(tagsToInsert);
-          if (tagsError) {
-            console.error('Erro ao atualizar tags:', tagsError);
-            throw tagsError;
-          }
-        }
-      }
-
-      // ✅ Atualiza messages e sent_messages (mantém coerência)
-      if (Object.keys(updates).length > 0) {
-        const [messagesResult, sentMessagesResult] = await Promise.all([
-          supabase
-            .from('messages')
-            .update(updates)
-            .eq('apikey_instancia', company.api_key)
-            .eq('numero', selectedContact),
-
-          supabase
-            .from('sent_messages')
-            .update(updates)
-            .eq('apikey_instancia', company.api_key)
-            .eq('numero', selectedContact),
+            from_department_id: oldDepartmentId,
+            to_department_id: newDepartmentId,
+          },
         ]);
 
-        if (messagesResult.error) console.error('Erro ao atualizar messages:', messagesResult.error);
-        if (sentMessagesResult.error) console.error('Erro ao atualizar sent_messages:', sentMessagesResult.error);
+        if (fallbackErr) {
+          console.error("❌ Fallback insert transferencias falhou:", fallbackErr);
+        } else {
+          transferOk = true;
+        }
       }
 
-      // ✅ Notificação no chat quando muda setor
-      if (sectorChanged) {
-        const oldSectorName = sectors.find(s => s.id === oldSectorId)?.name || 'Desconhecido';
-        const newSectorName = newSectorId ? sectors.find(s => s.id === newSectorId)?.name : 'Sem setor';
-        const phoneDisplay = getPhoneNumber(selectedContact);
-
-        const systemMessage = {
-          numero: selectedContact,
-          sender: null,
-          'minha?': 'false',
-          pushname: 'SISTEMA',
-          apikey_instancia: company.api_key,
-          date_time: new Date().toISOString(),
-          instancia: company.name,
-          idmessage: `sys_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-          company_id: company.id,
-          message: `${phoneDisplay} foi do setor ${oldSectorName} para o setor ${newSectorName}`,
-          tipomessage: 'system_notification',
-          created_at: new Date().toISOString(),
-        };
-
-        await supabase.from('messages').insert([systemMessage]);
+      // Mensagem 100% UI
+      if (transferOk) {
+        addInlineSystemMessage(`Chamado transferido de ${oldDeptName} para ${newDeptName}`, "system_transfer");
       }
-
-      setToastMessage('Informações atualizadas com sucesso!');
-      setShowToast(true);
-
-      setShowOptionsMenu(false);
-      setSelectedDepartment('');
-      setSelectedSector('');
-      setSelectedTags([]);
-
-      fetchMessages();
-      fetchContacts();
-    } catch (error: any) {
-      console.error('Erro ao atualizar informações:', error);
-      setToastMessage(`Erro: ${error?.message || 'Não foi possível atualizar as informações'}`);
-      setShowToast(true);
     }
-  };
+
+    // =========================
+    // 6) Atualizar TAGS (contact_tags)
+    // =========================
+    // Se você quer manter a lógica original de comparar, você precisa carregar as tags atuais do contato no momento da seleção.
+    // Aqui vamos fazer "sync direto" pelo selectedTags.
+    const { error: delErr } = await supabase
+      .from("contact_tags")
+      .delete()
+      .eq("contact_id", contactId);
+
+    if (delErr) {
+      console.error("❌ Erro ao remover tags antigas:", delErr);
+      throw delErr;
+    }
+
+    if (selectedTags.length > 0) {
+      const tagsToInsert = selectedTags.slice(0, 5).map((tagId) => ({
+        contact_id: contactId,
+        tag_id: tagId,
+      }));
+
+      const { error: tagsError } = await supabase.from("contact_tags").insert(tagsToInsert);
+
+      if (tagsError) {
+        console.error("❌ Erro ao inserir tags:", tagsError);
+        throw tagsError;
+      }
+    }
+
+    // =========================
+    // 7) Sync messages / sent_messages (somente se dept/sector mudou)
+    // =========================
+    if (Object.keys(updates).length > 0) {
+      const phoneForMsg = selectedPhoneDb;
+
+      const [messagesResult, sentMessagesResult] = await Promise.all([
+        supabase
+          .from("messages")
+          .update(updates)
+          .eq("apikey_instancia", company.api_key)
+          .eq("numero", phoneForMsg),
+
+        supabase
+          .from("sent_messages")
+          .update(updates)
+          .eq("apikey_instancia", company.api_key)
+          .eq("numero", phoneForMsg),
+      ]);
+
+      if (messagesResult.error) console.error("❌ Erro ao atualizar messages:", messagesResult.error);
+      if (sentMessagesResult.error) console.error("❌ Erro ao atualizar sent_messages:", sentMessagesResult.error);
+    }
+
+    // =========================
+    // 8) Finalização UI
+    // =========================
+    setToastMessage("Informações atualizadas com sucesso!");
+    setShowToast(true);
+
+    setShowOptionsMenu(false);
+    setSelectedDepartment("");
+    setSelectedSector("");
+    setSelectedTags([]);
+
+    // Atualiza listas na UI (mantém sua estrutura)
+    fetchContacts();
+    fetchMessages();
+  } catch (error: any) {
+    console.error("Erro ao atualizar informações:", error);
+    setToastMessage(`Erro: ${error?.message || "Não foi possível atualizar as informações"}`);
+    setShowToast(true);
+  }
+};
 
 
   const handleTransferir = async () => {
@@ -868,9 +1014,26 @@ export default function CompanyDashboard() {
       return;
     }
 
-    const currentContact = contactsDB.find(
-      c => normalizePhone(c.phone_number) === normalizePhone(selectedContact)
+    // Pode acontecer de o state estar desatualizado. Fazemos fallback no banco.
+    let currentContact: any = contactsDB.find(
+      (c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact)
     );
+
+    if (!currentContact?.id && company?.id) {
+      console.warn('⚠️ Contato não encontrado no state, buscando no banco...', selectedContact);
+      const { data, error: fetchContactErr } = await supabase
+        .from('contacts')
+        .select('id, company_id, phone_number, name, department_id')
+        .eq('company_id', company.id)
+        .eq('phone_number', normalizeDbPhone(selectedContact))
+        .maybeSingle();
+
+      if (fetchContactErr) {
+        console.error('❌ Erro ao buscar contato no banco:', fetchContactErr);
+      }
+
+      if (data) currentContact = data;
+    }
 
     if (!currentContact?.id) {
       setToastMessage('❌ Erro: Contato não encontrado');
@@ -896,18 +1059,57 @@ export default function CompanyDashboard() {
     setTransferindo(true);
 
     try {
-      const payload = {
-        api_key: company.api_key,
-        contact_id: currentContact.id,
-        departamento_origem_id: oldDeptId,
-        departamento_destino_id: deptDestino.id,
-      };
+      // 1) Atualizar contact + 2) inserir histórico de transferência
+      // Preferência: RPC (1 chamada). Fallback: update+insert.
+      let transferOk = false;
 
-      const resultado = await registrarTransferencia(payload);
+      // Tentativa 1: RPC
+      try {
+        const { error: rpcErr } = await supabase.rpc('transfer_contact_department', {
+          p_company_id: company.id,
+          p_contact_id: currentContact.id,
+          p_to_department_id: deptDestino.id,
+        });
 
-      if (resultado?.sucesso) {
+        if (rpcErr) {
+          console.warn('⚠️ RPC transfer_contact_department falhou, usando fallback...', rpcErr);
+        } else {
+          transferOk = true;
+        }
+      } catch (rpcCatch) {
+        console.warn('⚠️ Exceção ao chamar RPC, usando fallback...', rpcCatch);
+      }
+
+      // Tentativa 2: Fallback (update contacts + insert transferencias)
+      if (!transferOk) {
+        const { error: updErr } = await supabase
+          .from('contacts')
+          .update({ department_id: deptDestino.id })
+          .eq('id', currentContact.id)
+          .eq('company_id', company.id);
+
+        if (updErr) throw updErr;
+
+        const { error: insErr } = await supabase.from('transferencias').insert([
+          {
+            company_id: company.id,
+            contact_id: currentContact.id,
+            from_department_id: oldDeptId,
+            to_department_id: deptDestino.id,
+          },
+        ]);
+
+        if (insErr) throw insErr;
+        transferOk = true;
+      }
+
+      if (transferOk) {
         setTransferSuccessData({
-          ...resultado.data,
+          // Mantém o modal/estrutura existente sem depender do retorno do backend
+          id: crypto?.randomUUID?.() || String(Date.now()),
+          contact_id: currentContact.id,
+          from_department_id: oldDeptId,
+          to_department_id: deptDestino.id,
           nomedept: deptDestino.name,
           nomecontato: currentContact.name,
         });
@@ -920,10 +1122,15 @@ export default function CompanyDashboard() {
         setDepartamentoTransferencia('');
         setShowOptionsMenu(false);
 
+        // Mensagem 100% UI (não gravar em messages)
+        const oldDeptName = departments.find((d: any) => d.id === oldDeptId)?.name || 'Desconhecido';
+        const transferText = `Chamado transferido de ${oldDeptName} para ${deptDestino.name}`;
+        addInlineSystemMessage(transferText, 'system_transfer');
+
         fetchMessages();
         fetchContacts();
       } else {
-        setToastMessage(`❌ Erro: ${resultado?.erro || 'Erro desconhecido'}`);
+        setToastMessage(`❌ Erro: Erro desconhecido`);
         setShowToast(true);
       }
     } catch (error: any) {
@@ -1051,6 +1258,42 @@ export default function CompanyDashboard() {
       });
     }
   });
+  // Detecta transferências em tempo real e mostra um aviso no meio do chat
+  useEffect(() => {
+    if (!company?.id) return;
+
+    const channel = supabase
+      .channel(`rt-transferencias-${company.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "transferencias", filter: `company_id=eq.${company.id}` },
+        (payload: any) => {
+          const row = payload?.new || {};
+          const contactId = row.contact_id || row.contactId || row.contato_id;
+          if (!contactId || !selectedContact) return;
+
+          const currentContact = contactsDB.find(
+            (c: any) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact)
+          );
+          if (!currentContact?.id || currentContact.id !== contactId) return;
+
+          const fromId = row.from_department_id || row.departamento_origem_id || row.fromDepartmentId;
+          const toId = row.to_department_id || row.departamento_destino_id || row.toDepartmentId;
+
+          const fromName = departments.find((d: any) => d.id === fromId)?.name || "Desconhecido";
+          const toName = departments.find((d: any) => d.id === toId)?.name || "Desconhecido";
+
+          addInlineSystemMessage(`Chamado transferido de ${fromName} para ${toName}`, "system_transfer");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [company?.id, selectedContact, contactsDB, departments, addInlineSystemMessage]);
+
+
 
   // Polling automático como fallback - verifica a cada 3 segundos
   useEffect(() => {
@@ -1128,10 +1371,6 @@ export default function CompanyDashboard() {
     return normalizePhone(contactId);
   };
 
-  const getContactName = (msg: Message): string => {
-    return msg.pushname || getPhoneNumber(getContactId(msg));
-  };
-
   const groupMessagesByContact = (): Contact[] => {
     const contactsMap: { [key: string]: Contact } = {};
 
@@ -1141,10 +1380,15 @@ export default function CompanyDashboard() {
 
       if (!contactsMap[contactId]) {
         // Buscar informações do contato na tabela contacts
-        const contactDB = contactsDB.find(c => normalizePhone(c.phone_number) === contactId);
+        const contactDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contactId));
 
-        // SEMPRE usar nome do banco, nunca do pushname
-        const contactName = contactDB?.name || getPhoneNumber(contactId);
+        // Se não estiver no state, tentar buscar no banco (fallback sem depender de company_id)
+        if (!contactDB) {
+          fetchAndCacheContactByPhone(contactId);
+        }
+
+        // SEMPRE usar nome do banco. Se não existir, exibir vazio (sem fallback)
+        const contactName = contactDB?.name || '';
 
         contactsMap[contactId] = {
           phoneNumber: contactId,
@@ -1175,12 +1419,12 @@ export default function CompanyDashboard() {
       contact.lastMessageTime = lastMsgTime > 0 ? new Date(lastMsgTime).toISOString() : '';
 
       // CRÍTICO: O nome SEMPRE vem do banco de dados
-      // NUNCA usar pushname da mensagem - isto causa o problema de nome mudando
-      const dbContact = contactsDB.find(c => normalizePhone(c.phone_number) === contact.phoneNumber);
+      // Se o DB não tiver name, mostramos vazio (sem fallback)
+      const dbContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber));
       if (dbContact?.name) {
         contact.name = dbContact.name;
       } else {
-        contact.name = getPhoneNumber(contact.phoneNumber);
+        contact.name = '';
       }
 
       // Contar mensagens pendentes (do cliente, não respondidas pela empresa)
@@ -1240,6 +1484,14 @@ export default function CompanyDashboard() {
   const selectedContactData = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact)
     : null;
+
+  const isContactOnline = (() => {
+    if (!selectedContactData) return false;
+    const lastMsg = selectedContactData.messages?.slice(-1)[0];
+    if (!lastMsg || !lastMsg.created_at) return false;
+    const lastTs = new Date(lastMsg.created_at).getTime();
+    return (Date.now() - lastTs) < 5 * 60 * 1000;
+  })();
 
   useEffect(() => {
     if (!selectedContact && contacts.length > 0) {
@@ -1525,50 +1777,36 @@ export default function CompanyDashboard() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('mensagens')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'mensagens'
-                ? 'bg-sky-500 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'mensagens' ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
             >
               <MessageSquare className="w-4 h-4" />
               Mensagens
             </button>
+
             <button
               onClick={() => setActiveTab('departamentos')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'departamentos'
-                ? 'bg-sky-500 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'departamentos' ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
             >
               <Briefcase className="w-4 h-4" />
               Departamentos
             </button>
             <button
               onClick={() => setActiveTab('setores')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'setores'
-                ? 'bg-sky-500 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'setores' ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
             >
               <FolderTree className="w-4 h-4" />
               Setores
             </button>
             <button
               onClick={() => setActiveTab('atendentes')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'atendentes'
-                ? 'bg-sky-500 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'atendentes' ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
             >
               <UserCircle2 className="w-4 h-4" />
               Atendentes
             </button>
             <button
               onClick={() => setActiveTab('tags')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'tags'
-                ? 'bg-sky-500 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-                }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'tags' ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
             >
               <Tag className="w-4 h-4" />
               Tags
@@ -1576,18 +1814,20 @@ export default function CompanyDashboard() {
             <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${iaGlobalAtivada
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${iaGlobalAtivada
+                ? 'bg-slate-50 ring-1 ring-sky-200 shadow-sm text-sky-700'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                 } disabled:opacity-50`}
               title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
             >
               {togglingIaGlobal ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <span className="text-lg">⚡</span>
+                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold ${iaGlobalAtivada ? 'bg-gradient-to-r from-sky-500 to-emerald-400 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-700'}`}>
+                  IA
+                </span>
               )}
-              IA: {iaGlobalAtivada ? 'Ativada' : 'Desativada'}
+              <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
             </button>
             <div className="relative ml-2">
               <button
@@ -1684,7 +1924,7 @@ export default function CompanyDashboard() {
         {/* Sidebar - Contacts List */}
         <div
           className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[320px] bg-white border-r-2 border-gray-300 flex-col`}
+            } md:flex w-full md:w-[320px] bg-[#F8FAFC] border-r border-gray-200 flex-col`}
         >
 
           {error && activeTab === 'mensagens' && (
@@ -1732,25 +1972,25 @@ export default function CompanyDashboard() {
                         }
                       }}
                       className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${selectedContact === contact.phoneNumber
-                        ? 'bg-sky-50 border-2 border-sky-500 shadow-md'
-                        : 'hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-[#E6F0FF] border-l-4 border-[#2563EB] shadow-sm'
+                        : 'hover:bg-[#F1F5F9] border border-transparent'
                         }`}
                     >
-                      <div className="w-11 h-11 bg-sky-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <User className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1 text-left overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
-                          <h3 className="text-gray-900 font-semibold text-sm truncate">{contact.name}</h3>
+                          <h3 className="text-[#0F172A] font-semibold text-[15px] truncate">{contact.name}</h3>
                           <span className="text-xs text-gray-400 ml-2">
                             {formatTime(contact.lastMessageTime)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mb-1">
-                          <p className="text-gray-500 text-xs truncate flex-1">{contact.lastMessage}</p>
+                          <p className="text-[#64748B] text-[13px] truncate flex-1">{contact.lastMessage}</p>
                           {contact.unreadCount > 0 && (
-                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center ml-2">
-                              <span className="text-[10px] font-bold text-white">{contact.unreadCount}</span>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ml-2 text-white font-bold text-[11px] ${selectedContact !== contact.phoneNumber ? 'bg-[#2563EB] animate-pulse' : 'bg-[#2563EB]'}`}>
+                              <span>{contact.unreadCount}</span>
                             </div>
                           )}
                         </div>
@@ -1791,12 +2031,15 @@ export default function CompanyDashboard() {
                   >
                     <Menu className="w-5 h-5" />
                   </button>
-                  <div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center">
                     <User className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h1 className="text-gray-900 font-bold text-base tracking-tight">{selectedContactData.name}</h1>
-                    <p className="text-gray-500 text-xs mb-1">{getPhoneNumber(selectedContactData.phoneNumber)}</p>
+                    <h1 className="text-[#0F172A] font-semibold text-[18px] tracking-tight">{selectedContactData.name}</h1>
+                    <div className="flex items-center gap-3 mb-1">
+                      <div className={`w-2 h-2 rounded-full ${isContactOnline ? 'bg-green-400' : 'bg-gray-300'}`} />
+                      <p className="text-[#64748B] text-[12px]">{isContactOnline ? 'Online agora • WhatsApp' : `WhatsApp • ${getPhoneNumber(selectedContactData.phoneNumber)}`}</p>
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedContactData.department_id && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-sky-700 rounded text-xs font-medium">
@@ -1833,8 +2076,8 @@ export default function CompanyDashboard() {
                 <button
                   onClick={() => {
                     // Carregar informações atuais do contato
-                    const currentContact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
-                    setSelectedDepartment(currentContact?.department_id || '');
+                    const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+                    setSelectedDepartment(currentContact?.department_id || receptionDeptId || '');
                     setSelectedSector(currentContact?.sector_id || '');
                     setSelectedTags(currentContact?.tag_ids || []);
                     setShowOptionsMenu(true);
@@ -1889,7 +2132,12 @@ export default function CompanyDashboard() {
                           }
 
                           const isSentMessage = msg['minha?'] === 'true';
-                          const senderLabel = isSentMessage ? (msg.pushname || company?.name || 'Atendente') : (msg.pushname || getPhoneNumber(getContactId(msg)));
+                          // Para mensagem enviada pela empresa (isSentMessage): manter pushname/empresa
+                          // Para mensagem recebida: mostrar APENAS o nome vindo da tabela contacts (ou vazio se não existir)
+                          const contactIdForLabel = getContactId(msg);
+                          const dbContactForLabel = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contactIdForLabel));
+                          if (!dbContactForLabel) fetchAndCacheContactByPhone(contactIdForLabel);
+                          const senderLabel = isSentMessage ? (msg.pushname || company?.name || 'Atendente') : (dbContactForLabel?.name || '');
                           const base64Type = msg.base64 ? detectBase64Type(msg.base64) : null;
                           const tipoFromField = getMessageTypeFromTipomessage(msg.tipomessage);
                           const hasBase64Content = msg.base64 && base64Type;
@@ -1900,9 +2148,9 @@ export default function CompanyDashboard() {
                               className={`flex ${isSentMessage ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-[70%] rounded-2xl ${isSentMessage
-                                  ? 'bg-sky-500 text-white rounded-br-sm shadow-md'
-                                  : 'bg-white text-gray-900 rounded-bl-sm border-2 border-gray-300 shadow-md'
+                                className={`max-w-[70%] rounded-[16px] ${isSentMessage
+                                  ? 'bg-[#2563EB] text-white rounded-br-sm shadow-sm'
+                                  : 'bg-[#F1F5F9] text-[#0F172A] rounded-bl-sm shadow-sm'
                                   }`}
                               >
                                 {/* TOPO DO BALÃO: APENAS NOME DO REMETENTE */}
@@ -1974,8 +2222,7 @@ export default function CompanyDashboard() {
                                 {hasBase64Content && (base64Type === 'audio' || tipoFromField === 'audio') &&
                                   base64Type !== 'image' && tipoFromField !== 'image' && (
                                     <div className="p-3">
-                                      <div className={`flex items-center gap-3 p-3 rounded-xl ${isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
-                                        }`}>
+                                      <div className={`flex items-center gap-3 p-3 rounded-xl ${isSentMessage ? 'bg-[#2563EB]' : 'bg-[#F1F5F9]'}`}>
                                         <button
                                           onClick={() => handleAudioPlay(msg.id, msg.base64!)}
                                           className={`p-2 rounded-full ${isSentMessage ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'
@@ -2056,7 +2303,7 @@ export default function CompanyDashboard() {
                                 )}
 
                                 <div className="px-3.5 pb-1.5 flex items-center justify-end gap-1">
-                                  <span className={`text-[10px] ${isSentMessage ? 'text-blue-100' : 'text-gray-400'}`}>
+                                  <span className={`text-[10px] ${isSentMessage ? 'text-blue-100' : 'text-[#64748B]'}`}>
                                     {formatTime(msg)}
                                   </span>
                                   {isSentMessage && (
@@ -2205,22 +2452,23 @@ export default function CompanyDashboard() {
                     <Paperclip className="w-5 h-5" />
                   </button>
 
-                  <div className="flex-1 bg-gray-50 rounded-lg flex items-center px-4 py-2.5 border border-gray-200 focus-within:border-sky-500 focus-within:bg-white transition-all">
-                    <input
-                      ref={messageInputRef}
-                      type="text"
+                  <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-3 border border-gray-200 focus-within:border-[#2563EB] focus-within:bg-white transition-all">
+                    <textarea
+                      ref={messageInputRef as React.RefObject<HTMLTextAreaElement>}
+                      rows={1}
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       onPaste={handlePasteContent}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
                           handleSendMessage();
                         }
+                        // Shift+Enter -> newline (default behavior)
                       }}
-                      placeholder="Digite uma mensagem (ou cole imagem/arquivo)"
+                      placeholder="Digite uma mensagem ou arraste um arquivo…"
                       disabled={sending}
-                      className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none disabled:opacity-50 text-sm"
+                      className="flex-1 bg-transparent text-gray-900 placeholder-gray-400 focus:outline-none disabled:opacity-50 text-sm resize-none"
                     />
                     <EmojiPicker
                       onSelect={(emoji) => setMessageText(prev => prev + emoji)}
@@ -2230,7 +2478,7 @@ export default function CompanyDashboard() {
                   <button
                     onClick={handleSendMessage}
                     disabled={(!messageText.trim() && !selectedFile) || sending}
-                    className="p-3 bg-sky-500 hover:bg-sky-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-3 bg-[#2563EB] hover:bg-[#1f4fd3] rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Enviar mensagem"
                   >
                     {sending || uploadingFile ? (
@@ -2259,20 +2507,28 @@ export default function CompanyDashboard() {
               </div>
             </div>
           ) : activeTab === 'departamentos' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto">
-              <DepartmentsManagement />
+            <div className="flex-1 bg-transparent overflow-y-auto p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <DepartmentsManagement />
+              </div>
             </div>
           ) : activeTab === 'setores' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto">
-              <SectorsManagement />
+            <div className="flex-1 bg-transparent overflow-y-auto p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <SectorsManagement />
+              </div>
             </div>
           ) : activeTab === 'atendentes' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto">
-              <AttendantsManagement />
+            <div className="flex-1 bg-transparent overflow-y-auto p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <AttendantsManagement />
+              </div>
             </div>
           ) : activeTab === 'tags' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto">
-              <TagsManagement />
+            <div className="flex-1 bg-transparent overflow-y-auto p-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <TagsManagement />
+              </div>
             </div>
           ) : null}
         </div>
@@ -2343,14 +2599,19 @@ export default function CompanyDashboard() {
                 <div className="flex gap-2">
                   <select
                     value={selectedDepartment}
-                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                    onChange={(e) => { setSelectedDepartment(e.target.value); setSelectedSector(""); }}
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-900"
                   >
-                    <option value="">Recepção (Padrão)</option>
+                    {/* Recepção como padrão */}
+                    <option value={receptionDeptId || ''}>Recepção</option>
 
-                    {/* Mostrar departamentos reais (excluir Recepção) */}
+                    {/* Outros departamentos (exclui Recepção) */}
                     {departments
-                      .filter(dept => !dept.name.startsWith('Recepção'))
+                      .filter((dept) => {
+                        if (receptionDeptId && dept.id === receptionDeptId) return false;
+                        if (dept.is_reception === true) return false;
+                        return !String(dept.name ?? '').toLowerCase().startsWith('recep');
+                      })
                       .map((dept) => (
                         <option key={dept.id} value={dept.id}>
                           {dept.name}
@@ -2368,25 +2629,18 @@ export default function CompanyDashboard() {
                 <div className="flex gap-2">
                   <select
                     value={selectedSector}
+                    disabled={!selectedDepartment}
                     onChange={(e) => setSelectedSector(e.target.value)}
                     className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-900"
                   >
                     <option value="">Selecione um setor</option>
-                    {sectors.map((sec) => (
+                    {sectorsFiltered.map((sec) => (
                       <option key={sec.id} value={sec.id}>
                         {sec.name}
                       </option>
                     ))}
                   </select>
-                  {selectedSector && (
-                    <button
-                      onClick={() => setSelectedSector('')}
-                      className="px-3 py-3 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                      title="Remover setor"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
+
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Message as SupabaseMessage } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
   MessageCircle,
@@ -20,34 +21,16 @@ import {
 } from 'lucide-react';
 import Toast from './Toast';
 import { registrarTransferencia } from '../lib/mensagemTransferencia';
-import SystemMessage from './SystemMessage';
+
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
 
-interface Message {
-  id?: number;
-  numero: string | null;
-  sender?: string | null;
-  pushname: string | null;
-  tipomessage: string | null;
-  message: string | null;
-  timestamp: string | null;
-  created_at: string;
-  apikey_instancia?: string;
-  sector_id?: string | null;
-  department_id?: string | null;
-  tag_id?: string | null;
-  date_time?: string | null;
-  instancia?: string | null;
-  idmessage?: string | null;
-  mimetype?: string | null;
-  base64?: string | null;
-  urlpdf?: string | null;
-  urlimagem?: string | null;
-  caption?: string | null;
+type Message = SupabaseMessage & {
   company_id?: string | null;
-  'minha?'?: string | null;
-}
+  department_id?: string | null;
+  sector_id?: string | null;
+  tag_id?: string | null;
+};
 
 interface Contact {
   phoneNumber: string; // normalizado (somente dígitos)
@@ -58,6 +41,7 @@ interface Contact {
   messages: Message[];
   department_id?: string;
   sector_id?: string;
+  company_id?: string;
   tag_ids?: string[];
   contact_db_id?: string;
 }
@@ -75,6 +59,7 @@ interface ContactDB {
   created_at: string;
   updated_at: string;
   tag_ids?: string[];
+  ia_ativada?: boolean | null;
 }
 
 interface Sector {
@@ -99,6 +84,13 @@ function normalizePhone(input?: string | null): string {
   return noJid.replace(/\D/g, '');
 }
 
+// Para consultas no banco (se o número vier sem DDI 55 ou com sufixo @...)
+function normalizeDbPhone(input?: string | null): string {
+  const digits = normalizePhone(input);
+  if (!digits) return '';
+  return digits.startsWith('55') ? digits : `55${digits}`;
+}
+
 function safeISO(dateStr?: string | null): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -119,6 +111,8 @@ export default function AttendantDashboard() {
 
   const [sector, setSector] = useState<Sector | null>(null);
 
+  // Company api_key fallback: alguns contextos de attendant não trazem api_key
+  const [companyApiKey, setCompanyApiKey] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -137,15 +131,18 @@ export default function AttendantDashboard() {
   const [selectedContact, setSelectedContact] = useState<string | null>(null); // phone normalizado
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  type FilterMode = 'mine' | 'all';
+  const [filterMode, setFilterMode] = useState<FilterMode>('mine');
 
-  const [showTagsModal, setShowTagsModal] = useState(false);
   const [modalContactPhone, setModalContactPhone] = useState<string | null>(null); // phone normalizado
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showTagsModal, setShowTagsModal] = useState(false);
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
+
   const [transferindo, setTransferindo] = useState(false);
   const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
   const [transferSuccessData, setTransferSuccessData] = useState<{
@@ -168,7 +165,6 @@ export default function AttendantDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [base64Data, setBase64Data] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalSrc, setImageModalSrc] = useState('');
   const [imageModalType, setImageModalType] = useState<'image' | 'sticker' | 'video'>('image');
@@ -180,6 +176,44 @@ export default function AttendantDashboard() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const isUserScrollingRef = useRef(false);
+  const lastContactsRefetchAt = useRef<number>(0);
+
+  // Cache para evitar múltiplas buscas no fallback de contatos
+  const fetchedPhonesRef = useRef<Set<string>>(new Set());
+
+  const fetchAndCacheContactByPhone = useCallback(async (phone: string) => {
+    const phoneNormalized = normalizeDbPhone(phone);
+    if (!phoneNormalized || !company?.id) return;
+    if (fetchedPhonesRef.current.has(phoneNormalized)) return;
+    fetchedPhonesRef.current.add(phoneNormalized);
+
+    try {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('phone_number', phoneNormalized)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar contato (fallback):', error);
+        return;
+      }
+
+      if (data) {
+        const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', data.id);
+        const withTags = { ...data, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] } as ContactDB;
+
+        setContactsDB(prev => {
+          if (prev.some(c => c.id === withTags.id)) return prev.map(c => c.id === withTags.id ? withTags : c);
+          return [...prev, withTags];
+        });
+      }
+    } catch (e) {
+      console.error('Erro inesperado ao buscar contato (fallback):', e);
+    }
+  }, [company?.id]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePasteContent = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -198,9 +232,7 @@ export default function AttendantDashboard() {
           reader.onload = (event) => {
             const base64 = event.target?.result as string;
             setSelectedFile(file);
-            const base64Data = base64.split(',')[1];
-            setBase64Data(base64Data);
-            console.log('✅ Imagem colada via Ctrl+V convertida para base64');
+            setFilePreview(base64);
           };
           reader.readAsDataURL(file);
         }
@@ -214,9 +246,7 @@ export default function AttendantDashboard() {
           reader.onload = (event) => {
             const base64 = event.target?.result as string;
             setSelectedFile(file);
-            const base64Data = base64.split(',')[1];
-            setBase64Data(base64Data);
-            console.log('✅ Arquivo colado via Ctrl+V convertido para base64');
+            setFilePreview(base64);
           };
           reader.readAsDataURL(file);
         }
@@ -224,7 +254,7 @@ export default function AttendantDashboard() {
     }
   };
 
-  const getMessageTypeFromTipomessage = (tipomessage?: string): 'image' | 'audio' | 'document' | 'sticker' | 'video' | null => {
+  const getMessageTypeFromTipomessage = (tipomessage?: string | null): 'image' | 'audio' | 'document' | 'sticker' | 'video' | null => {
     if (!tipomessage) return null;
 
     const tipo = tipomessage.toLowerCase();
@@ -332,15 +362,7 @@ export default function AttendantDashboard() {
       return;
     }
 
-    console.log('AttendantDashboard init:', {
-      attendant: attendant?.name,
-      attendant_id: attendant?.id,
-      dept: attendant?.department_id,
-      sector: attendant?.sector_id,
-      company: company?.name,
-      company_id: company?.id,
-      api_key: company?.api_key,
-    });
+
 
     let unsub: (() => void) | undefined;
 
@@ -364,6 +386,47 @@ export default function AttendantDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attendant?.id, company?.id, company?.api_key]);
 
+  // DEV-only diagnostic: inspeciona amostras da tabela `messages` por apikey e por company_id (sem UI)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    (async () => {
+      try {
+        const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+        const effectiveApiKey = company?.api_key ?? attendant?.apikey_instancia ?? null;
+
+        if (effectiveApiKey) {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('id, numero, department_id, company_id, apikey_instancia, created_at')
+            .eq('apikey_instancia', effectiveApiKey)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          console.log('[DIAG] messages by apikey', effectiveApiKey, 'count=', data?.length || 0, 'error=', error || null, 'sample=', data?.slice(0,3) || []);
+        } else {
+          console.log('[DIAG] no effectiveApiKey');
+        }
+
+        if (effectiveCompanyId) {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('id, numero, department_id, company_id, apikey_instancia, created_at')
+            .eq('company_id', effectiveCompanyId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          console.log('[DIAG] messages by company_id', effectiveCompanyId, 'count=', data?.length || 0, 'error=', error || null, 'sample=', data?.slice(0,3) || []);
+        } else {
+          console.log('[DIAG] no effectiveCompanyId');
+        }
+      } catch (e) {
+        console.error('[DIAG] erro ao inspecionar mensagens', e);
+      }
+    })();
+
+  }, [company?.id, company?.api_key, attendant?.company_id, attendant?.apikey_instancia]);
+
   useEffect(() => {
     if (selectedContact) {
       scrollToBottom(false);
@@ -372,19 +435,24 @@ export default function AttendantDashboard() {
     }
   }, [selectedContact]);
 
-  // ✅ FILTRO ESTRITO: NÃO deixa passar NULL
-  function matchAttendantScope(item: { department_id?: string | null; sector_id?: string | null }) {
-    const attDept = attendant?.department_id ?? null;
-    const attSector = attendant?.sector_id ?? null;
+  // Carregar api_key da company quando necessário (alguns contexts do attendant não têm company.api_key)
+  useEffect(() => {
+    const run = async () => {
+      try {
+        if (!company?.id) return;
+        const { data, error } = await supabase
+          .from('companies')
+          .select('api_key')
+          .eq('id', company.id)
+          .maybeSingle();
 
-    // se atendente não tem dept/setor, não mostra nada
-    if (!attDept || !attSector) return false;
-
-    // item precisa ter dept/setor preenchidos e bater exatamente
-    if (!item.department_id || !item.sector_id) return false;
-
-    return item.department_id === attDept && item.sector_id === attSector;
-  }
+        if (!error) setCompanyApiKey(data?.api_key ?? null);
+      } catch (e) {
+        console.error('Erro ao buscar company api_key:', e);
+      }
+    };
+    run();
+  }, [company?.id]);
 
   const fetchSector = async () => {
     if (!attendant?.sector_id) return;
@@ -450,6 +518,7 @@ export default function AttendantDashboard() {
     if (!company?.id) return;
 
     try {
+      // Buscar todos os contatos da empresa (sem filtro por departamento/sector)
       const { data, error } = await supabase
         .from('contacts')
         .select('*')
@@ -458,11 +527,8 @@ export default function AttendantDashboard() {
 
       if (error) throw error;
 
-      const raw = (data || []) as ContactDB[];
-      const filtered = raw.filter(matchAttendantScope);
-
       const withTags = await Promise.all(
-        filtered.map(async (c) => {
+        (data || []).map(async (c: ContactDB) => {
           const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', c.id);
           return { ...c, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] };
         })
@@ -493,7 +559,7 @@ export default function AttendantDashboard() {
     
     if (reactions.length === 0) return messages;
 
-    console.log('😊 Reações encontradas:', reactions.length);
+
 
     // Mapear reações por ID da mensagem alvo
     const reactionMap = new Map<string, Array<{ emoji: string; count: number }>>();
@@ -516,7 +582,7 @@ export default function AttendantDashboard() {
       if (!emoji && looksLikeEmoji(reaction?.caption)) emoji = reaction.caption;
       if (!targetId && reaction?.idmessage) targetId = reaction.idmessage;
       
-      console.log(`😊 Reação: targetId=${targetId}, emoji=${emoji}`);
+
       
       if (!targetId || !emoji) {
         console.warn('⚠️ Reação inválida: falta reaction_target_id ou message', reaction);
@@ -537,16 +603,16 @@ export default function AttendantDashboard() {
       }
     });
 
-    console.log('🔍 Mapa de reações:', reactionMap);
+
 
     // Adicionar reações às mensagens originais
     const filtered = messages.filter(m => m.tipomessage !== 'reactionMessage');
     
     return filtered.map(msg => {
-      const msgReactions = reactionMap.get(msg.idmessage) || reactionMap.get(msg.message) || reactionMap.get(msg.id) || [];
+      const msgReactions = (reactionMap.get(msg?.idmessage || '') || reactionMap.get(msg?.message || '') || reactionMap.get(msg?.id || '') || []) as Array<{ emoji: string; count: number }>;
       
       if (msgReactions.length > 0) {
-        console.log(`✨ Mensagem ${msg.idmessage} tem ${msgReactions.length} reações:`, msgReactions);
+
       }
       
       return {
@@ -557,83 +623,125 @@ export default function AttendantDashboard() {
   };
 
   const fetchMessages = async () => {
-    if (!company?.api_key) {
+    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
+    const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+
+    if (!effectiveApiKey && !effectiveCompanyId) {
       setMessages([]);
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
+
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      // silent timeout
+    }, 10000);
+
     try {
-      const [received, sent] = await Promise.all([
-        supabase.from('messages').select('*').eq('apikey_instancia', company.api_key),
-        supabase.from('sent_messages').select('*').eq('apikey_instancia', company.api_key),
-      ]);
+      let receivedResult: any, sentResult: any;
 
-      if (received.error) throw received.error;
-      if (sent.error) throw sent.error;
-
-      let all: Message[] = [...(received.data || []), ...(sent.data || [])];
-
-      // ✅ filtro estrito
-      all = all.filter(matchAttendantScope);
-
-      console.log('📩 Mensagens recebidas:', received.data?.length || 0);
-      console.log('📤 Mensagens enviadas:', sent.data?.length || 0);
-      console.log('✉️ Total de mensagens:', all.length);
-      
-      // Log para debugar reactionMessage
-      const reactionMessages = all.filter(m => m.tipomessage === 'reactionMessage');
-      if (reactionMessages.length > 0) {
-        console.log('😊 REACTION MESSAGES ENCONTRADAS:', reactionMessages);
-        reactionMessages.forEach((rm, idx) => {
-          console.log(`  [${idx}] message="${rm.message}", caption="${rm.caption}", idmessage="${rm.idmessage}", id="${rm.id}"`);
-        });
-      }
-      
-      // Log para mensagens de sistema
-      const systemMessages = all.filter(m => m.message_type === 'system_transfer');
-      if (systemMessages.length > 0) {
-        console.log('🎫 MENSAGENS DE SISTEMA ENCONTRADAS:', systemMessages);
+      if (effectiveApiKey) {
+        // Preferir buscar por apikey (mesmo comportamento do CompanyDashboard)
+        [receivedResult, sentResult] = await Promise.all([
+          supabase.from('messages').select('*').eq('apikey_instancia', effectiveApiKey),
+          supabase.from('sent_messages').select('*').eq('apikey_instancia', effectiveApiKey)
+        ]);
       } else {
-        console.log('⚠️ Nenhuma mensagem de sistema encontrada');
+        [receivedResult, sentResult] = await Promise.all([
+          supabase.from('messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
+          supabase.from('sent_messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true })
+        ]);
       }
 
-      all.sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+      clearTimeout(timeout);
+
+      if (receivedResult.error) throw receivedResult.error;
+      if (sentResult.error) throw sentResult.error;
+
+      // DEV: diagnósticos rápidos
+      if (import.meta.env.DEV) {
+        try {
+          console.log('[DIAG] fetchMessages using', effectiveApiKey ? 'apikey' : 'company_id', effectiveApiKey ?? effectiveCompanyId, 'received=', (receivedResult.data || []).length, 'sent=', (sentResult.data || []).length);
+        } catch (e) {}
+      }
+
+      let allMessages: Message[] = [
+        ...(receivedResult.data || []),
+        ...(sentResult.data || [])
+      ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+
+      // Garantir company_id consistente com a empresa logada ou atendente
+      if (effectiveCompanyId) {
+        allMessages = allMessages.filter(m => !m.company_id || m.company_id === effectiveCompanyId);
+      }
 
       // Processar reações
-      const messagesWithReactions = processReactions(all);
+      const messagesWithReactions = processReactions(allMessages);
 
       setMessages(messagesWithReactions);
       setTimeout(scrollToBottom, 50);
     } catch (e) {
       console.error('Erro ao carregar mensagens:', e);
       setMessages([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const subscribeToRealtime = () => {
-    if (!company?.api_key || !company?.id) return;
+    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
+    const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+
+    // Em produção, precisamos de ao menos um identificador; em DEV permitimos assinatura sem filtro para testes
+    if (!effectiveApiKey && !effectiveCompanyId && !import.meta.env.DEV) return;
+    if (!effectiveApiKey && !effectiveCompanyId && import.meta.env.DEV) {
+      console.log('[DEV] subscribing to all messages (no apikey/companyId) for testing');
+    }
 
     const channel = supabase
       .channel('attendant-realtime')
+      // Listen to messages by apikey (if available)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `apikey_instancia=eq.${company.api_key}` },
+        { event: '*', schema: 'public', table: 'messages', filter: effectiveApiKey ? `apikey_instancia=eq.${effectiveApiKey}` : undefined },
         () => {
           fetchMessages();
           fetchContacts();
         }
       )
+      // Also listen to messages by company_id as a fallback (if available)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'sent_messages', filter: `apikey_instancia=eq.${company.api_key}` },
+        { event: '*', schema: 'public', table: 'messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
         () => {
           fetchMessages();
           fetchContacts();
         }
       )
+      // Sent messages by apikey
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'contacts', filter: `company_id=eq.${company.id}` },
+        { event: '*', schema: 'public', table: 'sent_messages', filter: effectiveApiKey ? `apikey_instancia=eq.${effectiveApiKey}` : undefined },
+        () => {
+          fetchMessages();
+          fetchContacts();
+        }
+      )
+      // Sent messages by company_id fallback
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sent_messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
+        () => {
+          fetchMessages();
+          fetchContacts();
+        }
+      )
+      // Contacts
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contacts', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
         () => {
           fetchContacts();
         }
@@ -645,10 +753,19 @@ export default function AttendantDashboard() {
     };
   };
 
-  // Hook para monitorar mudanças em tempo real nas mensagens
+  // Effective api key trazido explicitamente (somente companyApiKey)
+  const effectiveApiKey = companyApiKey;
+  const realtimeEnabled = !!effectiveApiKey;
+
+  // DEV: log para confirmar que o api_key foi carregado
+  useEffect(() => {
+    if (import.meta.env.DEV) console.log('[DIAG] companyApiKey', companyApiKey);
+  }, [companyApiKey]);
+
+  // Hook para monitorar mudanças em tempo real nas mensagens — habilita apenas se tivermos effectiveApiKey
   useRealtimeMessages({
-    apiKey: company?.api_key,
-    enabled: true,
+    apiKey: effectiveApiKey,
+    enabled: realtimeEnabled,
     onMessagesChange: (message: Message) => {
       // Atualizar a lista de mensagens quando uma nova mensagem chega
       setMessages((prevMessages) => {
@@ -659,22 +776,60 @@ export default function AttendantDashboard() {
         return [...prevMessages, message];
       });
     },
-    onNewMessage: (message: Message, type: 'received' | 'sent') => {
-      console.log(`📨 Nova mensagem ${type}:`, message);
-      
+    onNewMessage: (message: Message, _type: 'received' | 'sent') => {
       // Scroll automático apenas (sem fetchContacts para não alterar nomes)
       if (isUserScrollingRef.current) {
         setPendingMessagesCount(prev => prev + 1);
       } else {
         scrollToBottom();
       }
+
+      // Refetch condicional de contatos: se estamos filtrando por departamento
+      try {
+        const now = Date.now();
+        if (now - lastContactsRefetchAt.current < 2500) return; // debounce 2.5s
+
+        const msgDept = (message as any).department_id || (message as any).departamento_id || null;
+        const phoneRaw = String((message as any).numero || (message as any).sender || '');
+        const phone = normalizeDbPhone(phoneRaw);
+
+        // Se modo 'mine' e a mensagem pertence ao dept do atendente, refetch geral de contatos
+        if (filterMode === 'mine' && attendant?.department_id && msgDept && msgDept === attendant.department_id) {
+          const exists = contactsDB.some(c => normalizeDbPhone(c.phone_number) === phone);
+          if (!exists) {
+            lastContactsRefetchAt.current = now;
+            fetchContacts();
+          }
+        }
+
+        // Sempre tentar trazer o contato pelo número caso não exista no cache (fallback semelhante ao Company)
+        const exists = contactsDB.some(c => normalizeDbPhone(c.phone_number) === phone);
+        if (!exists && phoneRaw) {
+          fetchAndCacheContactByPhone(phoneRaw);
+        }
+      } catch (e) {
+        console.error('Erro ao decidir refetch de contatos no onNewMessage:', e);
+      }
     }
   });
+
+  // Polling automático como fallback - verifica a cada 3 segundos quando api_key estiver disponível
+  useEffect(() => {
+    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
+    if (!effectiveApiKey) return;
+
+    const pollingInterval = setInterval(() => {
+      fetchMessages();
+      fetchContacts();
+    }, 3000);
+
+    return () => clearInterval(pollingInterval);
+  }, [companyApiKey, company?.api_key, attendant?.apikey_instancia]);
 
   // Carregar status IA do contato
   useEffect(() => {
     if (!selectedContact || contactsDB.length === 0) return;
-    const contact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
+    const contact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
     setIaAtivada(contact?.ia_ativada || false);
   }, [selectedContact, contactsDB]);
 
@@ -683,15 +838,60 @@ export default function AttendantDashboard() {
     companyId: company?.id,
     enabled: true,
     onContactsChange: (contact: any, type: 'INSERT' | 'UPDATE' | 'DELETE') => {
-      console.log(`👥 Contato ${type}:`, contact);
+
+
+      const matchesFilter = (() => {
+        if (!contact) return false;
+
+        if (filterMode === 'mine') {
+          if (!attendant?.department_id) return false;
+          if (contact.department_id !== attendant.department_id) return false;
+          // Se atendente tem setor e o contato tem setor, validar também
+          if (attendant?.sector_id && contact.sector_id && contact.sector_id !== attendant.sector_id) return false;
+          return true;
+        }
+
+        // 'all' inclui contatos sem department; mantemos retorno true para todos os outros casos
+        return true; // 'all' or default
+      })();
+
       setContactsDB((prevContacts) => {
         const contactExists = prevContacts.some(c => c.id === contact.id);
+
+        // Se não bate no filtro e já existia, removemos; se não existia, ignoramos
+        if (!matchesFilter) {
+          if (contactExists) return prevContacts.filter(c => c.id !== contact.id);
+          return prevContacts;
+        }
+
+        // Se bate no filtro, aplicamos update/insert normalmente
         if (type === 'DELETE') {
           return prevContacts.filter(c => c.id !== contact.id);
         }
+
         if (contactExists) {
-          return prevContacts.map(c => c.id === contact.id ? contact : c);
+          return prevContacts.map(c => c.id === contact.id ? { ...c, ...contact } : c);
         }
+
+        // Novo contato que satisfaz o filtro: buscar tags e inserir
+        (async () => {
+          try {
+            const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', contact.id);
+            const contactWithTags = { ...contact, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] };
+            setContactsDB(prev => {
+              if (prev.some(p => p.id === contact.id)) {
+                return prev.map(p => p.id === contact.id ? contactWithTags : p);
+              }
+              return [...prev, contactWithTags];
+            });
+          } catch (e) {
+            console.error('Erro ao buscar tags do contato realtime:', e);
+            // Fallback: inserir contato sem tags
+            setContactsDB(prev => prev.some(p => p.id === contact.id) ? prev.map(p => p.id === contact.id ? { ...p, ...contact } : p) : [...prev, contact]);
+          }
+        })();
+
+        // Enquanto tags chegam, já adicionamos contato sem tags (para responsividade)
         return [...prevContacts, contact];
       });
     }
@@ -701,19 +901,25 @@ export default function AttendantDashboard() {
   useEffect(() => {
     if (!company?.api_key) return;
 
-    console.log('⏱️ Iniciando polling de mensagens a cada 3 segundos');
+
     
     const pollingInterval = setInterval(() => {
-      console.log('🔄 Verificando novas mensagens...');
+
       fetchMessages();
       fetchContacts();
     }, 3000); // 3 segundos
 
     return () => {
       clearInterval(pollingInterval);
-      console.log('⏹️ Parando polling de mensagens');
     };
   }, [company?.api_key]);
+
+  // Recarregar contatos quando o filtro do atendente mudar (modo, depto, setor ou lista de departamentos)
+  useEffect(() => {
+    if (!company?.id) return;
+    fetchContacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterMode, attendant?.department_id, attendant?.sector_id, departments, company?.id]);
 
   const fileToBase64 = (file: File): Promise<string> => {
 
@@ -728,111 +934,131 @@ export default function AttendantDashboard() {
     });
   };
 
-  // ======= AGRUPA CONTATOS PELAS MENSAGENS (normalizado) =======
+  // ======= AGRUPA CONTATOS A PARTIR DO DB (contacts) E ANEXA MENSAGENS =======
   const contacts: Contact[] = useMemo(() => {
-    const map = new Map<string, Contact>();
+    if (!company?.id) return [];
 
-    for (const msg of messages) {
-      const phone = normalizePhone(msg.numero || msg.sender || '');
-      if (!phone) continue;
+    const arr = (contactsDB || []).map((db) => {
+      const phone = normalizePhone(db.phone_number);
 
-      if (!map.has(phone)) {
-        const contactDB = contactsDB.find((c) => normalizePhone(c.phone_number) === phone);
+      // Mensagens desta empresa para este contato
+      const msgs = messages.filter(m => normalizePhone(m.numero || m.sender || '') === phone && (!m.company_id || m.company_id === company.id));
+      msgs.sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
 
-        // SEMPRE usar nome do banco, nunca do pushname
-        const contactName = contactDB?.name || phone;
+      const last = msgs[msgs.length - 1] || null;
 
-        map.set(phone, {
-          phoneNumber: phone,
-          name: contactName,
-          lastMessage: '',
-          lastMessageTime: '',
-          unreadCount: 0,
-          messages: [],
-          department_id: contactDB?.department_id || undefined,
-          sector_id: contactDB?.sector_id || undefined,
-          tag_ids: contactDB?.tag_ids || [],
-          contact_db_id: contactDB?.id || undefined,
-        });
-      }
-
-      map.get(phone)!.messages.push(msg);
-    }
-
-    const arr = Array.from(map.values()).map((c) => {
-      c.messages.sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
-      const last = c.messages[c.messages.length - 1];
-      c.lastMessage = last?.message || 'Mensagem';
-      c.lastMessageTime = safeISO(last?.date_time || last?.created_at || null);
-      
-      // CRÍTICO: O nome SEMPRE vem do banco de dados
-      // NUNCA usar pushname da mensagem - isto causa o problema de nome mudando
-      const dbContact = contactsDB.find((db) => normalizePhone(db.phone_number) === c.phoneNumber);
-      if (dbContact?.name) {
-        c.name = dbContact.name;
-      } else {
-        c.name = c.phoneNumber;
-      }
+      const lastMessage = last?.message || db.last_message || 'Mensagem';
+      const lastMessageTime = safeISO(last?.date_time || last?.created_at || db.last_message_time) || '';
 
       // Contar mensagens pendentes (do cliente, não respondidas pelo atendente)
-      const lastViewedTime = lastViewedMessageTime[c.phoneNumber] || 0;
-      c.unreadCount = 0;
-      
-      // Procurar por mensagens não lidas do cliente que não foram respondidas
-      for (let i = c.messages.length - 1; i >= 0; i--) {
-        const msg = c.messages[i];
+      const lastViewedTime = lastViewedMessageTime[phone] || 0;
+      let unread = 0;
+
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i];
         const isSent = msg['minha?'] === 'true';
         const msgTime = getMessageTimestamp(msg);
-        
-        // Se é mensagem do cliente (não enviada pelo atendente)
         if (!isSent && msgTime > lastViewedTime) {
-          // Verificar se há resposta DEPOIS dessa mensagem
+          // verificar resposta após esta mensagem
           let hasResponse = false;
-          for (let j = i + 1; j < c.messages.length; j++) {
-            const responseMsg = c.messages[j];
-            const isResponseSent = responseMsg['minha?'] === 'true';
-            if (isResponseSent) {
-              hasResponse = true;
-              break;
-            }
+          for (let j = i + 1; j < msgs.length; j++) {
+            const responseMsg = msgs[j];
+            if (responseMsg['minha?'] === 'true') { hasResponse = true; break; }
           }
-          
-          // Só contar como pendente se não tem resposta
-          if (!hasResponse) {
-            c.unreadCount++;
-          }
+          if (!hasResponse) unread++;
         }
       }
 
-      return c;
+      return {
+        phoneNumber: phone,
+        name: db.name || '',
+        lastMessage,
+        lastMessageTime,
+        unreadCount: unread,
+        messages: msgs,
+        department_id: db.department_id || undefined,
+        sector_id: db.sector_id || undefined,
+        company_id: db.company_id || undefined,
+        tag_ids: db.tag_ids || [],
+        contact_db_id: db.id,
+      } as Contact;
     });
 
     arr.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
-    return arr;
-  }, [messages, contactsDB]);
+
+    // Não adicionamos contatos a partir de mensagens aqui: a lista lateral deve vir apenas de `contacts` (contactsDB).
+    return arr; 
+  }, [contactsDB, messages, lastViewedMessageTime, company?.id, filterMode, attendant?.department_id, fetchAndCacheContactByPhone]);
 
   const filteredContacts = useMemo(() => {
     const s = searchTerm.toLowerCase().trim();
-    if (!s) return contacts;
-    return contacts.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s));
-  }, [contacts, searchTerm]);
+
+    // Base -> apenas contatos do DB para a company
+    const base = (contacts || []).filter(c => c.company_id === company?.id);
+
+    if (filterMode === 'all') {
+      const res = s ? base.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : base;
+      return res;
+    }
+
+    // mine -> somente contatos do mesmo departamento do atendente
+    const myDept = attendant?.department_id ?? null;
+    if (!myDept) return [];
+
+    const res = base.filter(c => c.department_id === myDept);
+    return s ? res.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : res;
+
+  }, [contacts, searchTerm, filterMode, attendant?.department_id, company?.id]);
 
   const selectedContactData = selectedContact ? contacts.find((c) => c.phoneNumber === selectedContact) : null;
+
+  // Auto-selecionar primeiro contato disponível quando não houver seleção
+  useEffect(() => {
+    if (!selectedContact && filteredContacts.length > 0) {
+      setSelectedContact(filteredContacts[0].phoneNumber);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredContacts]);
+
+  // Se seleção atual sumir do filtro, selecionar o primeiro
+  useEffect(() => {
+    if (!selectedContact) return;
+    const exists = filteredContacts.some(c => c.phoneNumber === selectedContact);
+    if (!exists) {
+      setSelectedContact(filteredContacts[0]?.phoneNumber ?? null);
+    }
+  }, [filterMode, filteredContacts, selectedContact]);
+
+  // Mensagens do chat (filtradas por contato selecionado)
+  const chatMessages = useMemo(() => {
+    if (!selectedContact) return [] as Message[];
+    const n = normalizePhone(selectedContact);
+    return messages.filter(m => normalizePhone(m.numero || m.sender || '') === n).sort((a,b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+  }, [messages, selectedContact]);
 
   useEffect(() => {
     if (!selectedContact && contacts.length > 0) setSelectedContact(contacts[0].phoneNumber);
   }, [contacts, selectedContact]);
+
+  // Garantir que o contato selecionado respeite o filtro atual; se não, escolhe o primeiro do resultado
+  useEffect(() => {
+    if (!filteredContacts || filteredContacts.length === 0) {
+      setSelectedContact(null);
+      return;
+    }
+    if (selectedContact && !filteredContacts.some(c => c.phoneNumber === selectedContact)) {
+      setSelectedContact(filteredContacts[0].phoneNumber);
+    }
+  }, [filteredContacts, selectedContact]);
 
   useEffect(() => {
     if (selectedContact) {
       scrollToBottom(false);
       // Resetar o flag de scroll quando muda de contato
       isUserScrollingRef.current = false;
-      // Marcar todas as mensagens como vistas
-      if (selectedContactData?.messages) {
-        const lastMsgTime = selectedContactData.messages.reduce((max, msg) => {
-          return Math.max(max, getMessageTimestamp(msg));
-        }, 0);
+      // Marcar todas as mensagens como vistas (usando mensagens filtradas do chat)
+      if (chatMessages.length > 0) {
+        const lastMsgTime = chatMessages.reduce((max, msg) => Math.max(max, getMessageTimestamp(msg)), 0);
         setLastViewedMessageTime(prev => ({
           ...prev,
           [selectedContact]: lastMsgTime
@@ -843,20 +1069,53 @@ export default function AttendantDashboard() {
 
   // Contar mensagens pendentes (novas mensagens que não foram vistas)
   useEffect(() => {
-    if (!selectedContact || !selectedContactData?.messages) {
+    if (!selectedContact || chatMessages.length === 0) {
       setPendingMessagesCount(0);
       return;
     }
 
     const lastViewedTime = lastViewedMessageTime[selectedContact] || 0;
-    const pendingCount = selectedContactData.messages.filter(msg => {
+    const pendingCount = chatMessages.filter(msg => {
       const isSent = msg['minha?'] === 'true';
       const timestamp = msg.timestamp ? new Date(msg.timestamp).getTime() : msg.created_at ? new Date(msg.created_at).getTime() : 0;
       return !isSent && timestamp > lastViewedTime;
     }).length;
 
     setPendingMessagesCount(pendingCount);
-  }, [messages, selectedContact, selectedContactData, lastViewedMessageTime]);
+  }, [messages, selectedContact, chatMessages, lastViewedMessageTime]);
+
+  // Bloquear envio se departamento não bater e setar banner/estado
+  const [sendBlocked, setSendBlocked] = useState(false);
+  const [blockedBannerMessage, setBlockedBannerMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedContact) {
+      setSendBlocked(false);
+      setBlockedBannerMessage(null);
+      return;
+    }
+
+    const contactDb = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+    const contactDept = contactDb?.department_id ?? null;
+
+    // Regras: Se houver mismatch de company_id -> bloquear
+    if (contactDb?.company_id && company?.id && contactDb.company_id !== company.id) {
+      setSendBlocked(true);
+      setBlockedBannerMessage('Contato pertence a outra empresa. Envio bloqueado.');
+      return;
+    }
+
+    // Se atendente tem department_id e contato tem department_id e não coincidem -> bloquear
+    if (attendant?.department_id && contactDept && contactDept !== attendant.department_id) {
+      setSendBlocked(true);
+      setBlockedBannerMessage('Você não pode enviar mensagem: esta conversa pertence a outro departamento. Solicite transferência.');
+      return;
+    }
+
+    // Caso contrário, permitir envio
+    setSendBlocked(false);
+    setBlockedBannerMessage(null);
+  }, [selectedContact, contactsDB, attendant?.department_id]);
 
   const formatTime = (timestamp: string | null, createdAt: string) => {
     const base = timestamp || createdAt;
@@ -908,17 +1167,14 @@ export default function AttendantDashboard() {
    * PASSO 3 — NOME DO DEPARTAMENTO
    * =========================================
    */
-  const getDeptName = (deptId?: string | null): string | null => {
-    if (!deptId) return null;
-    return departmentsMap[deptId] || null;
-  };
+
 
   // ======= ATUALIZAR TAGS DO CONTATO =======
   const handleUpdateContactInfo = async () => {
     if (!modalContactPhone || !company?.id) return;
 
     try {
-      const contactDB = contactsDB.find((c) => normalizePhone(c.phone_number) === modalContactPhone);
+      const contactDB = contactsDB.find((c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(modalContactPhone));
       if (!contactDB) throw new Error('Contato não encontrado no DB');
 
       const currentTags = contactDB.tag_ids || [];
@@ -955,6 +1211,24 @@ export default function AttendantDashboard() {
   const sendMessage = async (messageData: Partial<Message>) => {
     if (!company || !company.api_key || !selectedContact) return;
 
+    // Validação: impedir envio se o contato não pertencer ao mesmo departamento ou empresa do atendente
+    const contactDB = contactsDB.find((c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+    const lastMsg = chatMessages[chatMessages.length - 1] || null;
+    const contactDept = contactDB?.department_id || selectedContactData?.department_id || lastMsg?.department_id || null;
+    const contactCompany = contactDB?.company_id || selectedContactData?.company_id || lastMsg?.company_id || null;
+
+    if (attendant?.department_id && contactDept !== attendant.department_id) {
+      setToastMessage('Contato não pertence ao seu departamento. Envio bloqueado.');
+      setShowToast(true);
+      return;
+    }
+
+    if (company?.id && contactCompany && contactCompany !== company.id) {
+      setToastMessage('Contato pertence a outra empresa. Envio bloqueado.');
+      setShowToast(true);
+      return;
+    }
+
     setSending(true);
     try {
       const generatedIdMessage = `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -974,13 +1248,14 @@ export default function AttendantDashboard() {
 
       const nowIso = new Date().toISOString();
 
-      const rowToInsert: Message = {
+      const rowToInsert: Partial<Message> = {
         numero: selectedContact,
         sender: selectedContact,
         'minha?': 'true',
         pushname: attendant?.name || company.name,
         apikey_instancia: company.api_key,
         date_time: nowIso,
+        timestamp: nowIso,
         instancia: instanciaValue,
         idmessage: generatedIdMessage,
         company_id: company.id,
@@ -1072,7 +1347,7 @@ export default function AttendantDashboard() {
     if (!selectedContact || !company) return;
     try {
       setTogglingIa(true);
-      const contact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
+      const contact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
       if (!contact) return;
 
       const newStatus = !iaAtivada;
@@ -1126,16 +1401,39 @@ export default function AttendantDashboard() {
       console.log('[TRANSFERÊNCIA ATD 1] Iniciando transferência', {
         numeroContato: selectedContact,
         nomeContato: currentContact.name,
-        departamentoDestino: departamentoTransferencia,
+        departamentoDestino: departmentsMap[departamentoTransferencia] || departamentoTransferencia,
         apiKey: attendant.apikey_instancia
       });
 
+      const contactDb = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+      const contactId = contactDb?.id || (currentContact as any).contact_db_id;
+      if (!contactId) {
+        setToastMessage('❌ Erro: ID do contato não encontrado no banco');
+        setShowToast(true);
+        return;
+      }
+
+      const deptDestinoId = departamentoTransferencia; // agora é UUID
+
+
+      const deptOrigemId = (contactDb?.department_id ?? (currentContact as any).department_id ?? null) as any;
+
+      // 1) Atualiza o departamento do contato no banco (roteamento)
+      const { error: updErr } = await supabase
+        .from('contacts')
+        .update({ department_id: deptDestinoId })
+        .eq('id', contactId);
+
+      if (updErr) {
+        console.warn('[TRANSFERÊNCIA ATD] Aviso: falha ao atualizar departamento do contato:', updErr);
+      }
+
+      // 2) Registra a transferência (histórico)
       const dadosTransferencia = {
         api_key: attendant.apikey_instancia,
-        numero_contato: parseInt(selectedContact.replace(/\D/g, ''), 10),
-        nome_contato: currentContact.name,
-        departamento_origem: 'Atendente',
-        departamento_destino: departamentoTransferencia
+        contact_id: contactId,
+        departamento_origem_id: deptOrigemId,
+        departamento_destino_id: deptDestinoId,
       };
 
       console.log('[TRANSFERÊNCIA ATD 1.5] Dados a enviar para RPC:', dadosTransferencia);
@@ -1152,12 +1450,12 @@ export default function AttendantDashboard() {
         // Mostrar modal de sucesso com todos os dados da transferência
         setTransferSuccessData({
           ...resultado.data,
-          nomedept: departamentoTransferencia,
+          nomedept: departmentsMap[departamentoTransferencia] || departamentoTransferencia,
           nomecontato: currentContact.name
         });
         setShowTransferSuccessModal(true);
         
-        setToastMessage(`✅ Contato transferido para ${departamentoTransferencia}`);
+        setToastMessage(`✅ Contato transferido para ${departmentsMap[departamentoTransferencia] || 'Departamento'}`);
         setShowToast(true);
         setDepartamentoTransferencia('');
         setMessageText('');
@@ -1178,6 +1476,11 @@ export default function AttendantDashboard() {
 
   const handleSendMessage = async () => {
     if (sending) return;
+    if (sendBlocked) {
+      setToastMessage('Você não pode enviar mensagem: esta conversa pertence a outro departamento. Solicite transferência.');
+      setShowToast(true);
+      return;
+    }
     if (!messageText.trim() && !selectedFile) return;
 
     setSending(true);
@@ -1256,7 +1559,7 @@ export default function AttendantDashboard() {
     );
   }
 
-  const currentMessages = selectedContactData?.messages || [];
+  const currentMessages = chatMessages;
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
@@ -1286,6 +1589,8 @@ export default function AttendantDashboard() {
         </div>
       </header>
 
+
+
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* SIDEBAR */}
@@ -1302,6 +1607,22 @@ export default function AttendantDashboard() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-gray-50 text-gray-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-sky-500 focus:bg-white transition-all placeholder-gray-400"
               />
+            </div>
+
+            <div className="mt-3 flex gap-2 flex-wrap items-center">
+              <button
+                onClick={() => setFilterMode('mine')}
+                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'mine' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1` }>
+                Meu Departamento
+              </button>
+
+
+
+              <button
+                onClick={() => setFilterMode('all')}
+                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'all' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1` }>
+                Todos
+              </button>
             </div>
           </div>
 
@@ -1416,6 +1737,21 @@ export default function AttendantDashboard() {
                     >
                       <SendIcon className="w-5 h-5" />
                     </button>
+
+                    <button
+                      onClick={() => {
+                        if (!selectedContact) return;
+                        const contactDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+                        setSelectedTags(contactDB?.tag_ids || []);
+                        setModalContactPhone(selectedContact);
+                        setShowTagsModal(true);
+                      }}
+                      className="p-2 text-gray-500 hover:text-gray-700 rounded-lg transition-all"
+                      title="Editar tags"
+                    >
+                      <Tag className="w-5 h-5" />
+                    </button>
+
                     <button
                       onClick={() => setSidebarOpen(!sidebarOpen)}
                       className="p-2 text-gray-500 hover:text-gray-700 md:hidden"
@@ -1454,11 +1790,11 @@ export default function AttendantDashboard() {
                       >
                         <option value="">Selecione um departamento...</option>
                         {departments.map((dept) => {
-                          const currentContact = contactsDB.find(c => normalizePhone(c.phone_number) === normalizePhone(selectedContact));
+                          const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
                           const currentDeptId = currentContact?.department_id;
-                          const currentDeptName = currentContact ? departmentsMap[currentContact.department_id] : null;
+
                           return (
-                            <option key={dept.id} value={dept.name} disabled={dept.id === currentDeptId}>
+                            <option key={dept.id} value={dept.id} disabled={dept.id === currentDeptId}>
                               {dept.name} {dept.id === currentDeptId ? '(departamento atual)' : ''}
                             </option>
                           );
@@ -1467,7 +1803,7 @@ export default function AttendantDashboard() {
                       {departamentoTransferencia && (
                         <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                           <p className="text-sm text-green-700">
-                            ✅ Será transferido para: <span className="font-semibold">{departamentoTransferencia}</span>
+                            ✅ Será transferido para: <span className="font-semibold">{departmentsMap[departamentoTransferencia] || 'Departamento'}</span>
                           </p>
                         </div>
                       )}
@@ -1503,6 +1839,57 @@ export default function AttendantDashboard() {
                             Transferir
                           </>
                         )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tags Modal */}
+              {showTagsModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Editar Tags</h3>
+                    <p className="text-sm text-gray-500 mb-4">Selecione até 5 tags para este contato</p>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-56 overflow-auto mb-4">
+                      {tags.map((t) => (
+                        <label key={t.id} className="flex items-center gap-2 p-2 border rounded-lg hover:shadow-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.includes(t.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTags(prev => prev.includes(t.id) ? prev : [...prev, t.id].slice(0,5));
+                              } else {
+                                setSelectedTags(prev => prev.filter(id => id !== t.id));
+                              }
+                            }}
+                          />
+                          <span className="text-sm font-medium text-gray-800">{t.name}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowTagsModal(false);
+                          setModalContactPhone(null);
+                          setSelectedTags([]);
+                        }}
+                        className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all"
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          await handleUpdateContactInfo();
+                        }}
+                        className="flex-1 px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-all disabled:opacity-50"
+                      >
+                        Salvar
                       </button>
                     </div>
                   </div>
@@ -1623,7 +2010,9 @@ export default function AttendantDashboard() {
                           }
 
                           const isSentMessage = msg['minha?'] === 'true';
-                          const senderLabel = isSentMessage ? (msg.pushname || attendant?.name) : msg.pushname;
+                          // Para mensagens recebidas mostramos apenas o nome do contacts (se existir)
+                          const contactForLabel = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(normalizePhone(msg.numero || msg.sender || '')));
+                          const senderLabel = isSentMessage ? (msg.pushname || attendant?.name || '') : (contactForLabel?.name || '');
                           const tipoFromField = getMessageTypeFromTipomessage(msg.tipomessage);
                           const hasBase64Content = msg.base64;
 
@@ -1722,7 +2111,7 @@ export default function AttendantDashboard() {
                                   </div>
                                 )}
 
-                                {hasBase64Content && (tipoFromField === 'document') &&
+                                {hasBase64Content &&
                                   tipoFromField !== 'audio' &&
                                   tipoFromField !== 'image' &&
                                   tipoFromField !== 'sticker' &&
@@ -1797,8 +2186,8 @@ export default function AttendantDashboard() {
                     scrollToBottom(true);
                     setPendingMessagesCount(0);
                     // Marcar como visto
-                    if (selectedContactData?.messages) {
-                      const lastMsgTime = selectedContactData.messages.reduce((max, msg) => {
+                    if (chatMessages.length > 0) {
+                      const lastMsgTime = chatMessages.reduce((max, msg) => {
                         return Math.max(max, msg.timestamp ? new Date(msg.timestamp).getTime() : msg.created_at ? new Date(msg.created_at).getTime() : 0);
                       }, 0);
                       setLastViewedMessageTime(prev => ({
@@ -1826,12 +2215,19 @@ export default function AttendantDashboard() {
               {/* Message Input */}
               <div className="bg-white border-t border-gray-200 p-4">
                 <div className="max-w-4xl mx-auto space-y-3">
+                  {sendBlocked && blockedBannerMessage && (
+                    <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                      {blockedBannerMessage}
+                    </div>
+                  )}
+
                   {filePreview && (
                     <div className="relative inline-block">
                       <img src={filePreview} alt="preview" className="h-24 rounded-lg" />
                       <button
                         onClick={clearSelectedFile}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        disabled={sendBlocked}
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1841,13 +2237,15 @@ export default function AttendantDashboard() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => imageInputRef.current?.click()}
-                      className="p-2.5 text-sky-500 hover:bg-sky-50 rounded-lg transition-all"
+                      className={`p-2.5 text-sky-500 hover:bg-sky-50 rounded-lg transition-all ${sendBlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={sendBlocked}
                     >
                       <ImageIcon className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="p-2.5 text-sky-500 hover:bg-sky-50 rounded-lg transition-all"
+                      className={`p-2.5 text-sky-500 hover:bg-sky-50 rounded-lg transition-all ${sendBlocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={sendBlocked}
                     >
                       <Paperclip className="w-5 h-5" />
                     </button>
@@ -1858,12 +2256,14 @@ export default function AttendantDashboard() {
                       accept="image/*"
                       onChange={handleImageSelect}
                       className="hidden"
+                      disabled={sendBlocked}
                     />
                     <input
                       ref={fileInputRef}
                       type="file"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={sendBlocked}
                     />
 
                     <input
@@ -1873,13 +2273,13 @@ export default function AttendantDashboard() {
                       onChange={(e) => setMessageText(e.target.value)}
                       onPaste={handlePasteContent}
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey && messageText.trim()) {
+                        if (e.key === 'Enter' && !e.shiftKey && messageText.trim() && !sendBlocked) {
                           handleSendMessage();
                         }
                       }}
                       placeholder="Digite sua mensagem (ou cole imagem/arquivo)..."
                       className="flex-1 px-4 py-2.5 bg-gray-50 text-gray-900 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
-                      disabled={sending}
+                      disabled={sending || sendBlocked}
                     />
 
                     <EmojiPicker 
@@ -1888,7 +2288,7 @@ export default function AttendantDashboard() {
 
                     <button
                       onClick={handleSendMessage}
-                      disabled={sending || (!messageText.trim() && !selectedFile)}
+                      disabled={sending || (!messageText.trim() && !selectedFile) || sendBlocked}
                       className="p-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="w-5 h-5" />

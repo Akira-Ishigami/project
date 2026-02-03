@@ -13,6 +13,7 @@ interface Attendant {
   function: string;
   is_active: boolean;
   user_id: string;
+  apikey_instancia?: string | null;
 }
 
 interface AuthContextType {
