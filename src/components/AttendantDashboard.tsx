@@ -480,12 +480,23 @@ useEffect(() => {
     if (!company?.id) return;
 
     try {
-      // Buscar todos os contatos da empresa (sem filtro por departamento/sector)
-      const { data, error } = await supabase
+      // Construir query base
+      let query = supabase
         .from('contacts')
         .select('*')
-        .eq('company_id', company.id)
-        .order('last_message_time', { ascending: false });
+        .eq('company_id', company.id);
+
+      // Aplicar filtro de departamento/setor quando filterMode === 'mine'
+      if (filterMode === 'mine' && attendant?.department_id) {
+        query = query.eq('department_id', attendant.department_id);
+
+        // Se o atendente tem setor específico, filtrar também por setor
+        if (attendant?.sector_id) {
+          query = query.eq('sector_id', attendant.sector_id);
+        }
+      }
+
+      const { data, error } = await query.order('last_message_time', { ascending: false });
 
       if (error) throw error;
       const withTags = (data || []).map((c: ContactDB) => ({ ...c, tag_ids: (c as any).tag_ids ?? [] }));
