@@ -480,20 +480,18 @@ useEffect(() => {
     if (!company?.id) return;
 
     try {
+      console.log('[fetchContacts] Iniciando busca - filterMode:', filterMode, 'department_id:', attendant?.department_id);
+
       // Construir query base
       let query = supabase
         .from('contacts')
         .select('*')
         .eq('company_id', company.id);
 
-      // Aplicar filtro de departamento/setor quando filterMode === 'mine'
+      // Aplicar filtro de departamento quando filterMode === 'mine'
       if (filterMode === 'mine' && attendant?.department_id) {
         query = query.eq('department_id', attendant.department_id);
-
-        // Se o atendente tem setor específico, filtrar também por setor
-        if (attendant?.sector_id) {
-          query = query.eq('sector_id', attendant.sector_id);
-        }
+        console.log('[fetchContacts] Aplicando filtro department_id:', attendant.department_id);
       }
 
       const { data, error } = await query.order('last_message_time', { ascending: false });
@@ -501,6 +499,7 @@ useEffect(() => {
       if (error) throw error;
       const withTags = (data || []).map((c: ContactDB) => ({ ...c, tag_ids: (c as any).tag_ids ?? [] }));
 
+      console.log('[fetchContacts] Contatos retornados:', data?.length || 0);
       setContactsDB(withTags);
     } catch (e) {
       console.error('Erro ao buscar contatos:', e);
@@ -592,12 +591,15 @@ useEffect(() => {
 
 const fetchMessages = async () => {
   const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+  const apiKey = company?.api_key ?? null;
 
   if (!effectiveCompanyId) {
     setMessages([]);
     setLoading(false);
     return;
   }
+
+  console.log('[fetchMessages] Buscando mensagens - company_id:', effectiveCompanyId, 'api_key:', apiKey ? 'present' : 'absent');
 
   setLoading(true);
 
@@ -606,9 +608,18 @@ const fetchMessages = async () => {
   }, 10000);
 
   try {
+    // Usar filtro combinado como no CompanyDashboard
+    const messagesQuery = apiKey && effectiveCompanyId
+      ? supabase.from('messages').select('*').or(`apikey_instancia.eq.${apiKey},company_id.eq.${effectiveCompanyId}`)
+      : supabase.from('messages').select('*').eq('company_id', effectiveCompanyId);
+
+    const sentMessagesQuery = apiKey && effectiveCompanyId
+      ? supabase.from('sent_messages').select('*').or(`apikey_instancia.eq.${apiKey},company_id.eq.${effectiveCompanyId}`)
+      : supabase.from('sent_messages').select('*').eq('company_id', effectiveCompanyId);
+
     const [receivedResult, sentResult] = await Promise.all([
-      supabase.from('messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
-      supabase.from('sent_messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
+      messagesQuery.order('created_at', { ascending: true }),
+      sentMessagesQuery.order('created_at', { ascending: true }),
     ]);
 
     clearTimeout(timeout);
@@ -622,6 +633,8 @@ const fetchMessages = async () => {
     ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
 
     allMessages = allMessages.filter(m => !m.company_id || m.company_id === effectiveCompanyId);
+
+    console.log('[fetchMessages] Mensagens carregadas:', allMessages.length);
 
     const messagesWithReactions = processReactions(allMessages);
 
@@ -753,6 +766,8 @@ const subscribeToRealtime = () => {
   const contacts: Contact[] = useMemo(() => {
     if (!company?.id) return [];
 
+    console.log('[contacts useMemo] contactsDB count:', contactsDB?.length || 0, 'messages count:', messages?.length || 0);
+
     const arr = (contactsDB || []).map((db) => {
       const phone = normalizePhone(db.phone_number);
 
@@ -808,19 +823,26 @@ const subscribeToRealtime = () => {
   const filteredContacts = useMemo(() => {
     const s = searchTerm.toLowerCase().trim();
 
+    console.log('[filteredContacts] contacts count:', contacts?.length || 0, 'filterMode:', filterMode);
+
     // Base -> apenas contatos do DB para a company
     const base = (contacts || []).filter(c => c.company_id === company?.id);
 
     if (filterMode === 'all') {
       const res = s ? base.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : base;
+      console.log('[filteredContacts] mode=all, result count:', res?.length || 0);
       return res;
     }
 
     // mine -> somente contatos do mesmo departamento do atendente
     const myDept = attendant?.department_id ?? null;
-    if (!myDept) return [];
+    if (!myDept) {
+      console.log('[filteredContacts] mode=mine, mas sem department_id');
+      return [];
+    }
 
     const res = base.filter(c => c.department_id === myDept);
+    console.log('[filteredContacts] mode=mine, department:', myDept, 'result count:', res?.length || 0);
     return s ? res.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : res;
 
   }, [contacts, searchTerm, filterMode, attendant?.department_id, company?.id]);
