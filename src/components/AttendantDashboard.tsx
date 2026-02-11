@@ -81,7 +81,22 @@ interface TagItem {
 function normalizePhone(input?: string | null): string {
   if (!input) return '';
   const noJid = input.includes('@') ? input.split('@')[0] : input;
-  return noJid.replace(/\D/g, '');
+  let digits = noJid.replace(/\D/g, '');
+
+  // Remover 9 duplicado após o DDD
+  // Formato esperado: 55 (DDI) + 2 dígitos (DDD) + 9 dígitos
+  // Se vier: 5569999145425 (13 dígitos com 9 duplicado)
+  // Deve virar: 556999145425 (12 dígitos corretos)
+  if (digits.length === 13 && digits.startsWith('55')) {
+    const ddd = digits.substring(2, 4);
+    const resto = digits.substring(4);
+    // Se após DDD começar com 99, remover o primeiro 9
+    if (resto.startsWith('99')) {
+      digits = '55' + ddd + resto.substring(1);
+    }
+  }
+
+  return digits;
 }
 
 // Para consultas no banco (se o número vier sem DDI 55 ou com sufixo @...)
