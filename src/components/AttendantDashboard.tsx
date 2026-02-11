@@ -480,26 +480,17 @@ useEffect(() => {
     if (!company?.id) return;
 
     try {
-      console.log('[fetchContacts] Iniciando busca - filterMode:', filterMode, 'department_id:', attendant?.department_id);
-
-      // Construir query base
-      let query = supabase
+      // Buscar TODOS os contatos da empresa (sem filtro de departamento)
+      // O filtro será aplicado no client-side no useMemo filteredContacts
+      const { data, error } = await supabase
         .from('contacts')
         .select('*')
-        .eq('company_id', company.id);
-
-      // Aplicar filtro de departamento quando filterMode === 'mine'
-      if (filterMode === 'mine' && attendant?.department_id) {
-        query = query.eq('department_id', attendant.department_id);
-        console.log('[fetchContacts] Aplicando filtro department_id:', attendant.department_id);
-      }
-
-      const { data, error } = await query.order('last_message_time', { ascending: false });
+        .eq('company_id', company.id)
+        .order('last_message_time', { ascending: false });
 
       if (error) throw error;
       const withTags = (data || []).map((c: ContactDB) => ({ ...c, tag_ids: (c as any).tag_ids ?? [] }));
 
-      console.log('[fetchContacts] Contatos retornados:', data?.length || 0);
       setContactsDB(withTags);
     } catch (e) {
       console.error('Erro ao buscar contatos:', e);
@@ -599,8 +590,6 @@ const fetchMessages = async () => {
     return;
   }
 
-  console.log('[fetchMessages] Buscando mensagens - company_id:', effectiveCompanyId, 'api_key:', apiKey ? 'present' : 'absent');
-
   setLoading(true);
 
   const timeout = setTimeout(() => {
@@ -633,8 +622,6 @@ const fetchMessages = async () => {
     ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
 
     allMessages = allMessages.filter(m => !m.company_id || m.company_id === effectiveCompanyId);
-
-    console.log('[fetchMessages] Mensagens carregadas:', allMessages.length);
 
     const messagesWithReactions = processReactions(allMessages);
 
@@ -697,57 +684,41 @@ const subscribeToRealtime = () => {
   }, [selectedContact, contactsDB]);
 
   // Hook para monitorar mudanças em tempo real nos contatos
+  // Não aplicamos filtro aqui - o filtro é feito no client-side pelo useMemo filteredContacts
   useRealtimeContacts({
     companyId: company?.id,
     enabled: true,
     onContactsChange: (contact: any, type: 'INSERT' | 'UPDATE' | 'DELETE') => {
+      if (!contact) return;
 
-
-      const matchesFilter = (() => {
-        if (!contact) return false;
-
-        if (filterMode === 'mine') {
-          if (!attendant?.department_id) return false;
-          if (contact.department_id !== attendant.department_id) return false;
-          // Se atendente tem setor e o contato tem setor, validar também
-          if (attendant?.sector_id && contact.sector_id && contact.sector_id !== attendant.sector_id) return false;
-          return true;
-        }
-
-        // 'all' inclui contatos sem department; mantemos retorno true para todos os outros casos
-        return true; // 'all' or default
-      })();
+      // Verificar se é contato da mesma empresa
+      if (contact.company_id !== company?.id) return;
 
       setContactsDB((prevContacts) => {
         const contactExists = prevContacts.some(c => c.id === contact.id);
 
-        // Se não bate no filtro e já existia, removemos; se não existia, ignoramos
-        if (!matchesFilter) {
-          if (contactExists) return prevContacts.filter(c => c.id !== contact.id);
-          return prevContacts;
-        }
-
-        // Se bate no filtro, aplicamos update/insert normalmente
         if (type === 'DELETE') {
           return prevContacts.filter(c => c.id !== contact.id);
         }
 
         if (contactExists) {
+          // Atualizar contato existente
           return prevContacts.map(c => c.id === contact.id ? { ...c, ...contact } : c);
         }
 
-        // Novo contato que satisfaz o filtro: inserir contato (tags já vêm em contacts.tag_ids)
+        // Inserir novo contato
         return [...prevContacts, { ...contact, tag_ids: (contact as any).tag_ids ?? [] }];
       });
     }
   });
 
-  // Recarregar contatos quando o filtro do atendente mudar (modo, depto, setor ou lista de departamentos)
+  // Recarregar contatos apenas quando a empresa mudar
+  // O filtro por departamento é aplicado no client-side (useMemo filteredContacts)
   useEffect(() => {
     if (!company?.id) return;
     fetchContacts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterMode, attendant?.department_id, attendant?.sector_id, departments, company?.id]);
+  }, [company?.id]);
 
   const fileToBase64 = (file: File): Promise<string> => {
 
@@ -765,8 +736,6 @@ const subscribeToRealtime = () => {
   // ======= AGRUPA CONTATOS A PARTIR DO DB (contacts) E ANEXA MENSAGENS =======
   const contacts: Contact[] = useMemo(() => {
     if (!company?.id) return [];
-
-    console.log('[contacts useMemo] contactsDB count:', contactsDB?.length || 0, 'messages count:', messages?.length || 0);
 
     const arr = (contactsDB || []).map((db) => {
       const phone = normalizePhone(db.phone_number);
@@ -823,26 +792,21 @@ const subscribeToRealtime = () => {
   const filteredContacts = useMemo(() => {
     const s = searchTerm.toLowerCase().trim();
 
-    console.log('[filteredContacts] contacts count:', contacts?.length || 0, 'filterMode:', filterMode);
-
     // Base -> apenas contatos do DB para a company
     const base = (contacts || []).filter(c => c.company_id === company?.id);
 
     if (filterMode === 'all') {
       const res = s ? base.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : base;
-      console.log('[filteredContacts] mode=all, result count:', res?.length || 0);
       return res;
     }
 
     // mine -> somente contatos do mesmo departamento do atendente
     const myDept = attendant?.department_id ?? null;
     if (!myDept) {
-      console.log('[filteredContacts] mode=mine, mas sem department_id');
       return [];
     }
 
     const res = base.filter(c => c.department_id === myDept);
-    console.log('[filteredContacts] mode=mine, department:', myDept, 'result count:', res?.length || 0);
     return s ? res.filter((c) => c.name.toLowerCase().includes(s) || c.phoneNumber.toLowerCase().includes(s)) : res;
 
   }, [contacts, searchTerm, filterMode, attendant?.department_id, company?.id]);
