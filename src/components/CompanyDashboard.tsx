@@ -502,16 +502,16 @@ export default function CompanyDashboard() {
     }, 10000);
 
     try {
-      const [receivedResult, sentResult] = await Promise.all([
-        supabase
-          .from('messages')
-          .select('*')
-          .eq('apikey_instancia', company.api_key),
-        supabase
-          .from('sent_messages')
-          .select('*')
-          .eq('apikey_instancia', company.api_key)
-      ]);
+      // Incluir fallback por company_id caso mensagens não possuam apikey_instancia
+      const messagesQuery = company?.id
+        ? supabase.from('messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
+        : supabase.from('messages').select('*').eq('apikey_instancia', company.api_key);
+
+      const sentMessagesQuery = company?.id
+        ? supabase.from('sent_messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
+        : supabase.from('sent_messages').select('*').eq('apikey_instancia', company.api_key);
+
+      const [receivedResult, sentResult] = await Promise.all([messagesQuery, sentMessagesQuery]);
 
       clearTimeout(timeout);
 
@@ -586,32 +586,23 @@ export default function CompanyDashboard() {
     try {
       const { data, error } = await supabase
         .from('contacts')
-        .select('*')
+        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, tag_ids, last_message, last_message_time, created_at, updated_at')
         .eq('company_id', company.id)
         .order('last_message_time', { ascending: false });
 
-      if (!error && data) {
-        // Buscar tags para cada contato
-        const contactsWithTags = await Promise.all(
-          data.map(async (contact) => {
-            const { data: contactTags } = await supabase
-              .from('contact_tags')
-              .select('tag_id')
-              .eq('contact_id', contact.id);
+      if (error) throw error;
 
-            return {
-              ...contact,
-              tag_ids: contactTags?.map(ct => ct.tag_id) || []
-            };
-          })
-        );
+      const normalized = (data || []).map((c: any) => ({
+        ...c,
+        tag_ids: Array.isArray(c.tag_ids) ? c.tag_ids : [],
+      }));
 
-        setContactsDB(contactsWithTags);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar contatos:', error);
+      setContactsDB(normalized);
+    } catch (err) {
+      console.error('Erro ao carregar contatos:', err);
     }
   };
+
 
   const fetchDepartments = async () => {
     if (!company?.id) return;
@@ -849,7 +840,13 @@ export default function CompanyDashboard() {
     // A referência correta é a tabela contact_tags. Então consideramos "mudou" sempre que selectedTags for diferente do estado selecionado atual da UI.
     // (Se você já carrega selectedTags a partir do banco ao selecionar o contato, isso fica correto.)
 
-    if (!departmentChanged && !sectorChanged && selectedTags.length === 0) {
+    const currentTagsPre = Array.isArray((currentContact as any).tag_ids) ? (currentContact as any).tag_ids : [];
+
+    const tagsChangedPre =
+      selectedTags.length !== currentTagsPre.length ||
+      !selectedTags.every((id) => currentTagsPre.includes(id));
+
+    if (!departmentChanged && !sectorChanged && !tagsChangedPre) {
       setToastMessage("Nenhuma alteração foi feita");
       setShowToast(true);
       return;
@@ -926,35 +923,55 @@ export default function CompanyDashboard() {
     }
 
     // =========================
-    // 6) Atualizar TAGS (contact_tags)
+    // 6) Atualizar TAGS (somente via RPC)
     // =========================
-    // Se você quer manter a lógica original de comparar, você precisa carregar as tags atuais do contato no momento da seleção.
-    // Aqui vamos fazer "sync direto" pelo selectedTags.
-    const { error: delErr } = await supabase
-      .from("contact_tags")
-      .delete()
-      .eq("contact_id", contactId);
+    // REGRA: nunca acessar contact_tags no frontend.
+    // A UI trabalha com selectedTags (string[] de UUIDs).
+    // A leitura/exibição vem de contacts.tag_ids (array) e do catálogo `tags`.
 
-    if (delErr) {
-      console.error("❌ Erro ao remover tags antigas:", delErr);
-      throw delErr;
-    }
+    // Detectar se tags mudaram de verdade
+    const currentTags = Array.isArray((currentContact as any).tag_ids) ? (currentContact as any).tag_ids : [];
+    const tagsChanged =
+      selectedTags.length !== currentTags.length ||
+      !selectedTags.every((id) => currentTags.includes(id));
 
-    if (selectedTags.length > 0) {
-      const tagsToInsert = selectedTags.slice(0, 5).map((tagId) => ({
-        contact_id: contactId,
-        tag_id: tagId,
-      }));
+    if (tagsChanged) {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('update_contact_tags', {
+        p_contact_id: contactId,
+        p_tag_ids: selectedTags,
+      });
 
-      const { error: tagsError } = await supabase.from("contact_tags").insert(tagsToInsert);
-
-      if (tagsError) {
-        console.error("❌ Erro ao inserir tags:", tagsError);
-        throw tagsError;
+      if (rpcError) {
+        console.error('[TAGS][Company] RPC update_contact_tags falhou:', rpcError);
+        setToastMessage(`Erro ao atualizar tags: ${rpcError.message || String(rpcError)}`);
+        setShowToast(true);
+        throw rpcError;
       }
+
+      // Opcional: manter espelho em contacts para UI (tag_ids e tag_id)
+      // Isso garante que a lista de contatos e o header/modal atualizem imediatamente.
+      const primaryTag = selectedTags.length > 0 ? selectedTags[0] : null;
+      const { error: mirrorErr } = await supabase
+        .from('contacts')
+        .update({ tag_ids: selectedTags, tag_id: primaryTag })
+        .eq('id', contactId);
+
+      if (mirrorErr) {
+        console.warn('[TAGS][Company] Aviso ao atualizar contacts.tag_ids/tag_id:', mirrorErr);
+      }
+
+      // Atualizar estado local imediatamente (sem depender de refetch)
+      setContactsDB((prev) =>
+        prev.map((c: any) => (c.id === contactId ? { ...c, tag_ids: selectedTags, tag_id: primaryTag } : c))
+      );
+      setSelectedContactData((prev: any) => (prev ? { ...prev, tag_ids: selectedTags, tag_id: primaryTag } : prev));
+
+      // Se quiser garantir consistência total, pode manter o refetch:
+      fetchContacts();
     }
 
     // =========================
+
     // 7) Sync messages / sent_messages (somente se dept/sector mudou)
     // =========================
     if (Object.keys(updates).length > 0) {

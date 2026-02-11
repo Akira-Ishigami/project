@@ -110,9 +110,6 @@ export default function AttendantDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [sector, setSector] = useState<Sector | null>(null);
-
-  // Company api_key fallback: alguns contextos de attendant não trazem api_key
-  const [companyApiKey, setCompanyApiKey] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -140,7 +137,7 @@ export default function AttendantDashboard() {
 
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  
+
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
 
   const [transferindo, setTransferindo] = useState(false);
@@ -201,8 +198,7 @@ export default function AttendantDashboard() {
       }
 
       if (data) {
-        const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', data.id);
-        const withTags = { ...data, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] } as ContactDB;
+        const withTags = { ...data, tag_ids: (data as any).tag_ids ?? [] } as ContactDB;
 
         setContactsDB(prev => {
           if (prev.some(c => c.id === withTags.id)) return prev.map(c => c.id === withTags.id ? withTags : c);
@@ -384,48 +380,33 @@ export default function AttendantDashboard() {
       if (unsub) unsub();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attendant?.id, company?.id, company?.api_key]);
+  }, [attendant?.id, company?.id]);
 
-  // DEV-only diagnostic: inspeciona amostras da tabela `messages` por apikey e por company_id (sem UI)
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
+// DEV-only diagnostic: inspeciona amostras da tabela `messages` por company_id (sem UI)
+useEffect(() => {
+  if (!import.meta.env.DEV) return;
 
-    (async () => {
-      try {
-        const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
-        const effectiveApiKey = company?.api_key ?? attendant?.apikey_instancia ?? null;
-
-        if (effectiveApiKey) {
-          const { data, error } = await supabase
-            .from('messages')
-            .select('id, numero, department_id, company_id, apikey_instancia, created_at')
-            .eq('apikey_instancia', effectiveApiKey)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          console.log('[DIAG] messages by apikey', effectiveApiKey, 'count=', data?.length || 0, 'error=', error || null, 'sample=', data?.slice(0,3) || []);
-        } else {
-          console.log('[DIAG] no effectiveApiKey');
-        }
-
-        if (effectiveCompanyId) {
-          const { data, error } = await supabase
-            .from('messages')
-            .select('id, numero, department_id, company_id, apikey_instancia, created_at')
-            .eq('company_id', effectiveCompanyId)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          console.log('[DIAG] messages by company_id', effectiveCompanyId, 'count=', data?.length || 0, 'error=', error || null, 'sample=', data?.slice(0,3) || []);
-        } else {
-          console.log('[DIAG] no effectiveCompanyId');
-        }
-      } catch (e) {
-        console.error('[DIAG] erro ao inspecionar mensagens', e);
+  (async () => {
+    try {
+      const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+      if (!effectiveCompanyId) {
+        console.log('[DIAG] no effectiveCompanyId');
+        return;
       }
-    })();
 
-  }, [company?.id, company?.api_key, attendant?.company_id, attendant?.apikey_instancia]);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, numero, department_id, company_id, apikey_instancia, created_at')
+        .eq('company_id', effectiveCompanyId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      console.log('[DIAG] messages by company_id', effectiveCompanyId, 'count=', data?.length || 0, 'error=', error || null, 'sample=', data?.slice(0, 3) || []);
+    } catch (e) {
+      console.error('[DIAG] erro ao inspecionar mensagens', e);
+    }
+  })();
+}, [company?.id, attendant?.company_id]);
 
   useEffect(() => {
     if (selectedContact) {
@@ -434,25 +415,6 @@ export default function AttendantDashboard() {
       isUserScrollingRef.current = false;
     }
   }, [selectedContact]);
-
-  // Carregar api_key da company quando necessário (alguns contexts do attendant não têm company.api_key)
-  useEffect(() => {
-    const run = async () => {
-      try {
-        if (!company?.id) return;
-        const { data, error } = await supabase
-          .from('companies')
-          .select('api_key')
-          .eq('id', company.id)
-          .maybeSingle();
-
-        if (!error) setCompanyApiKey(data?.api_key ?? null);
-      } catch (e) {
-        console.error('Erro ao buscar company api_key:', e);
-      }
-    };
-    run();
-  }, [company?.id]);
 
   const fetchSector = async () => {
     if (!attendant?.sector_id) return;
@@ -526,13 +488,7 @@ export default function AttendantDashboard() {
         .order('last_message_time', { ascending: false });
 
       if (error) throw error;
-
-      const withTags = await Promise.all(
-        (data || []).map(async (c: ContactDB) => {
-          const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', c.id);
-          return { ...c, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] };
-        })
-      );
+      const withTags = (data || []).map((c: ContactDB) => ({ ...c, tag_ids: (c as any).tag_ids ?? [] }));
 
       setContactsDB(withTags);
     } catch (e) {
@@ -556,34 +512,34 @@ export default function AttendantDashboard() {
   const processReactions = (messages: Message[]) => {
     // Extrair reações
     const reactions = messages.filter(m => m.tipomessage === 'reactionMessage');
-    
+
     if (reactions.length === 0) return messages;
 
 
 
     // Mapear reações por ID da mensagem alvo
     const reactionMap = new Map<string, Array<{ emoji: string; count: number }>>();
-    
+
     const looksLikeEmoji = (v?: string | null) =>
       !!v && v.length <= 6 && /[^\w\d]/.test(v);
-    
+
     reactions.forEach(reaction => {
       let targetId = reaction?.reaction_target_id as string | null;
       let emoji = reaction?.message as string | null;
-      
+
       // ✅ Fallback: se emoji tá em reaction_target_id, swap
       if (looksLikeEmoji(targetId) && !looksLikeEmoji(emoji)) {
         const tmp = targetId;
         targetId = emoji;
         emoji = tmp;
       }
-      
+
       // ✅ Outros fallbacks
       if (!emoji && looksLikeEmoji(reaction?.caption)) emoji = reaction.caption;
       if (!targetId && reaction?.idmessage) targetId = reaction.idmessage;
-      
 
-      
+
+
       if (!targetId || !emoji) {
         console.warn('⚠️ Reação inválida: falta reaction_target_id ou message', reaction);
         return;
@@ -595,7 +551,7 @@ export default function AttendantDashboard() {
 
       const reactionList = reactionMap.get(targetId)!;
       const existing = reactionList.find(r => r.emoji === emoji);
-      
+
       if (existing) {
         existing.count++;
       } else {
@@ -607,14 +563,14 @@ export default function AttendantDashboard() {
 
     // Adicionar reações às mensagens originais
     const filtered = messages.filter(m => m.tipomessage !== 'reactionMessage');
-    
+
     return filtered.map(msg => {
       const msgReactions = (reactionMap.get(msg?.idmessage || '') || reactionMap.get(msg?.message || '') || reactionMap.get(msg?.id || '') || []) as Array<{ emoji: string; count: number }>;
-      
+
       if (msgReactions.length > 0) {
 
       }
-      
+
       return {
         ...msg,
         reactions: msgReactions
@@ -622,209 +578,92 @@ export default function AttendantDashboard() {
     });
   };
 
-  const fetchMessages = async () => {
-    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
-    const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
 
-    if (!effectiveApiKey && !effectiveCompanyId) {
-      setMessages([]);
-      setLoading(false);
-      return;
-    }
+const fetchMessages = async () => {
+  const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
 
-    setLoading(true);
+  if (!effectiveCompanyId) {
+    setMessages([]);
+    setLoading(false);
+    return;
+  }
 
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      // silent timeout
-    }, 10000);
+  setLoading(true);
 
-    try {
-      let receivedResult: any, sentResult: any;
+  const timeout = setTimeout(() => {
+    setLoading(false);
+  }, 10000);
 
-      if (effectiveApiKey) {
-        // Preferir buscar por apikey (mesmo comportamento do CompanyDashboard)
-        [receivedResult, sentResult] = await Promise.all([
-          supabase.from('messages').select('*').eq('apikey_instancia', effectiveApiKey),
-          supabase.from('sent_messages').select('*').eq('apikey_instancia', effectiveApiKey)
-        ]);
-      } else {
-        [receivedResult, sentResult] = await Promise.all([
-          supabase.from('messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
-          supabase.from('sent_messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true })
-        ]);
+  try {
+    const [receivedResult, sentResult] = await Promise.all([
+      supabase.from('messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
+      supabase.from('sent_messages').select('*').eq('company_id', effectiveCompanyId).order('created_at', { ascending: true }),
+    ]);
+
+    clearTimeout(timeout);
+
+    if (receivedResult.error) throw receivedResult.error;
+    if (sentResult.error) throw sentResult.error;
+
+    let allMessages: Message[] = [
+      ...(receivedResult.data || []),
+      ...(sentResult.data || []),
+    ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+
+    allMessages = allMessages.filter(m => !m.company_id || m.company_id === effectiveCompanyId);
+
+    const messagesWithReactions = processReactions(allMessages);
+
+    setMessages(messagesWithReactions);
+    setTimeout(scrollToBottom, 50);
+  } catch (e) {
+    console.error('Erro ao carregar mensagens:', e);
+    setMessages([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+const subscribeToRealtime = () => {
+  const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
+
+  if (!effectiveCompanyId && !import.meta.env.DEV) return;
+  if (!effectiveCompanyId && import.meta.env.DEV) {
+    console.log('[DEV] subscribing to all messages (no companyId) for testing');
+  }
+
+  const channel = supabase
+    .channel('attendant-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
+      () => {
+        fetchMessages();
+        fetchContacts();
       }
-
-      clearTimeout(timeout);
-
-      if (receivedResult.error) throw receivedResult.error;
-      if (sentResult.error) throw sentResult.error;
-
-      // DEV: diagnósticos rápidos
-      if (import.meta.env.DEV) {
-        try {
-          console.log('[DIAG] fetchMessages using', effectiveApiKey ? 'apikey' : 'company_id', effectiveApiKey ?? effectiveCompanyId, 'received=', (receivedResult.data || []).length, 'sent=', (sentResult.data || []).length);
-        } catch (e) {}
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'sent_messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
+      () => {
+        fetchMessages();
+        fetchContacts();
       }
-
-      let allMessages: Message[] = [
-        ...(receivedResult.data || []),
-        ...(sentResult.data || [])
-      ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
-
-      // Garantir company_id consistente com a empresa logada ou atendente
-      if (effectiveCompanyId) {
-        allMessages = allMessages.filter(m => !m.company_id || m.company_id === effectiveCompanyId);
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'contacts', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
+      () => {
+        fetchContacts();
       }
+    )
+    .subscribe();
 
-      // Processar reações
-      const messagesWithReactions = processReactions(allMessages);
-
-      setMessages(messagesWithReactions);
-      setTimeout(scrollToBottom, 50);
-    } catch (e) {
-      console.error('Erro ao carregar mensagens:', e);
-      setMessages([]);
-    } finally {
-      setLoading(false);
-    }
+  return () => {
+    supabase.removeChannel(channel);
   };
-
-  const subscribeToRealtime = () => {
-    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
-    const effectiveCompanyId = company?.id ?? attendant?.company_id ?? null;
-
-    // Em produção, precisamos de ao menos um identificador; em DEV permitimos assinatura sem filtro para testes
-    if (!effectiveApiKey && !effectiveCompanyId && !import.meta.env.DEV) return;
-    if (!effectiveApiKey && !effectiveCompanyId && import.meta.env.DEV) {
-      console.log('[DEV] subscribing to all messages (no apikey/companyId) for testing');
-    }
-
-    const channel = supabase
-      .channel('attendant-realtime')
-      // Listen to messages by apikey (if available)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: effectiveApiKey ? `apikey_instancia=eq.${effectiveApiKey}` : undefined },
-        () => {
-          fetchMessages();
-          fetchContacts();
-        }
-      )
-      // Also listen to messages by company_id as a fallback (if available)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
-        () => {
-          fetchMessages();
-          fetchContacts();
-        }
-      )
-      // Sent messages by apikey
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sent_messages', filter: effectiveApiKey ? `apikey_instancia=eq.${effectiveApiKey}` : undefined },
-        () => {
-          fetchMessages();
-          fetchContacts();
-        }
-      )
-      // Sent messages by company_id fallback
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sent_messages', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
-        () => {
-          fetchMessages();
-          fetchContacts();
-        }
-      )
-      // Contacts
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'contacts', filter: effectiveCompanyId ? `company_id=eq.${effectiveCompanyId}` : undefined },
-        () => {
-          fetchContacts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  // Effective api key trazido explicitamente (somente companyApiKey)
-  const effectiveApiKey = companyApiKey;
-  const realtimeEnabled = !!effectiveApiKey;
-
-  // DEV: log para confirmar que o api_key foi carregado
-  useEffect(() => {
-    if (import.meta.env.DEV) console.log('[DIAG] companyApiKey', companyApiKey);
-  }, [companyApiKey]);
-
-  // Hook para monitorar mudanças em tempo real nas mensagens — habilita apenas se tivermos effectiveApiKey
-  useRealtimeMessages({
-    apiKey: effectiveApiKey,
-    enabled: realtimeEnabled,
-    onMessagesChange: (message: Message) => {
-      // Atualizar a lista de mensagens quando uma nova mensagem chega
-      setMessages((prevMessages) => {
-        const messageExists = prevMessages.some(m => m.id === message.id);
-        if (messageExists) {
-          return prevMessages.map(m => m.id === message.id ? message : m);
-        }
-        return [...prevMessages, message];
-      });
-    },
-    onNewMessage: (message: Message, _type: 'received' | 'sent') => {
-      // Scroll automático apenas (sem fetchContacts para não alterar nomes)
-      if (isUserScrollingRef.current) {
-        setPendingMessagesCount(prev => prev + 1);
-      } else {
-        scrollToBottom();
-      }
-
-      // Refetch condicional de contatos: se estamos filtrando por departamento
-      try {
-        const now = Date.now();
-        if (now - lastContactsRefetchAt.current < 2500) return; // debounce 2.5s
-
-        const msgDept = (message as any).department_id || (message as any).departamento_id || null;
-        const phoneRaw = String((message as any).numero || (message as any).sender || '');
-        const phone = normalizeDbPhone(phoneRaw);
-
-        // Se modo 'mine' e a mensagem pertence ao dept do atendente, refetch geral de contatos
-        if (filterMode === 'mine' && attendant?.department_id && msgDept && msgDept === attendant.department_id) {
-          const exists = contactsDB.some(c => normalizeDbPhone(c.phone_number) === phone);
-          if (!exists) {
-            lastContactsRefetchAt.current = now;
-            fetchContacts();
-          }
-        }
-
-        // Sempre tentar trazer o contato pelo número caso não exista no cache (fallback semelhante ao Company)
-        const exists = contactsDB.some(c => normalizeDbPhone(c.phone_number) === phone);
-        if (!exists && phoneRaw) {
-          fetchAndCacheContactByPhone(phoneRaw);
-        }
-      } catch (e) {
-        console.error('Erro ao decidir refetch de contatos no onNewMessage:', e);
-      }
-    }
-  });
-
-  // Polling automático como fallback - verifica a cada 3 segundos quando api_key estiver disponível
-  useEffect(() => {
-    const effectiveApiKey = companyApiKey ?? company?.api_key ?? attendant?.apikey_instancia ?? null;
-    if (!effectiveApiKey) return;
-
-    const pollingInterval = setInterval(() => {
-      fetchMessages();
-      fetchContacts();
-    }, 3000);
-
-    return () => clearInterval(pollingInterval);
-  }, [companyApiKey, company?.api_key, attendant?.apikey_instancia]);
+};
 
   // Carregar status IA do contato
   useEffect(() => {
@@ -873,46 +712,11 @@ export default function AttendantDashboard() {
           return prevContacts.map(c => c.id === contact.id ? { ...c, ...contact } : c);
         }
 
-        // Novo contato que satisfaz o filtro: buscar tags e inserir
-        (async () => {
-          try {
-            const { data: contactTags } = await supabase.from('contact_tags').select('tag_id').eq('contact_id', contact.id);
-            const contactWithTags = { ...contact, tag_ids: contactTags?.map((ct: any) => ct.tag_id) || [] };
-            setContactsDB(prev => {
-              if (prev.some(p => p.id === contact.id)) {
-                return prev.map(p => p.id === contact.id ? contactWithTags : p);
-              }
-              return [...prev, contactWithTags];
-            });
-          } catch (e) {
-            console.error('Erro ao buscar tags do contato realtime:', e);
-            // Fallback: inserir contato sem tags
-            setContactsDB(prev => prev.some(p => p.id === contact.id) ? prev.map(p => p.id === contact.id ? { ...p, ...contact } : p) : [...prev, contact]);
-          }
-        })();
-
-        // Enquanto tags chegam, já adicionamos contato sem tags (para responsividade)
-        return [...prevContacts, contact];
+        // Novo contato que satisfaz o filtro: inserir contato (tags já vêm em contacts.tag_ids)
+        return [...prevContacts, { ...contact, tag_ids: (contact as any).tag_ids ?? [] }];
       });
     }
   });
-
-  // Polling automático como fallback - verifica a cada 3 segundos
-  useEffect(() => {
-    if (!company?.api_key) return;
-
-
-    
-    const pollingInterval = setInterval(() => {
-
-      fetchMessages();
-      fetchContacts();
-    }, 3000); // 3 segundos
-
-    return () => {
-      clearInterval(pollingInterval);
-    };
-  }, [company?.api_key]);
 
   // Recarregar contatos quando o filtro do atendente mudar (modo, depto, setor ou lista de departamentos)
   useEffect(() => {
@@ -987,7 +791,7 @@ export default function AttendantDashboard() {
     arr.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
 
     // Não adicionamos contatos a partir de mensagens aqui: a lista lateral deve vir apenas de `contacts` (contactsDB).
-    return arr; 
+    return arr;
   }, [contactsDB, messages, lastViewedMessageTime, company?.id, filterMode, attendant?.department_id, fetchAndCacheContactByPhone]);
 
   const filteredContacts = useMemo(() => {
@@ -1033,7 +837,7 @@ export default function AttendantDashboard() {
   const chatMessages = useMemo(() => {
     if (!selectedContact) return [] as Message[];
     const n = normalizePhone(selectedContact);
-    return messages.filter(m => normalizePhone(m.numero || m.sender || '') === n).sort((a,b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+    return messages.filter(m => normalizePhone(m.numero || m.sender || '') === n).sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
   }, [messages, selectedContact]);
 
   useEffect(() => {
@@ -1186,12 +990,91 @@ export default function AttendantDashboard() {
         return;
       }
 
-      await supabase.from('contact_tags').delete().eq('contact_id', contactDB.id);
+      // Calcular diffs entre tags atuais e as selecionadas
+      const toAdd = selectedTags.filter(id => !currentTags.includes(id));
+      const toRemove = currentTags.filter(id => !selectedTags.includes(id));
 
-      if (selectedTags.length > 0) {
-        const payload = selectedTags.slice(0, 5).map((tagId) => ({ contact_id: contactDB.id, tag_id: tagId }));
-        const { error } = await supabase.from('contact_tags').insert(payload);
-        if (error) throw error;
+      console.log('[TAGS] Atualizando tags para contato:', contactDB.id, { currentTags, selectedTags, toAdd, toRemove });
+
+      // Usar RPC atômica no banco para aplicar diffs e garantir permissões/consistência.
+      // Se a RPC não existir ou falhar por não existir (migration não aplicada), fazemos fallback para lógica cliente (deleta/inserir)
+      let rpcInvoked = false;
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('update_contact_tags', { p_contact_id: contactDB.id, p_tag_ids: selectedTags });
+        rpcInvoked = true;
+        if (rpcError) {
+          console.error('[TAGS] Erro RPC update_contact_tags:', rpcError);
+          setToastMessage(`Erro ao atualizar tags: ${rpcError.message || String(rpcError)}`);
+          setShowToast(true);
+          // Se o erro indica que a função não existe, vamos para o fallback; senão, rethrow
+          const msg = String(rpcError?.message || '').toLowerCase();
+          const notFound = msg.includes('function') && msg.includes('does not exist');
+          if (!notFound) throw rpcError;
+        }
+
+        console.log('[TAGS] RPC update_contact_tags result:', rpcData);
+
+        if (rpcData && rpcData.success === false) {
+          console.error('[TAGS] RPC erro lógico:', rpcData);
+          setToastMessage(`Erro ao atualizar tags: ${rpcData.error || JSON.stringify(rpcData)}`);
+          setShowToast(true);
+          // Se for forbidden, provavelmente políticas RLS — abortar e mostrar erro
+          if (rpcData.error === 'forbidden') throw new Error('forbidden');
+          // Caso contrário, permitir fallback
+        } else {
+          // RPC executou com sucesso — atualizar lista local e encerrar
+          fetchContacts();
+        }
+      } catch (rpcEx) {
+        if (rpcInvoked) {
+          // RPC existe mas falhou com erro diferente de 'function not found' — abortar
+          console.error('[TAGS] RPC falhou:', rpcEx);
+          throw rpcEx;
+        }
+
+        // RPC não existe — usar fallback cliente
+        console.warn('[TAGS] RPC update_contact_tags não encontrada — usando fallback cliente (delete/insert).');
+
+        // Deletar somente as tags desmarcadas
+        if (toRemove.length > 0) {
+          if (delError) {
+            console.error('[TAGS] Erro ao deletar tags desmarcadas (fallback):', delError, { toRemove });
+            setToastMessage(`Erro ao deletar tags: ${delError.message || String(delError)}`);
+            setShowToast(true);
+            throw delError;
+          }
+          console.log('[TAGS] (fallback) Linhas deletadas (contact_tags):', delData);
+        }
+
+        // Inserir somente as novas tags, respeitando limite de 5 por contato
+        if (toAdd.length > 0) {
+          const existingCount = currentTags.length - toRemove.length; // já removemos as desmarcadas
+          const allowed = Math.max(0, 5 - existingCount);
+          const toInsert = toAdd.slice(0, allowed);
+          if (toInsert.length > 0) {
+            const payload = toInsert.map(tagId => ({ contact_id: contactDB.id, tag_id: tagId }));
+            if (insError) {
+              console.error('[TAGS] Erro ao inserir novas tags (fallback):', insError, { payload });
+              setToastMessage(`Erro ao inserir tags: ${insError.message || String(insError)}`);
+              setShowToast(true);
+              throw insError;
+            }
+            console.log('[TAGS] (fallback) Linhas inseridas (contact_tags):', insData);
+          } else {
+            console.log('[TAGS] (fallback) Nenhuma tag nova permitida (limite atingido) - allowed:', allowed);
+          }
+        }
+
+        // Atualizar campo legacy `contacts.tag_id` para refletir primeira tag (ou NULL)
+        const contactTagToSet = selectedTags.length > 0 ? selectedTags[0] : null;
+        const { data: updData, error: updateError } = await supabase.from('contacts').update({ tag_id: contactTagToSet }).eq('id', contactDB.id);
+        if (updateError) {
+          console.warn('Aviso: não foi possível atualizar contacts.tag_id (fallback):', updateError);
+        } else {
+          console.log('[TAGS] (fallback) contacts.tag_id atualizado:', updData);
+        }
+
+        fetchContacts();
       }
 
       setToastMessage('Tags atualizadas com sucesso!');
@@ -1209,7 +1092,7 @@ export default function AttendantDashboard() {
 
   // ======= ENVIO DE MENSAGEM + WEBHOOK COM DEPARTAMENTO =======
   const sendMessage = async (messageData: Partial<Message>) => {
-    if (!company || !company.api_key || !selectedContact) return;
+    if (!company?.id || !selectedContact) return;
 
     // Validação: impedir envio se o contato não pertencer ao mesmo departamento ou empresa do atendente
     const contactDB = contactsDB.find((c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
@@ -1236,10 +1119,11 @@ export default function AttendantDashboard() {
       const { data: lastMsg } = await supabase
         .from('messages')
         .select('instancia, department_id, sector_id, tag_id')
-        .eq('apikey_instancia', company.api_key)
+        .eq('company_id', company.id)
         .eq('numero', selectedContact)
         .order('created_at', { ascending: false })
         .limit(1);
+
 
       const instanciaValue = lastMsg?.[0]?.instancia || company.name;
       const departmentId = lastMsg?.[0]?.department_id ?? attendant?.department_id ?? null;
@@ -1251,9 +1135,8 @@ export default function AttendantDashboard() {
       const rowToInsert: Partial<Message> = {
         numero: selectedContact,
         sender: selectedContact,
-        'minha?': 'true',
+        minha: 'true',
         pushname: attendant?.name || company.name,
-        apikey_instancia: company.api_key,
         date_time: nowIso,
         timestamp: nowIso,
         instancia: instanciaValue,
@@ -1271,6 +1154,8 @@ export default function AttendantDashboard() {
         urlimagem: messageData.urlimagem || null,
         caption: messageData.caption || null,
       };
+
+
 
       const { error } = await supabase.from('sent_messages').insert([rowToInsert]);
       if (error) throw error;
@@ -1302,7 +1187,7 @@ export default function AttendantDashboard() {
         pushname: attendant?.name || company.name,
         timestamp: nowIso,
         instancia: instanciaValue,
-        apikey_instancia: company.api_key,
+        apikey_instancia: attendant?.apikey_instancia ?? null,
 
         sender_type: 'attendant',
         attendant_id: attendant?.id || null,
@@ -1446,7 +1331,7 @@ export default function AttendantDashboard() {
 
       if (resultado.sucesso) {
         console.log('[TRANSFERÊNCIA ATD 3] ✅ Transferência registrada com sucesso:', resultado.data);
-        
+
         // Mostrar modal de sucesso com todos os dados da transferência
         setTransferSuccessData({
           ...resultado.data,
@@ -1454,7 +1339,7 @@ export default function AttendantDashboard() {
           nomecontato: currentContact.name
         });
         setShowTransferSuccessModal(true);
-        
+
         setToastMessage(`✅ Contato transferido para ${departmentsMap[departamentoTransferencia] || 'Departamento'}`);
         setShowToast(true);
         setDepartamentoTransferencia('');
@@ -1612,7 +1497,7 @@ export default function AttendantDashboard() {
             <div className="mt-3 flex gap-2 flex-wrap items-center">
               <button
                 onClick={() => setFilterMode('mine')}
-                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'mine' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1` }>
+                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'mine' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1`}>
                 Meu Departamento
               </button>
 
@@ -1620,7 +1505,7 @@ export default function AttendantDashboard() {
 
               <button
                 onClick={() => setFilterMode('all')}
-                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'all' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1` }>
+                className={`px-2.5 py-1 rounded-full text-sm font-medium transition transform enabled:hover:-translate-y-0.5 ${filterMode === 'all' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md' : 'bg-white border border-blue-100 text-gray-700 hover:bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1`}>
                 Todos
               </button>
             </div>
@@ -1645,11 +1530,10 @@ export default function AttendantDashboard() {
                       setSelectedContact(contact.phoneNumber);
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
-                    className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${
-                      selectedContact === contact.phoneNumber
-                        ? 'bg-sky-50 border-2 border-sky-500 shadow-md'
-                        : 'hover:bg-gray-50 border border-gray-200'
-                    }`}
+                    className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${selectedContact === contact.phoneNumber
+                      ? 'bg-sky-50 border-2 border-sky-500 shadow-md'
+                      : 'hover:bg-gray-50 border border-gray-200'
+                      }`}
                   >
                     <div className="w-11 h-11 bg-sky-500 rounded-lg flex items-center justify-center flex-shrink-0">
                       <User className="w-5 h-5 text-white" />
@@ -1711,11 +1595,10 @@ export default function AttendantDashboard() {
                         <p className="text-gray-500 text-xs">{selectedContactData.phoneNumber}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                          iaAtivada 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${iaAtivada
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-600'
+                          }`}>
                           IA: {iaAtivada ? 'Ativada ✅' : 'Desativada ❌'}
                         </span>
                       </div>
@@ -1769,17 +1652,17 @@ export default function AttendantDashboard() {
                     <div className="flex items-center justify-center w-12 h-12 bg-amber-100 rounded-full mx-auto mb-4">
                       <SendIcon className="w-6 h-6 text-amber-600" />
                     </div>
-                    
+
                     <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
                       Transferir Contato
                     </h2>
-                    
+
                     <div className="bg-gray-50 rounded-xl p-4 mb-6">
                       <p className="text-xs font-medium text-gray-500 mb-1">Contato:</p>
                       <p className="text-lg font-semibold text-gray-900">{selectedContactData?.name}</p>
                       <p className="text-sm text-gray-600">{selectedContactData?.phoneNumber}</p>
                     </div>
-                    
+
                     <div className="space-y-3 mb-6">
                       <label className="block text-sm font-semibold text-gray-700">Departamento Destino</label>
                       <select
@@ -1860,7 +1743,7 @@ export default function AttendantDashboard() {
                             checked={selectedTags.includes(t.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedTags(prev => prev.includes(t.id) ? prev : [...prev, t.id].slice(0,5));
+                                setSelectedTags(prev => prev.includes(t.id) ? prev : [...prev, t.id].slice(0, 5));
                               } else {
                                 setSelectedTags(prev => prev.filter(id => id !== t.id));
                               }
@@ -1905,38 +1788,38 @@ export default function AttendantDashboard() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    
+
                     <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">
                       Transferência Registrada! ✅
                     </h2>
-                    
+
                     <p className="text-sm text-gray-600 mb-6 text-center">Dados salvos no banco de dados</p>
-                    
+
                     <div className="bg-gray-50 rounded-xl p-4 space-y-4 mb-6 border border-gray-200">
                       <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Contato</p>
                         <p className="text-base font-bold text-gray-900">{transferSuccessData.nomecontato}</p>
                       </div>
-                      
+
                       <div className="border-t border-gray-200 pt-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Número do Contato</p>
                         <p className="text-base font-mono text-gray-900">{transferSuccessData.numero_contato || transferSuccessData.nome_contato}</p>
                       </div>
-                      
+
                       <div className="border-t border-gray-200 pt-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Departamento De Origem</p>
                         <p className="text-base font-bold text-gray-700">{transferSuccessData.departamento_origem}</p>
                       </div>
-                      
+
                       <div className="border-t border-gray-200 pt-3 bg-green-50 p-3 rounded-lg">
                         <p className="text-xs font-semibold text-green-700 uppercase mb-1">Departamento Destino</p>
                         <p className="text-lg font-bold text-green-700">{transferSuccessData.departamento_destino || transferSuccessData.nomedept}</p>
                       </div>
-                      
+
                       <div className="border-t border-gray-200 pt-3">
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Data da Transferência</p>
                         <p className="text-sm text-gray-600">
-                          {transferSuccessData.data_transferencia 
+                          {transferSuccessData.data_transferencia
                             ? new Date(transferSuccessData.data_transferencia).toLocaleString('pt-BR')
                             : new Date().toLocaleString('pt-BR')
                           }
@@ -1950,11 +1833,11 @@ export default function AttendantDashboard() {
                         </div>
                       )}
                     </div>
-                    
+
                     <p className="text-xs text-gray-600 mb-6 text-center bg-blue-50 border border-blue-200 rounded-lg p-3">
                       📊 Todos os dados foram salvos na tabela <strong>transferencias</strong> para análise futura.
                     </p>
-                    
+
                     <button
                       onClick={() => {
                         setShowTransferSuccessModal(false);
@@ -2022,11 +1905,10 @@ export default function AttendantDashboard() {
                               className={`flex ${isSentMessage ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-[70%] rounded-2xl ${
-                                  isSentMessage
-                                    ? 'bg-sky-500 text-white rounded-br-sm shadow-md'
-                                    : 'bg-white text-gray-900 rounded-bl-sm border-2 border-gray-300 shadow-md'
-                                }`}
+                                className={`max-w-[70%] rounded-2xl ${isSentMessage
+                                  ? 'bg-sky-500 text-white rounded-br-sm shadow-md'
+                                  : 'bg-white text-gray-900 rounded-bl-sm border-2 border-gray-300 shadow-md'
+                                  }`}
                               >
                                 <div className="px-3.5 pt-2 pb-1">
                                   <span className={`text-xs font-semibold ${isSentMessage ? 'text-white' : 'text-gray-900'}`}>
@@ -2064,7 +1946,7 @@ export default function AttendantDashboard() {
                                 )}
 
                                 {hasBase64Content && (tipoFromField === 'video') && (
-                                  <div 
+                                  <div
                                     className="p-1 relative group cursor-pointer"
                                     onClick={() => openImageModal(normalizeBase64(msg.base64!, 'video'), 'video')}
                                   >
@@ -2083,14 +1965,12 @@ export default function AttendantDashboard() {
 
                                 {hasBase64Content && (tipoFromField === 'audio') && (
                                   <div className="p-3">
-                                    <div className={`flex items-center gap-3 p-3 rounded-xl ${
-                                      isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
-                                    }`}>
+                                    <div className={`flex items-center gap-3 p-3 rounded-xl ${isSentMessage ? 'bg-blue-600' : 'bg-gray-50'
+                                      }`}>
                                       <button
                                         onClick={() => handleAudioPlay(msg.id || '', msg.base64!)}
-                                        className={`p-2 rounded-full ${
-                                          isSentMessage ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'
-                                        } transition`}
+                                        className={`p-2 rounded-full ${isSentMessage ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'
+                                          } transition`}
                                       >
                                         {playingAudio === msg.id ? (
                                           <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M5.5 3a2 2 0 00-2 2v10a2 2 0 002 2h9a2 2 0 002-2V5a2 2 0 00-2-2h-9zm3 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"></path></svg>
@@ -2116,25 +1996,24 @@ export default function AttendantDashboard() {
                                   tipoFromField !== 'image' &&
                                   tipoFromField !== 'sticker' &&
                                   tipoFromField !== 'video' && (
-                                  <div className="p-2">
-                                    <button
-                                      onClick={() => downloadBase64File(msg.base64!, msg.message || 'documento.pdf')}
-                                      className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${
-                                        isSentMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'
-                                      } transition`}
-                                    >
-                                      <FileText className="w-8 h-8 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-sm font-medium truncate">
-                                          {msg.message || 'Documento'}
-                                        </p>
-                                        <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                                          Clique para baixar
-                                        </p>
-                                      </div>
-                                    </button>
-                                  </div>
-                                )}
+                                    <div className="p-2">
+                                      <button
+                                        onClick={() => downloadBase64File(msg.base64!, msg.message || 'documento.pdf')}
+                                        className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${isSentMessage ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'
+                                          } transition`}
+                                      >
+                                        <FileText className="w-8 h-8 flex-shrink-0" />
+                                        <div className="flex-1 min-w-0 text-left">
+                                          <p className="text-sm font-medium truncate">
+                                            {msg.message || 'Documento'}
+                                          </p>
+                                          <p className={`text-[11px] ${isSentMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                                            Clique para baixar
+                                          </p>
+                                        </div>
+                                      </button>
+                                    </div>
+                                  )}
 
                                 {msg.message && !hasBase64Content && (
                                   <div className="px-3.5 py-2">
@@ -2282,7 +2161,7 @@ export default function AttendantDashboard() {
                       disabled={sending || sendBlocked}
                     />
 
-                    <EmojiPicker 
+                    <EmojiPicker
                       onSelect={(emoji) => setMessageText(prev => prev + emoji)}
                     />
 
@@ -2310,7 +2189,7 @@ export default function AttendantDashboard() {
 
       {/* Modal de Imagem/Figurinha/Vídeo */}
       {imageModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center cursor-pointer"
           onClick={closeImageModal}
         >

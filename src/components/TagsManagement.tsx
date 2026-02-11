@@ -38,7 +38,8 @@ export default function TagsManagement() {
 
   useEffect(() => {
     fetchTags();
-  }, [company]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company?.id]);
 
   const fetchTags = async () => {
     if (!company?.id) return;
@@ -52,7 +53,7 @@ export default function TagsManagement() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTags(data || []);
+      setTags((data as TagData[]) || []);
     } catch (error) {
       console.error('Erro ao carregar tags:', error);
     } finally {
@@ -78,13 +79,13 @@ export default function TagsManagement() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('tags')
-          .insert([{
+        const { error } = await supabase.from('tags').insert([
+          {
             company_id: company.id,
             name: formData.name,
             color: formData.color,
-          }]);
+          },
+        ]);
 
         if (error) throw error;
       }
@@ -110,22 +111,71 @@ export default function TagsManagement() {
     setShowForm(true);
   };
 
+  /**
+   * DELETE SEGURO:
+   * - Remove vínculos primeiro (contact_tags / message_tags)
+   * - Limpa messages.tag_id se usar esse campo
+   * - Apaga a tag por último
+   *
+   * Se houver erro, loga qual etapa falhou.
+   */
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a tag "${name}"?`)) {
-      return;
-    }
+    if (!confirm(`Tem certeza que deseja excluir a tag "${name}"?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', id);
+      console.log('[TAG DELETE] start', { id, name });
 
-      if (error) throw error;
+      // 1) apaga vínculos com contatos
+      {
+        const { error } = await supabase
+          .from('contact_tags')
+          .delete()
+          .eq('tag_id', id);
+
+        console.log('[TAG DELETE] contact_tags', error);
+        if (error) throw error;
+      }
+
+      // 2) apaga vínculos com mensagens (tabela ponte)
+      {
+        const { error } = await supabase
+          .from('message_tags')
+          .delete()
+          .eq('tag_id', id);
+
+        console.log('[TAG DELETE] message_tags', error);
+        if (error) throw error;
+      }
+
+      // 3) limpa coluna direta messages.tag_id (se seu schema usa isso)
+      {
+        const { error } = await supabase
+          .from('messages')
+          .update({ tag_id: null })
+          .eq('tag_id', id);
+
+        console.log('[TAG DELETE] messages.tag_id null', error);
+        if (error) throw error;
+      }
+
+      // 4) apaga a tag por último
+      {
+        const { error } = await supabase.from('tags').delete().eq('id', id);
+
+        console.log('[TAG DELETE] tags delete', error);
+        if (error) throw error;
+      }
+
       fetchTags();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao excluir tag:', error);
-      alert('Erro ao excluir tag');
+      // Mostra mensagem melhor se vier do Supabase
+      const msg =
+        error?.message ||
+        error?.details ||
+        error?.hint ||
+        'Erro ao excluir tag';
+      alert(msg);
     }
   };
 
@@ -148,7 +198,9 @@ export default function TagsManagement() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Tags</h2>
-          <p className="text-sm text-gray-500 mt-1">Crie etiquetas para organizar e identificar conversas</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Crie etiquetas para organizar e identificar conversas
+          </p>
         </div>
         {!showForm && (
           <button
@@ -184,7 +236,9 @@ export default function TagsManagement() {
                 type="text"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="Ex: Urgente, VIP, Orçamento"
                 className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
               />
@@ -199,7 +253,9 @@ export default function TagsManagement() {
                   <button
                     key={color.value}
                     type="button"
-                    onClick={() => setFormData({ ...formData, color: color.value })}
+                    onClick={() =>
+                      setFormData({ ...formData, color: color.value })
+                    }
                     className={`relative p-3 rounded-xl transition-all ${
                       formData.color === color.value
                         ? 'ring-2 ring-offset-2 ring-teal-500 scale-110'
@@ -229,8 +285,10 @@ export default function TagsManagement() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Salvando...
                   </span>
+                ) : editingId ? (
+                  'Atualizar'
                 ) : (
-                  editingId ? 'Atualizar' : 'Criar Tag'
+                  'Criar Tag'
                 )}
               </button>
               <button
@@ -250,8 +308,13 @@ export default function TagsManagement() {
           <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Tag className="w-10 h-10 text-purple-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma tag cadastrada</h3>
-          <p className="text-sm text-gray-500">Crie tags para organizar suas conversas por tipo, prioridade ou categoria</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Nenhuma tag cadastrada
+          </h3>
+          <p className="text-sm text-gray-500">
+            Crie tags para organizar suas conversas por tipo, prioridade ou
+            categoria
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -283,7 +346,9 @@ export default function TagsManagement() {
                 </div>
               </div>
 
-              <h3 className="text-sm font-bold text-gray-900 truncate mb-2">{tag.name}</h3>
+              <h3 className="text-sm font-bold text-gray-900 truncate mb-2">
+                {tag.name}
+              </h3>
 
               <div
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white"
