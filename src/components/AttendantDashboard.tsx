@@ -82,7 +82,7 @@ function normalizeDbPhone(input?: string | null): string {
 }
 
 export default function AttendantDashboard() {
-  const { company, attendant, signOut } = useAuth();
+  const { attendant, signOut } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -416,7 +416,7 @@ export default function AttendantDashboard() {
   };
 
   const fetchMessages = useCallback(async () => {
-    if (!company) {
+    if (!attendant?.api_key) {
       setLoading(false);
       return;
     }
@@ -429,14 +429,16 @@ export default function AttendantDashboard() {
     }, 10000);
 
     try {
-      // Incluir fallback por company_id caso mensagens não possuam apikey_instancia
-      const messagesQuery = company?.id
-        ? supabase.from('messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
-        : supabase.from('messages').select('*').eq('apikey_instancia', company.api_key);
+      // Usar api_key do attendant para buscar mensagens da empresa
+      const messagesQuery = supabase
+        .from('messages')
+        .select('*')
+        .eq('apikey_instancia', attendant.api_key);
 
-      const sentMessagesQuery = company?.id
-        ? supabase.from('sent_messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
-        : supabase.from('sent_messages').select('*').eq('apikey_instancia', company.api_key);
+      const sentMessagesQuery = supabase
+        .from('sent_messages')
+        .select('*')
+        .eq('apikey_instancia', attendant.api_key);
 
       const [receivedResult, sentResult] = await Promise.all([messagesQuery, sentMessagesQuery]);
 
@@ -473,16 +475,16 @@ export default function AttendantDashboard() {
       setError(`Erro inesperado: ${error.message}`);
       setLoading(false);
     }
-  }, [company]);
+  }, [attendant]);
 
   const fetchContacts = async () => {
-    if (!company?.id) return;
+    if (!attendant?.company_id) return;
 
     try {
       const { data, error } = await supabase
         .from('contacts')
         .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, tag_ids, last_message, last_message_time, created_at, updated_at')
-        .eq('company_id', company.id)
+        .eq('company_id', attendant.company_id)
         .order('last_message_time', { ascending: false });
 
       if (error) throw error;
@@ -499,13 +501,13 @@ export default function AttendantDashboard() {
   };
 
   const fetchDepartments = async () => {
-    if (!company?.id) return;
+    if (!attendant?.company_id) return;
 
     try {
       const { data, error } = await supabase
         .from('departments')
         .select('id,name,company_id')
-        .or(`company_id.eq.${company.id},company_id.is.null`)
+        .or(`company_id.eq.${attendant.company_id},company_id.is.null`)
         .order('name');
 
       if (error) throw error;
@@ -517,12 +519,12 @@ export default function AttendantDashboard() {
   };
 
   const fetchSectors = async () => {
-    if (!company?.id) return;
+    if (!attendant?.company_id) return;
     try {
       const { data, error } = await supabase
         .from('sectors')
         .select('*')
-        .eq('company_id', company.id)
+        .eq('company_id', attendant.company_id)
         .order('name');
 
       if (error) throw error;
@@ -534,12 +536,12 @@ export default function AttendantDashboard() {
   };
 
   const fetchTags = async () => {
-    if (!company?.id) return;
+    if (!attendant?.company_id) return;
     try {
       const { data, error } = await supabase
         .from('tags')
         .select('*')
-        .eq('company_id', company.id)
+        .eq('company_id', attendant.company_id)
         .order('name');
 
       if (error) throw error;
@@ -556,11 +558,11 @@ export default function AttendantDashboard() {
     fetchDepartments();
     fetchSectors();
     fetchTags();
-  }, [company?.id, fetchMessages]);
+  }, [attendant?.company_id, fetchMessages]);
 
   // Realtime para mensagens
   useRealtimeMessages({
-    apiKey: company?.api_key,
+    apiKey: attendant?.api_key,
     enabled: true,
     onMessagesChange: (message: Message) => {
       // Atualizar apenas a lista de mensagens
@@ -579,7 +581,7 @@ export default function AttendantDashboard() {
 
   // Realtime para contatos
   useRealtimeContacts({
-    companyId: company?.id,
+    companyId: attendant?.company_id,
     enabled: true,
     onContactsChange: (contact: any, type: 'INSERT' | 'UPDATE' | 'DELETE') => {
       console.log(`👥 Contato ${type}:`, contact);
@@ -602,7 +604,7 @@ export default function AttendantDashboard() {
 
   // Polling
   useEffect(() => {
-    if (!company?.api_key) return;
+    if (!attendant?.api_key) return;
 
     console.log('⏱️ Iniciando polling de mensagens a cada 3 segundos');
 
@@ -616,7 +618,7 @@ export default function AttendantDashboard() {
       clearInterval(pollingInterval);
       console.log('⏹️ Parando polling de mensagens');
     };
-  }, [company?.api_key, fetchMessages]);
+  }, [attendant?.api_key, fetchMessages]);
 
   const getContactId = (msg: Message): string => {
     return normalizePhone(msg.numero || msg.sender || msg.number || '');
@@ -805,7 +807,7 @@ export default function AttendantDashboard() {
   }, [messages, selectedContact, selectedContactData, lastViewedMessageTime]);
 
   const sendMessage = async (messageData: Partial<Message>) => {
-    if (!company || !selectedContact) return;
+    if (!attendant || !selectedContact) return;
 
     setSending(true);
     try {
@@ -815,16 +817,16 @@ export default function AttendantDashboard() {
         .from('messages')
         .select('instancia, department_id, sector_id, tag_id')
         .eq('numero', selectedContact)
-        .eq('apikey_instancia', company.api_key)
+        .eq('apikey_instancia', attendant.api_key)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      const instanciaValue = existingMessages?.[0]?.instancia || company.name;
+      const instanciaValue = existingMessages?.[0]?.instancia || attendant.name;
       const departmentId = existingMessages?.[0]?.department_id || null;
       const sectorId = existingMessages?.[0]?.sector_id || null;
       const tagId = existingMessages?.[0]?.tag_id || null;
 
-      const attendantName = attendant?.name || company.name;
+      const attendantName = attendant?.name || 'Atendente';
       const rawMessage = messageData.message || '';
       const rawCaption = messageData.caption || null;
 
@@ -833,11 +835,11 @@ export default function AttendantDashboard() {
         sender: null,
         'minha?': 'true',
         pushname: attendantName,
-        apikey_instancia: company.api_key,
+        apikey_instancia: attendant.api_key,
         date_time: new Date().toISOString(),
         instancia: instanciaValue,
         idmessage: generatedIdMessage,
-        company_id: company.id,
+        company_id: attendant.company_id,
         department_id: departmentId,
         sector_id: sectorId,
         tag_id: tagId,
