@@ -160,16 +160,6 @@ export default function AttendantDashboard() {
   const [selectedSectorId, setSelectedSectorId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  // Carregar tags do contato quando abrir o modal
-  useEffect(() => {
-    if (showTagModal && selectedContactData) {
-      const contactDB = contactsDB.find(c =>
-        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
-      );
-      setSelectedTagIds(contactDB?.tag_ids || []);
-    }
-  }, [showTagModal, selectedContactData, contactsDB]);
-
   const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -787,6 +777,16 @@ export default function AttendantDashboard() {
     if (!selectedContactData || !attendant?.department_id) return false;
     return selectedContactData.department_id === attendant.department_id;
   }, [selectedContactData, attendant?.department_id]);
+
+  // Carregar tags do contato quando abrir o modal
+  useEffect(() => {
+    if (showTagModal && selectedContactData) {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+      setSelectedTagIds(contactDB?.tag_ids || []);
+    }
+  }, [showTagModal, selectedContactData, contactsDB]);
 
   // Função para assumir a conversa (transferir para o departamento do atendente)
   const handleAssumeConversation = async () => {
