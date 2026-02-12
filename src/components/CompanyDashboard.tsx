@@ -2056,20 +2056,20 @@ export default function CompanyDashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Contacts List */}
-        <div
-          className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[320px] bg-[#F8FAFC] border-r border-gray-200 flex-col`}
-        >
+        {/* Sidebar - Contacts List (Apenas para aba mensagens) */}
+        {activeTab === 'mensagens' && (
+          <div
+            className={`${sidebarOpen ? 'flex' : 'hidden'
+              } md:flex w-full md:w-[320px] bg-[#F8FAFC] border-r border-gray-200 flex-col`}
+          >
 
-          {error && activeTab === 'mensagens' && (
-            <div className="bg-red-50/80 backdrop-blur-sm border-b border-red-200/50 px-5 py-3 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700 text-sm flex-1">{error}</p>
-            </div>
-          )}
+            {error && (
+              <div className="bg-red-50/80 backdrop-blur-sm border-b border-red-200/50 px-5 py-3 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-red-700 text-sm flex-1">{error}</p>
+              </div>
+            )}
 
-          {activeTab === 'mensagens' && (
             <div className="px-5 py-4 border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -2082,9 +2082,7 @@ export default function CompanyDashboard() {
                 />
               </div>
             </div>
-          )}
 
-          {activeTab === 'mensagens' && (
             <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white">
               {filteredContacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8">
@@ -2145,10 +2143,10 @@ export default function CompanyDashboard() {
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className={`flex-1 flex-col ${sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
+        <div className={`flex-1 flex-col ${activeTab === 'mensagens' && sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
           {activeTab === 'mensagens' && selectedContactData ? (
             <>
               <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
@@ -2637,28 +2635,20 @@ export default function CompanyDashboard() {
               </div>
             </div>
           ) : activeTab === 'departamentos' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto p-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <DepartmentsManagement />
-              </div>
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+              <DepartmentsManagement />
             </div>
           ) : activeTab === 'setores' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto p-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <SectorsManagement />
-              </div>
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+              <SectorsManagement />
             </div>
           ) : activeTab === 'atendentes' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto p-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <AttendantsManagement />
-              </div>
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+              <AttendantsManagement />
             </div>
           ) : activeTab === 'tags' ? (
-            <div className="flex-1 bg-transparent overflow-y-auto p-6">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <TagsManagement />
-              </div>
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+              <TagsManagement />
             </div>
           ) : null}
         </div>
