@@ -601,18 +601,32 @@ export default function CompanyDashboard() {
     if (!company?.id) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: contactsData, error: contactsError } = await supabase
         .from('contacts')
-        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, tag_ids, last_message, last_message_time, created_at, updated_at')
+        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, last_message, last_message_time, created_at, updated_at')
         .eq('company_id', company.id)
         .order('last_message_time', { ascending: false });
 
-      if (error) throw error;
+      if (contactsError) throw contactsError;
 
-      const normalized = (data || []).map((c: any) => ({
-        ...c,
-        tag_ids: Array.isArray(c.tag_ids) ? c.tag_ids : [],
-      }));
+      const { data: contactTagsData, error: contactTagsError } = await supabase
+        .from('contact_tags')
+        .select('contact_id, tag_id');
+
+      if (contactTagsError) {
+        console.error('Erro ao carregar contact_tags:', contactTagsError);
+      }
+
+      const normalized = (contactsData || []).map((c: any) => {
+        const contactTags = (contactTagsData || [])
+          .filter((ct: any) => ct.contact_id === c.id)
+          .map((ct: any) => ct.tag_id);
+
+        return {
+          ...c,
+          tag_ids: contactTags,
+        };
+      });
 
       setContactsDB(normalized);
     } catch (err) {
@@ -1303,6 +1317,10 @@ export default function CompanyDashboard() {
         }
         return [...prevContacts, contact];
       });
+    },
+    onContactTagsChange: () => {
+      console.log('🏷️ Tags alteradas, recarregando contatos...');
+      fetchContacts();
     }
   });
   // Detecta transferências em tempo real e mostra um aviso no meio do chat
