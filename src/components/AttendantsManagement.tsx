@@ -226,17 +226,36 @@ export default function AttendantsManagement() {
 
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('attendants')
-        .delete()
-        .eq('id', deleteModal.attendant.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Não autenticado');
+      }
 
-      if (error) throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-attendant`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            attendant_id: deleteModal.attendant.id,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao excluir atendente');
+      }
+
       setDeleteModal({ isOpen: false, attendant: null });
       fetchData();
     } catch (error) {
       console.error('Erro ao excluir atendente:', error);
-      alert('Erro ao excluir atendente');
+      alert(error instanceof Error ? error.message : 'Erro ao excluir atendente');
     } finally {
       setDeleting(false);
     }
