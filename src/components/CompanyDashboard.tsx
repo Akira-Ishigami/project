@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -180,7 +180,8 @@ export default function CompanyDashboard() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalSrc, setImageModalSrc] = useState('');
   const [imageModalType, setImageModalType] = useState<'image' | 'sticker' | 'video'>('image');
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
 
   // ✅ ID do departamento "Recepção" (criado automaticamente no banco)
@@ -205,13 +206,13 @@ export default function CompanyDashboard() {
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // ✅ Ao abrir o modal, se o contato não tiver departamento, já seleciona a Recepção
+  // ✅ Ao abrir o modal de transferência, se o contato não tiver departamento, já seleciona a Recepção
   useEffect(() => {
-    if (!showOptionsMenu) return;
+    if (!showTransferModal) return;
     if (selectedDepartment) return;
     if (!receptionDeptId) return;
     setSelectedDepartment(receptionDeptId);
-  }, [showOptionsMenu, selectedDepartment, receptionDeptId]);
+  }, [showTransferModal, selectedDepartment, receptionDeptId]);
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
   const [, setTransferindo] = useState(false);
   const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
@@ -1181,7 +1182,7 @@ export default function CompanyDashboard() {
         setShowToast(true);
 
         setDepartamentoTransferencia('');
-        setShowOptionsMenu(false);
+        setShowTransferModal(false);
 
         // Mensagem 100% UI (não gravar em messages)
         const oldDeptName = departments.find((d: any) => d.id === oldDeptId)?.name || 'Desconhecido';
@@ -1203,6 +1204,48 @@ export default function CompanyDashboard() {
     }
   };
 
+  const handleUpdateTags = async () => {
+    if (!selectedContact || !company?.id) return;
+
+    try {
+      const currentContact = contactsDB.find(
+        (c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact)
+      );
+
+      if (!currentContact?.id) {
+        setToastMessage('Erro: Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const { data: rpcData, error: rpcError } = await supabase.rpc('update_contact_tags', {
+        p_contact_id: currentContact.id,
+        p_tag_ids: selectedTags,
+      });
+
+      if (rpcError) throw rpcError;
+
+      if (rpcData && !rpcData.success) {
+        throw new Error(rpcData.error || 'Erro desconhecido');
+      }
+
+      setToastMessage('Tags atualizadas com sucesso!');
+      setShowToast(true);
+      setShowTagModal(false);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === currentContact.id
+          ? { ...c, tag_ids: selectedTags }
+          : c
+      ));
+
+      fetchContacts();
+    } catch (error: any) {
+      console.error('Erro ao atualizar tags:', error);
+      setToastMessage('Erro ao atualizar tags');
+      setShowToast(true);
+    }
+  };
 
   useEffect(() => {
     fetchMessages();
@@ -2094,28 +2137,6 @@ export default function CompanyDashboard() {
                               </span>
                             )}
                           </div>
-                          {contact.tag_ids && contact.tag_ids.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {contact.tag_ids.slice(0, 3).map((tagId) => {
-                                const tag = tags.find(t => t.id === tagId);
-                                return tag ? (
-                                  <span
-                                    key={tagId}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
-                                    style={{ backgroundColor: tag.color }}
-                                  >
-                                    <Tag className="w-2.5 h-2.5" />
-                                    {tag.name}
-                                  </span>
-                                ) : null;
-                              })}
-                              {contact.tag_ids.length > 3 && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600">
-                                  +{contact.tag_ids.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -2180,20 +2201,34 @@ export default function CompanyDashboard() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    // Carregar informações atuais do contato
-                    const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
-                    setSelectedDepartment(currentContact?.department_id || receptionDeptId || '');
-                    setSelectedSector(currentContact?.sector_id || '');
-                    setSelectedTags(currentContact?.tag_ids || []);
-                    setShowOptionsMenu(true);
-                  }}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                  title="Mais opções"
-                >
-                  <MoreVertical className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+                      setSelectedDepartment(currentContact?.department_id || receptionDeptId || '');
+                      setSelectedSector(currentContact?.sector_id || '');
+                      setDepartamentoTransferencia('');
+                      setShowTransferModal(true);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Transferir departamento"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Transferir
+                  </button>
+                  <button
+                    onClick={() => {
+                      const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+                      setSelectedTags(currentContact?.tag_ids || []);
+                      setShowTagModal(true);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Gerenciar tags"
+                  >
+                    <Tag className="w-4 h-4" />
+                    Tags
+                  </button>
+                </div>
               </header>
 
               <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
@@ -2658,150 +2693,132 @@ export default function CompanyDashboard() {
         </div>
       )}
 
-      {showOptionsMenu && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowOptionsMenu(false);
-            }
-          }}
-        >
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative z-[101]">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-5 flex items-center justify-between rounded-t-3xl">
-              <h2 className="text-xl font-bold text-gray-900">Definir Informações</h2>
+      {/* Modal de Transferir Departamento */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                Transferir Departamento
+              </h3>
               <button
-                onClick={() => {
-                  setShowOptionsMenu(false);
-                  setSelectedDepartment('');
-                  setSelectedSector('');
-                  setSelectedTags([]);
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                onClick={() => setShowTransferModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Briefcase className="w-4 h-4 text-blue-600" />
-                  Departamento
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Departamento de Destino
                 </label>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedDepartment}
-                    onChange={(e) => { setSelectedDepartment(e.target.value); setSelectedSector(""); }}
-                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-900"
-                  >
-                    {/* Recepção como padrão */}
-                    <option value={receptionDeptId || ''}>Recepção</option>
-
-                    {/* Outros departamentos (exclui Recepção) */}
-                    {departments
-                      .filter((dept) => {
-                        if (receptionDeptId && dept.id === receptionDeptId) return false;
-                        if (dept.is_reception === true) return false;
-                        return !String(dept.name ?? '').toLowerCase().startsWith('recep');
-                      })
-                      .map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <FolderTree className="w-4 h-4 text-blue-600" />
-                  Setor
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedSector}
-                    disabled={!selectedDepartment}
-                    onChange={(e) => setSelectedSector(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all text-gray-900"
-                  >
-                    <option value="">Selecione um setor</option>
-                    {sectorsFiltered.map((sec) => (
-                      <option key={sec.id} value={sec.id}>
-                        {sec.name}
-                      </option>
-                    ))}
-                  </select>
-
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-                  <Tag className="w-4 h-4 text-blue-600" />
-                  Tags (máx. 5)
-                </label>
-                <div className="space-y-2 max-h-60 overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl p-3">
-                  {tags.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-3">Nenhuma tag disponível</p>
-                  ) : (
-                    tags.map((tag) => (
-                      <label
-                        key={tag.id}
-                        className="flex items-center gap-3 p-3 hover:bg-white rounded-lg cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTags.includes(tag.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              if (selectedTags.length < 5) {
-                                setSelectedTags([...selectedTags, tag.id]);
-                              } else {
-                                setToastMessage('Você pode selecionar no máximo 5 tags');
-                                setShowToast(true);
-                              }
-                            } else {
-                              setSelectedTags(selectedTags.filter(id => id !== tag.id));
-                            }
-                          }}
-                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          disabled={!selectedTags.includes(tag.id) && selectedTags.length >= 5}
-                        />
-                        <span
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white flex-1"
-                          style={{ backgroundColor: tag.color }}
-                        >
-                          <Tag className="w-4 h-4" />
-                          {tag.name}
-                        </span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setShowOptionsMenu(false);
-                    setSelectedDepartment('');
-                    setSelectedSector('');
-                    setSelectedTags([]);
-                    setDepartamentoTransferencia('');
-                  }}
-                  className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-all"
+                <select
+                  value={departamentoTransferencia}
+                  onChange={(e) => setDepartamentoTransferencia(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                 >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleUpdateContactInfo}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
-                >
-                  Salvar
-                </button>
+                  <option value="">Selecione um departamento</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleTransferir}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
+              >
+                Transferir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Tags */}
+      {showTagModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-6 h-6 text-blue-600" />
+                Gerenciar Tags
+              </h3>
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {tags.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8">
+                  Nenhuma tag disponível
+                </p>
+              ) : (
+                tags.map((tag) => (
+                  <label
+                    key={tag.id}
+                    className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.includes(tag.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          if (selectedTags.length < 5) {
+                            setSelectedTags([...selectedTags, tag.id]);
+                          } else {
+                            setToastMessage('Você pode selecionar no máximo 5 tags');
+                            setShowToast(true);
+                          }
+                        } else {
+                          setSelectedTags(selectedTags.filter(id => id !== tag.id));
+                        }
+                      }}
+                      className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                      disabled={!selectedTags.includes(tag.id) && selectedTags.length >= 5}
+                    />
+                    <span
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-white flex-1"
+                      style={{ backgroundColor: tag.color }}
+                    >
+                      <Tag className="w-4 h-4" />
+                      {tag.name}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdateTags}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
+              >
+                Salvar
+              </button>
             </div>
           </div>
         </div>
