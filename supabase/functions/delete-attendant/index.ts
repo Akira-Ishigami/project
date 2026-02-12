@@ -119,14 +119,43 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log('Attempting to delete attendant:', attendant_id, 'user_id:', attendant.user_id);
+
+    if (attendant.user_id) {
+      console.log('Deleting user from auth first:', attendant.user_id);
+      const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(
+        attendant.user_id
+      );
+
+      if (deleteUserError) {
+        console.error('Error deleting user from auth:', deleteUserError);
+        return new Response(
+          JSON.stringify({
+            error: 'Failed to delete user from auth',
+            details: deleteUserError.message
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      console.log('User deleted from auth successfully');
+    }
+
+    console.log('Now deleting attendant from database');
     const { error: deleteAttendantError } = await supabaseAdmin
       .from("attendants")
       .delete()
       .eq("id", attendant_id);
 
     if (deleteAttendantError) {
+      console.error('Error deleting attendant:', deleteAttendantError);
       return new Response(
-        JSON.stringify({ error: deleteAttendantError.message }),
+        JSON.stringify({
+          error: deleteAttendantError.message,
+          details: deleteAttendantError
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -134,15 +163,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (attendant.user_id) {
-      const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(
-        attendant.user_id
-      );
-
-      if (deleteUserError) {
-        console.error('Error deleting user from auth:', deleteUserError);
-      }
-    }
+    console.log('Attendant deleted successfully');
 
     return new Response(
       JSON.stringify({

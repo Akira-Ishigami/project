@@ -246,9 +246,12 @@ export default function AttendantsManagement() {
       );
 
       const result = await response.json();
+      console.log('Delete response:', { status: response.status, result });
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao excluir atendente');
+        const errorMsg = result.error || result.message || 'Erro ao excluir atendente';
+        console.error('Delete failed:', errorMsg, result);
+        throw new Error(errorMsg);
       }
 
       setDeleteModal({ isOpen: false, attendant: null });
