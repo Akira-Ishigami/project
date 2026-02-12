@@ -1457,7 +1457,12 @@ export default function CompanyDashboard() {
         return getMessageTimestamp(a) - getMessageTimestamp(b);
       });
 
-      const lastMsg = contact.messages[contact.messages.length - 1];
+      // Filtrar mensagens de sistema para não aparecer como última mensagem
+      const nonSystemMessages = contact.messages.filter(msg => msg.tipomessage !== 'system');
+      const lastMsg = nonSystemMessages.length > 0
+        ? nonSystemMessages[nonSystemMessages.length - 1]
+        : contact.messages[contact.messages.length - 1];
+
       contact.lastMessage = lastMsg.message || (lastMsg.urlimagem ? 'Imagem' : (lastMsg.urlpdf ? 'Documento' : 'Mensagem'));
 
       const lastMsgTime = getMessageTimestamp(lastMsg);
@@ -1980,35 +1985,38 @@ export default function CompanyDashboard() {
           )}
 
           {activeTab === 'mensagens' && (
-            <div className="px-4 py-3 border-b-2 border-gray-300">
+            <div className="px-5 py-4 border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Pesquisar contato"
+                  placeholder="Buscar conversa..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-gray-50 text-gray-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-gray-400"
+                  className="w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400 shadow-sm"
                 />
               </div>
             </div>
           )}
 
           {activeTab === 'mensagens' && (
-            <div className="flex-1 overflow-y-auto bg-transparent">
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white">
               {filteredContacts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4">
+                <div className="flex flex-col items-center justify-center h-full p-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-200/50">
                     <MessageSquare className="w-10 h-10 text-blue-500" />
                   </div>
-                  <p className="text-gray-500 text-sm text-center font-medium">
+                  <p className="text-slate-500 text-sm text-center font-medium">
                     {searchTerm ? 'Nenhum contato encontrado' : 'Nenhuma conversa ainda'}
+                  </p>
+                  <p className="text-slate-400 text-xs text-center mt-2">
+                    {searchTerm ? 'Tente pesquisar outro termo' : 'Aguardando novas mensagens'}
                   </p>
                 </div>
               ) : (
-                <div className="p-2 space-y-1">
+                <div className="p-3 space-y-2">
                   {filteredContacts.map((contact) => (
-                    <button
+                    <div
                       key={contact.phoneNumber}
                       onClick={() => {
                         setSelectedContact(contact.phoneNumber);
@@ -2016,48 +2024,38 @@ export default function CompanyDashboard() {
                           setSidebarOpen(false);
                         }
                       }}
-                      className={`w-full px-3 py-3 flex items-center gap-3 rounded-lg transition-all ${selectedContact === contact.phoneNumber
-                        ? 'bg-[#E6F0FF] border-l-4 border-[#2563EB] shadow-sm'
-                        : 'hover:bg-[#F1F5F9] border border-transparent'
-                        }`}
+                      className={`group cursor-pointer p-3.5 rounded-xl transition-all duration-200 ${
+                        selectedContact === contact.phoneNumber
+                          ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 shadow-md shadow-blue-200/40 border border-blue-200/50'
+                          : 'bg-white hover:bg-slate-50 hover:shadow-sm border border-slate-100 hover:border-slate-200'
+                      }`}
                     >
-                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1 text-left overflow-hidden">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="text-[#0F172A] font-semibold text-[15px] truncate">{contact.name}</h3>
-                          <span className="text-xs text-gray-400 ml-2">
-                            {formatTime(contact.lastMessageTime)}
-                          </span>
+                      <div className="flex items-start gap-3">
+                        <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-md shadow-blue-500/30 transform group-hover:scale-110 transition-transform duration-200">
+                          {contact.name ? contact.name[0].toUpperCase() : <User className="w-5 h-5" />}
                         </div>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-[#64748B] text-[13px] truncate flex-1">{contact.lastMessage}</p>
-                          {contact.unreadCount > 0 && (
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center ml-2 text-white font-bold text-[11px] ${selectedContact !== contact.phoneNumber ? 'bg-[#2563EB] animate-pulse' : 'bg-[#2563EB]'}`}>
-                              <span>{contact.unreadCount}</span>
-                            </div>
-                          )}
-                        </div>
-                        {contact.tag_ids && contact.tag_ids.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {contact.tag_ids.map((tagId) => {
-                              const tag = tags.find(t => t.id === tagId);
-                              return tag ? (
-                                <span
-                                  key={tagId}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
-                                  style={{ backgroundColor: tag.color }}
-                                >
-                                  <Tag className="w-2.5 h-2.5" />
-                                  {tag.name}
-                                </span>
-                              ) : null;
-                            })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-semibold text-slate-900 truncate text-sm">
+                              {contact.name || getPhoneNumber(contact.phoneNumber)}
+                            </h3>
+                            <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
+                              {formatTime(contact.lastMessageTime)}
+                            </span>
                           </div>
-                        )}
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm text-slate-600 truncate flex-1">
+                              {contact.lastMessage}
+                            </p>
+                            {contact.unreadCount > 0 && (
+                              <span className="ml-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/40 animate-pulse">
+                                {contact.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -2068,32 +2066,33 @@ export default function CompanyDashboard() {
         <div className={`flex-1 flex-col ${sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
           {activeTab === 'mensagens' && selectedContactData ? (
             <>
-              <header className="bg-white px-6 py-4 flex items-center justify-between border-b-2 border-gray-300">
-                <div className="flex items-center gap-3 flex-1">
+              <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="md:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+                    className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
                   >
                     <Menu className="w-5 h-5" />
                   </button>
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
+                    {selectedContactData.name ? selectedContactData.name[0].toUpperCase() : <User className="w-5 h-5" />}
                   </div>
-                  <div className="flex-1">
-                    <h1 className="text-[#0F172A] font-semibold text-[18px] tracking-tight">{selectedContactData.name}</h1>
-                    <div className="flex items-center gap-3 mb-1">
-                      <div className={`w-2 h-2 rounded-full ${isContactOnline ? 'bg-green-400' : 'bg-gray-300'}`} />
-                      <p className="text-[#64748B] text-[12px]">{isContactOnline ? 'Online agora • WhatsApp' : `WhatsApp • ${getPhoneNumber(selectedContactData.phoneNumber)}`}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div>
+                    <h2 className="font-semibold text-slate-900">
+                      {selectedContactData.name || getPhoneNumber(selectedContactData.phoneNumber)}
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      {getPhoneNumber(selectedContactData.phoneNumber)}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {selectedContactData.department_id && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-blue-700 rounded text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-sky-700 text-xs rounded-full border border-sky-200">
                           <Briefcase className="w-3 h-3" />
                           {departments.find(d => d.id === selectedContactData.department_id)?.name || 'Departamento'}
                         </span>
                       )}
                       {selectedContactData.sector_id && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full border border-violet-200">
                           <FolderTree className="w-3 h-3" />
                           {sectors.find(s => s.id === selectedContactData.sector_id)?.name || 'Setor'}
                         </span>
@@ -2127,7 +2126,7 @@ export default function CompanyDashboard() {
                     setSelectedTags(currentContact?.tag_ids || []);
                     setShowOptionsMenu(true);
                   }}
-                  className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100/50 rounded-xl transition-all relative z-10"
+                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                   title="Mais opções"
                 >
                   <MoreVertical className="w-5 h-5" />
