@@ -1494,7 +1494,11 @@ export default function AttendantDashboard() {
                                 <div className="p-3 flex items-center gap-3">
                                   <button
                                     onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.urlimagem!)}
-                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                    className={`p-2 rounded-full transition-colors ${
+                                      isSent
+                                        ? 'bg-white/20 hover:bg-white/30 text-white'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
                                   >
                                     {playingAudio === (msg.id || msg.idmessage) ? (
                                       <Pause className="w-5 h-5" />
@@ -1502,25 +1506,38 @@ export default function AttendantDashboard() {
                                       <Play className="w-5 h-5" />
                                     )}
                                   </button>
-                                  <Mic className="w-5 h-5 text-gray-500" />
-                                  <span className="text-sm text-gray-600">Áudio</span>
+                                  <div className="flex-1">
+                                    <p className={`text-sm font-medium ${isSent ? 'text-white' : 'text-slate-900'}`}>
+                                      {msg.message || 'Áudio'}
+                                    </p>
+                                    <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
+                                      Clique para {playingAudio === (msg.id || msg.idmessage) ? 'pausar' : 'reproduzir'}
+                                    </p>
+                                  </div>
+                                  <Mic className={`w-5 h-5 ${isSent ? 'text-blue-100' : 'text-blue-500'}`} />
                                 </div>
                               )}
                               {messageType === 'document' && (msg.urlpdf || msg.urldocumento) && (
-                                <div className="p-4 flex items-center gap-3">
-                                  <FileText className="w-8 h-8 text-blue-600" />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">Documento</p>
-                                    <p className="text-xs text-gray-500">PDF</p>
-                                  </div>
+                                <div className="p-3">
                                   <button
                                     onClick={() => downloadBase64File(
                                       normalizeBase64(msg.urlpdf || msg.urldocumento || '', 'document'),
-                                      'documento.pdf'
+                                      msg.message || 'documento.pdf'
                                     )}
-                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                    className={`flex items-center gap-3 p-2.5 rounded-xl w-full ${
+                                      isSent ? 'bg-white/20 hover:bg-white/30' : 'bg-slate-50 hover:bg-slate-100'
+                                    } transition`}
                                   >
-                                    <Download className="w-4 h-4" />
+                                    <FileText className={`w-8 h-8 flex-shrink-0 ${isSent ? 'text-white' : 'text-blue-600'}`} />
+                                    <div className="flex-1 min-w-0 text-left">
+                                      <p className={`text-sm font-medium truncate ${isSent ? 'text-white' : 'text-slate-900'}`}>
+                                        {msg.message || 'Documento'}
+                                      </p>
+                                      <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
+                                        Clique para baixar
+                                      </p>
+                                    </div>
+                                    <Download className={`w-5 h-5 flex-shrink-0 ${isSent ? 'text-white' : 'text-blue-600'}`} />
                                   </button>
                                 </div>
                               )}
@@ -1528,9 +1545,9 @@ export default function AttendantDashboard() {
                           )}
 
                           {/* Texto da mensagem */}
-                          {msg.message && (
+                          {msg.message && !hasMedia && (
                             <div className="px-4 py-2">
-                              <p className="text-gray-900 text-sm whitespace-pre-wrap break-words">
+                              <p className={`text-[14px] leading-[1.4] whitespace-pre-wrap break-words ${isSent ? 'text-white' : 'text-slate-900'}`}>
                                 {msg.message}
                               </p>
                             </div>
@@ -1538,8 +1555,8 @@ export default function AttendantDashboard() {
 
                           {/* Caption (para imagens) */}
                           {msg.caption && msg.caption !== msg.message && (
-                            <div className="px-4 py-2 border-t border-gray-200">
-                              <p className="text-gray-700 text-sm whitespace-pre-wrap break-words">
+                            <div className={`px-4 py-2 ${isSent ? 'border-t border-white/20' : 'border-t border-slate-200'}`}>
+                              <p className={`text-sm whitespace-pre-wrap break-words ${isSent ? 'text-white/90' : 'text-slate-700'}`}>
                                 {msg.caption}
                               </p>
                             </div>
@@ -1547,11 +1564,11 @@ export default function AttendantDashboard() {
 
                           {/* Footer com hora e check */}
                           <div className="px-4 pb-2 flex items-center justify-end gap-1">
-                            <span className="text-[11px] text-gray-500">
+                            <span className={`text-[10px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
                               {formatTime(msg.date_time || msg.created_at || '')}
                             </span>
                             {isSent && (
-                              <CheckCheck className="w-4 h-4 text-blue-500" />
+                              <CheckCheck className="w-3.5 h-3.5 text-blue-50" />
                             )}
                           </div>
 
