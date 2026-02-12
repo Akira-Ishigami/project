@@ -956,9 +956,9 @@ export default function AttendantDashboard() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-100">
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-sky-600 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Carregando...</p>
         </div>
       </div>
@@ -966,7 +966,7 @@ export default function AttendantDashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-slate-50">
       {/* Toast */}
       {showToast && (
         <Toast
@@ -976,27 +976,29 @@ export default function AttendantDashboard() {
       )}
 
       {/* Header */}
-      <header className="bg-gradient-to-r from-sky-600 to-blue-700 shadow-lg border-b border-sky-700">
+      <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition-all"
+                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <MessageSquare className="w-8 h-8 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                <MessageSquare className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Dashboard do Atendente</h1>
-                <p className="text-sky-100 text-sm mt-1">
+                <h1 className="text-xl font-bold text-slate-900">ChatFlow</h1>
+                <p className="text-slate-500 text-sm mt-0.5">
                   {attendant?.name || 'Atendente'}
                 </p>
               </div>
             </div>
             <button
               onClick={signOut}
-              className="ml-2 p-2 text-white hover:bg-white/10 rounded-lg transition-all"
+              className="ml-2 p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
@@ -1010,34 +1012,34 @@ export default function AttendantDashboard() {
         {/* Sidebar - Contacts List */}
         <div
           className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[320px] bg-[#F8FAFC] border-r border-gray-200 flex-col`}
+            } md:flex w-full md:w-[360px] bg-white border-r border-slate-200 flex-col`}
         >
           {error && (
-            <div className="bg-red-50/80 backdrop-blur-sm border-b border-red-200/50 px-5 py-3 flex items-center gap-3">
+            <div className="bg-red-50 border-b border-red-200 px-5 py-3 flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <p className="text-red-700 text-sm flex-1">{error}</p>
             </div>
           )}
 
           {/* Filtros de Departamento */}
-          <div className="px-4 py-3 border-b border-gray-200">
+          <div className="px-4 py-4 border-b border-slate-200 bg-slate-50">
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('mine')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   filterMode === 'mine'
-                    ? 'bg-sky-600 text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 Meu Departamento
               </button>
               <button
                 onClick={() => setFilterMode('all')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
                   filterMode === 'all'
-                    ? 'bg-sky-600 text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 Todos
@@ -1046,26 +1048,26 @@ export default function AttendantDashboard() {
           </div>
 
           {/* Barra de Pesquisa */}
-          <div className="px-4 py-3 border-b-2 border-gray-300">
+          <div className="px-4 py-3 border-b border-slate-200">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Pesquisar contato"
+                placeholder="Pesquisar contato..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-50 text-gray-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:border-sky-500 focus:bg-white transition-all placeholder-gray-400"
+                className="w-full bg-slate-50 text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-slate-400"
               />
             </div>
           </div>
 
           {/* Lista de Contatos */}
-          <div className="flex-1 overflow-y-auto bg-transparent">
+          <div className="flex-1 overflow-y-auto">
             {filteredContacts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500 px-4 text-center">
-                <User className="w-16 h-16 mb-4 text-gray-300" />
-                <p className="font-medium text-gray-600">Nenhum contato encontrado</p>
-                <p className="text-sm text-gray-400 mt-2">
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 px-4 text-center">
+                <User className="w-16 h-16 mb-4 text-slate-300" />
+                <p className="font-medium text-slate-600">Nenhum contato encontrado</p>
+                <p className="text-sm text-slate-400 mt-2">
                   {filterMode === 'mine'
                     ? 'Não há contatos no seu departamento'
                     : 'Nenhuma conversa disponível'}
@@ -1079,30 +1081,30 @@ export default function AttendantDashboard() {
                     setSelectedContact(contact.phoneNumber);
                     setSidebarOpen(false);
                   }}
-                  className={`px-5 py-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-white/80 ${selectedContact === contact.phoneNumber
-                    ? 'bg-white shadow-sm border-l-4 border-l-sky-600'
-                    : 'hover:border-l-4 hover:border-l-sky-200'
+                  className={`px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all ${selectedContact === contact.phoneNumber
+                    ? 'bg-blue-50 border-l-4 border-l-blue-600'
+                    : 'hover:bg-slate-50'
                     }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-md">
-                      {contact.name ? contact.name[0].toUpperCase() : <User className="w-6 h-6" />}
+                    <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-sm">
+                      {contact.name ? contact.name[0].toUpperCase() : <User className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">
+                        <h3 className="font-semibold text-slate-900 truncate text-sm">
                           {contact.name || getPhoneNumber(contact.phoneNumber)}
                         </h3>
-                        <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                        <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
                           {formatTime(contact.lastMessageTime)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600 truncate flex-1">
+                        <p className="text-sm text-slate-600 truncate flex-1">
                           {contact.lastMessage}
                         </p>
                         {contact.unreadCount > 0 && (
-                          <span className="ml-2 bg-sky-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                          <span className="ml-2 bg-blue-600 text-white text-xs font-semibold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
                             {contact.unreadCount}
                           </span>
                         )}
@@ -1120,25 +1122,25 @@ export default function AttendantDashboard() {
           {selectedContactData ? (
             <>
               {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setSidebarOpen(true)}
-                    className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                    className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
                   >
                     <Menu className="w-5 h-5" />
                   </button>
-                  <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
                     {selectedContactData.name ? selectedContactData.name[0].toUpperCase() : <User className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h2 className="font-semibold text-gray-900">
+                    <h2 className="font-semibold text-slate-900">
                       {selectedContactData.name || getPhoneNumber(selectedContactData.phoneNumber)}
                     </h2>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-500">
                       {isContactOnline ? (
                         <span className="text-green-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                          <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
                           Online
                         </span>
                       ) : (
@@ -1153,11 +1155,7 @@ export default function AttendantDashboard() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="flex-1 overflow-y-auto p-6 bg-[#E5DDD5] space-y-4"
-                style={{
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 0h100v100H0z\' fill=\'%23e5ddd5\'/%3E%3Cpath d=\'M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm0 90c-22.1 0-40-17.9-40-40s17.9-40 40-40 40 17.9 40 40-17.9 40-40 40z\' fill=\'%23d1ccc0\' opacity=\'.05\'/%3E%3C/svg%3E")',
-                  backgroundSize: '300px 300px'
-                }}
+                className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3"
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
@@ -1171,7 +1169,7 @@ export default function AttendantDashboard() {
                     <div key={msg.id || msg.idmessage || index}>
                       {showDate && (
                         <div className="flex justify-center my-4">
-                          <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-xs px-4 py-1.5 rounded-full shadow-sm font-medium">
+                          <span className="bg-white text-slate-600 text-xs px-3 py-1.5 rounded-full shadow-sm font-medium border border-slate-200">
                             {formatDate(msg.date_time || msg.created_at || '')}
                           </span>
                         </div>
@@ -1179,9 +1177,9 @@ export default function AttendantDashboard() {
                       <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                         <div
                           className={`max-w-[70%] ${isSent
-                            ? 'bg-[#DCF8C6]'
-                            : 'bg-white'
-                            } rounded-lg shadow-sm overflow-hidden`}
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-slate-900 border border-slate-200'
+                            } rounded-2xl shadow-sm overflow-hidden`}
                         >
                           {/* Mídia */}
                           {hasMedia && (
@@ -1213,7 +1211,7 @@ export default function AttendantDashboard() {
                                 <div className="p-3 flex items-center gap-3">
                                   <button
                                     onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.urlimagem!)}
-                                    className="p-2 bg-sky-600 text-white rounded-full hover:bg-sky-700 transition-colors"
+                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
                                   >
                                     {playingAudio === (msg.id || msg.idmessage) ? (
                                       <Pause className="w-5 h-5" />
@@ -1227,7 +1225,7 @@ export default function AttendantDashboard() {
                               )}
                               {messageType === 'document' && (msg.urlpdf || msg.urldocumento) && (
                                 <div className="p-4 flex items-center gap-3">
-                                  <FileText className="w-8 h-8 text-sky-600" />
+                                  <FileText className="w-8 h-8 text-blue-600" />
                                   <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-900">Documento</p>
                                     <p className="text-xs text-gray-500">PDF</p>
@@ -1237,7 +1235,7 @@ export default function AttendantDashboard() {
                                       normalizeBase64(msg.urlpdf || msg.urldocumento || '', 'document'),
                                       'documento.pdf'
                                     )}
-                                    className="p-2 bg-sky-600 text-white rounded-full hover:bg-sky-700 transition-colors"
+                                    className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
                                   >
                                     <Download className="w-4 h-4" />
                                   </button>
@@ -1302,7 +1300,7 @@ export default function AttendantDashboard() {
               {showScrollButton && (
                 <button
                   onClick={() => scrollToBottom(true)}
-                  className="absolute bottom-24 right-8 bg-white text-sky-600 p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
+                  className="absolute bottom-24 right-8 bg-white text-blue-600 p-3 rounded-full shadow-lg hover:shadow-xl transition-all"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -1328,7 +1326,7 @@ export default function AttendantDashboard() {
                       <img src={filePreview} alt="Preview" className="max-w-full h-auto rounded-lg" />
                     ) : (
                       <div className="flex items-center gap-2 bg-white p-3 rounded-lg">
-                        <FileText className="w-8 h-8 text-sky-600" />
+                        <FileText className="w-8 h-8 text-blue-600" />
                         <span className="text-sm text-gray-700 truncate">{selectedFile?.name}</span>
                       </div>
                     )}
@@ -1337,7 +1335,7 @@ export default function AttendantDashboard() {
                       placeholder="Adicionar legenda..."
                       value={imageCaption}
                       onChange={(e) => setImageCaption(e.target.value)}
-                      className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
+                      className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -1362,14 +1360,14 @@ export default function AttendantDashboard() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-all"
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                     title="Anexar arquivo"
                   >
                     <Paperclip className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => imageInputRef.current?.click()}
-                    className="p-2 text-gray-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-all"
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                     title="Enviar imagem"
                   >
                     <ImageIcon className="w-5 h-5" />
@@ -1387,7 +1385,7 @@ export default function AttendantDashboard() {
                         }
                       }}
                       placeholder="Digite uma mensagem..."
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 resize-none min-h-[48px] max-h-[120px]"
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none min-h-[48px] max-h-[120px]"
                       rows={1}
                     />
                     <div className="absolute right-2 bottom-2">
@@ -1401,7 +1399,7 @@ export default function AttendantDashboard() {
                   <button
                     onClick={handleSendMessage}
                     disabled={sending || uploadingFile || (!messageText.trim() && !selectedFile)}
-                    className="p-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {sending || uploadingFile ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
