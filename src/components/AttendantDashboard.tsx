@@ -157,9 +157,11 @@ export default function AttendantDashboard() {
   // Modais de transferência e tags
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [showTransferHistoryModal, setShowTransferHistoryModal] = useState(false);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [selectedSectorId, setSelectedSectorId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [transferHistory, setTransferHistory] = useState<any[]>([]);
 
   const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -829,6 +831,16 @@ export default function AttendantDashboard() {
 
       if (error) throw error;
 
+      // Registrar a transferência na tabela transferencias
+      await supabase
+        .from('transferencias')
+        .insert({
+          company_id: attendant?.company_id,
+          contact_id: contactDB.id,
+          from_department_id: oldDepartmentId,
+          to_department_id: attendant.department_id
+        });
+
       // Criar mensagem de sistema da transferência
       await createTransferSystemMessage(
         contactDB.id,
@@ -911,6 +923,16 @@ export default function AttendantDashboard() {
 
       if (error) throw error;
 
+      // Registrar a transferência na tabela transferencias
+      await supabase
+        .from('transferencias')
+        .insert({
+          company_id: attendant?.company_id,
+          contact_id: contactDB.id,
+          from_department_id: oldDepartmentId,
+          to_department_id: selectedDepartmentId
+        });
+
       // Criar mensagem de sistema da transferência
       await createTransferSystemMessage(
         contactDB.id,
@@ -983,6 +1005,30 @@ export default function AttendantDashboard() {
     } catch (error: any) {
       console.error('Erro ao atualizar tags:', error);
       setToastMessage(`Erro ao atualizar tags: ${error.message || 'Erro desconhecido'}`);
+      setShowToast(true);
+    }
+  };
+
+  // Função para carregar histórico de transferências
+  const loadTransferHistory = async (contactId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('transferencias')
+        .select(`
+          *,
+          from_department:departments!transferencias_from_department_id_fkey(id, name),
+          to_department:departments!transferencias_to_department_id_fkey(id, name)
+        `)
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setTransferHistory(data || []);
+      setShowTransferHistoryModal(true);
+    } catch (error) {
+      console.error('Erro ao carregar histórico de transferências:', error);
+      setToastMessage('Erro ao carregar histórico');
       setShowToast(true);
     }
   };
@@ -1340,6 +1386,24 @@ export default function AttendantDashboard() {
                           </span>
                         </div>
                       )}
+                      {/* Tags do contato */}
+                      {contact.tag_ids && contact.tag_ids.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {contact.tag_ids.map((tagId) => {
+                            const tag = tags.find(t => t.id === tagId);
+                            return tag ? (
+                              <span
+                                key={tagId}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
+                                style={{ backgroundColor: tag.color }}
+                              >
+                                <Tag className="w-2.5 h-2.5" />
+                                {tag.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1368,21 +1432,56 @@ export default function AttendantDashboard() {
                     <h2 className="font-semibold text-slate-900">
                       {selectedContactData.name || getPhoneNumber(selectedContactData.phoneNumber)}
                     </h2>
-                    <p className="text-sm text-slate-500">
-                      {isContactOnline ? (
-                        <span className="text-green-600 flex items-center gap-1">
-                          <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-                          Online
-                        </span>
-                      ) : (
-                        getPhoneNumber(selectedContactData.phoneNumber)
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-slate-500">
+                        {isContactOnline ? (
+                          <span className="text-green-600 flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                            Online
+                          </span>
+                        ) : (
+                          getPhoneNumber(selectedContactData.phoneNumber)
+                        )}
+                      </p>
+                      {/* Tags do contato no cabeçalho */}
+                      {selectedContactData.tag_ids && selectedContactData.tag_ids.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedContactData.tag_ids.map((tagId) => {
+                            const tag = tags.find(t => t.id === tagId);
+                            return tag ? (
+                              <span
+                                key={tagId}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                                style={{ backgroundColor: tag.color }}
+                              >
+                                <Tag className="w-3 h-3" />
+                                {tag.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Botões de Ação */}
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const contactDB = contactsDB.find(c =>
+                        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+                      );
+                      if (contactDB) {
+                        loadTransferHistory(contactDB.id);
+                      }
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Histórico de transferências"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Histórico
+                  </button>
                   <button
                     onClick={() => setShowTransferModal(true)}
                     className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
@@ -1874,6 +1973,77 @@ export default function AttendantDashboard() {
                 className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
               >
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Histórico de Transferências */}
+      {showTransferHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                Histórico de Transferências
+              </h3>
+              <button
+                onClick={() => setShowTransferHistoryModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {transferHistory.length === 0 ? (
+              <p className="text-center text-slate-500 py-8">
+                Nenhuma transferência registrada para este contato
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {transferHistory.map((transfer) => (
+                  <div
+                    key={transfer.id}
+                    className="bg-slate-50 rounded-lg p-4 border border-slate-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <ArrowRightLeft className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-slate-700">
+                            {transfer.from_department?.name || 'Departamento anterior'}
+                          </span>
+                          <ArrowRightLeft className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {transfer.to_department?.name || 'Novo departamento'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {new Date(transfer.created_at).toLocaleString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6">
+              <button
+                onClick={() => setShowTransferHistoryModal(false)}
+                className="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all font-medium"
+              >
+                Fechar
               </button>
             </div>
           </div>
