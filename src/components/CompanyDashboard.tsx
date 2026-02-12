@@ -1173,12 +1173,13 @@ export default function CompanyDashboard() {
 
       if (transferOk) {
         setShowTransferModal(false);
-
-        setToastMessage(`✅ Contato transferido para ${deptDestino.name}`);
-        setShowToast(true);
-
         setDepartamentoTransferencia('');
         setSetorTransferencia('');
+
+        setTimeout(() => {
+          setToastMessage(`✅ Contato transferido para ${deptDestino.name}`);
+          setShowToast(true);
+        }, 100);
 
         // Mensagem 100% UI (não gravar em messages)
         const oldDeptName = departments.find((d: any) => d.id === oldDeptId)?.name || 'Desconhecido';
@@ -1225,9 +1226,12 @@ export default function CompanyDashboard() {
         throw new Error(rpcData.error || 'Erro desconhecido');
       }
 
-      setToastMessage('Tags atualizadas com sucesso!');
-      setShowToast(true);
       setShowTagModal(false);
+
+      setTimeout(() => {
+        setToastMessage('✅ Tags atualizadas com sucesso!');
+        setShowToast(true);
+      }, 100);
 
       setContactsDB(prev => prev.map(c =>
         c.id === currentContact.id
