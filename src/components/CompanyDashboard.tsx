@@ -1195,6 +1195,7 @@ export default function CompanyDashboard() {
         });
 
         setShowTransferSuccessModal(true);
+        setShowTransferModal(false);
 
         setToastMessage(`✅ Contato transferido para ${deptDestino.name}`);
         setShowToast(true);
@@ -2875,7 +2876,7 @@ export default function CompanyDashboard() {
 
       {/* Transfer Success Modal */}
       {showTransferSuccessModal && transferSuccessData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] backdrop-blur-sm overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8 p-8">
             <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto mb-4">
               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
