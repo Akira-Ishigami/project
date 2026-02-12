@@ -1439,9 +1439,10 @@ export default function AttendantDashboard() {
                   const isSystemTransfer = msg.message_type === 'system_transfer';
                   const showDate = index === 0 || formatDate(msg.date_time || msg.created_at || '') !== formatDate(selectedContactData.messages[index - 1]?.date_time || selectedContactData.messages[index - 1]?.created_at || '');
 
-                  // Detectar tipo de mídia
-                  const messageType = getMessageTypeFromTipomessage(msg.tipomessage);
-                  const hasMedia = messageType && ['image', 'audio', 'document', 'sticker', 'video'].includes(messageType);
+                  // Detectar tipo de mídia (mesma lógica do CompanyDashboard)
+                  const base64Type = msg.base64 ? detectBase64Type(msg.base64) : null;
+                  const tipoFromField = getMessageTypeFromTipomessage(msg.tipomessage);
+                  const hasBase64Content = msg.base64 && base64Type;
 
                   return (
                     <div key={msg.id || msg.idmessage || index}>
@@ -1470,100 +1471,151 @@ export default function AttendantDashboard() {
                               {isSent ? (attendant?.name || 'Atendente') : (selectedContactData.name || selectedContactData.phoneNumber)}
                             </span>
                           </div>
-                          {/* Mídia */}
-                          {messageType === 'image' && msg.urlimagem && (
+
+                          {/* Imagem via urlimagem */}
+                          {msg.urlimagem && !hasBase64Content && (
                             <div className="p-1">
                               <img
-                                src={normalizeBase64(msg.urlimagem, 'image')}
+                                src={msg.urlimagem}
                                 alt="Imagem"
                                 className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
                                 style={{ maxHeight: '300px' }}
-                                onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'image'), 'image')}
+                                onClick={() => openImageModal(msg.urlimagem!)}
                               />
                             </div>
                           )}
-                          {messageType === 'sticker' && msg.urlimagem && (
+
+                          {/* Imagem via base64 */}
+                          {hasBase64Content && (base64Type === 'image' || tipoFromField === 'image') && (base64Type !== 'sticker' && tipoFromField !== 'sticker') && (
+                            <div className="p-1">
+                              <img
+                                src={normalizeBase64(msg.base64!, 'image')}
+                                alt="Imagem"
+                                className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
+                                style={{ maxHeight: '300px' }}
+                                onClick={() => openImageModal(normalizeBase64(msg.base64!, 'image'), 'image')}
+                              />
+                              {msg.caption && (
+                                <div className="mt-2 px-2 text-sm">
+                                  {msg.caption}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Sticker via base64 */}
+                          {hasBase64Content && (base64Type === 'sticker' || tipoFromField === 'sticker') && (
                             <div className="p-2">
                               <img
-                                src={normalizeBase64(msg.urlimagem, 'sticker')}
+                                src={normalizeBase64(msg.base64!, 'sticker')}
                                 alt="Figurinha"
                                 className="rounded-lg max-w-[250px] h-auto cursor-pointer hover:opacity-90 transition"
                                 style={{ maxHeight: '250px' }}
-                                onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'sticker'), 'sticker')}
+                                onClick={() => openImageModal(normalizeBase64(msg.base64!, 'sticker'), 'sticker')}
                               />
                             </div>
                           )}
-                          {messageType === 'video' && msg.urlimagem && (
-                            <div className="p-1">
+
+                          {/* Vídeo via base64 */}
+                          {hasBase64Content && (base64Type === 'video' || tipoFromField === 'video') && (
+                            <div
+                              className="p-1 relative group cursor-pointer"
+                              onClick={() => openImageModal(normalizeBase64(msg.base64!, 'video'), 'video')}
+                            >
                               <video
-                                src={normalizeBase64(msg.urlimagem, 'video')}
-                                controls
+                                src={normalizeBase64(msg.base64!, 'video')}
                                 className="rounded-xl max-w-full h-auto"
                                 style={{ maxHeight: '300px' }}
                               />
-                            </div>
-                          )}
-                          {messageType === 'audio' && msg.urlimagem && (
-                            <div className="p-3">
-                              <div className={`flex items-center gap-3 p-3 rounded-xl ${isSent ? 'bg-[#2563EB]' : 'bg-[#F1F5F9]'}`}>
-                                <button
-                                  onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.urlimagem!)}
-                                  className={`p-2 rounded-full ${isSent ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} transition`}
-                                >
-                                  {playingAudio === (msg.id || msg.idmessage) ? (
-                                    <Pause className="w-5 h-5 text-white" />
-                                  ) : (
-                                    <Play className="w-5 h-5 text-white" />
-                                  )}
-                                </button>
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium">
-                                    {msg.message || 'Áudio'}
-                                  </p>
-                                  <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
-                                    Clique para {playingAudio === (msg.id || msg.idmessage) ? 'pausar' : 'reproduzir'}
-                                  </p>
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                                  <Play className="w-6 h-6 text-blue-500 ml-1" />
                                 </div>
-                                <Mic className={`w-5 h-5 ${isSent ? 'text-blue-100' : 'text-blue-500'}`} />
                               </div>
                             </div>
                           )}
-                          {messageType === 'document' && (msg.urlpdf || msg.urldocumento) && (
+
+                          {/* Áudio via base64 */}
+                          {hasBase64Content && (base64Type === 'audio' || tipoFromField === 'audio') &&
+                            base64Type !== 'image' && tipoFromField !== 'image' && (
+                              <div className="p-3">
+                                <div className={`flex items-center gap-3 p-3 rounded-xl ${isSent ? 'bg-[#2563EB]' : 'bg-[#F1F5F9]'}`}>
+                                  <button
+                                    onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.base64!)}
+                                    className={`p-2 rounded-full ${isSent ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} transition`}
+                                  >
+                                    {playingAudio === (msg.id || msg.idmessage) ? (
+                                      <Pause className="w-5 h-5 text-white" />
+                                    ) : (
+                                      <Play className="w-5 h-5 text-white" />
+                                    )}
+                                  </button>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      {msg.message || 'Áudio'}
+                                    </p>
+                                    <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
+                                      Clique para {playingAudio === (msg.id || msg.idmessage) ? 'pausar' : 'reproduzir'}
+                                    </p>
+                                  </div>
+                                  <Mic className={`w-5 h-5 ${isSent ? 'text-blue-100' : 'text-blue-500'}`} />
+                                </div>
+                              </div>
+                            )}
+
+                          {/* Documento via base64 */}
+                          {hasBase64Content && (base64Type === 'document' || tipoFromField === 'document') &&
+                            base64Type !== 'audio' && tipoFromField !== 'audio' &&
+                            base64Type !== 'image' && tipoFromField !== 'image' &&
+                            base64Type !== 'sticker' && tipoFromField !== 'sticker' &&
+                            base64Type !== 'video' && tipoFromField !== 'video' && (
+                              <div className="p-2">
+                                <button
+                                  onClick={() => downloadBase64File(msg.base64!, msg.message || 'documento.pdf')}
+                                  className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${isSent ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'} transition`}
+                                >
+                                  <FileText className="w-8 h-8 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0 text-left">
+                                    <p className="text-sm font-medium truncate">
+                                      {msg.message || 'Documento'}
+                                    </p>
+                                    <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
+                                      Clique para baixar
+                                    </p>
+                                  </div>
+                                  <Download className="w-5 h-5 flex-shrink-0" />
+                                </button>
+                              </div>
+                            )}
+
+                          {/* Documento via urlpdf */}
+                          {msg.urlpdf && !hasBase64Content && (
                             <div className="p-2">
-                              <button
-                                onClick={() => downloadBase64File(
-                                  normalizeBase64(msg.urlpdf || msg.urldocumento || '', 'document'),
-                                  msg.message || 'documento.pdf'
-                                )}
-                                className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${isSent ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'} transition`}
+                              <a
+                                href={msg.urlpdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center gap-2 p-2.5 rounded-xl ${isSent ? 'bg-blue-600' : 'bg-gray-50'} hover:opacity-90 transition`}
                               >
                                 <FileText className="w-8 h-8 flex-shrink-0" />
-                                <div className="flex-1 min-w-0 text-left">
+                                <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">
                                     {msg.message || 'Documento'}
                                   </p>
                                   <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
-                                    Clique para baixar
+                                    Clique para abrir
                                   </p>
                                 </div>
-                                <Download className="w-5 h-5 flex-shrink-0" />
-                              </button>
+                              </a>
                             </div>
                           )}
 
                           {/* Texto da mensagem */}
-                          {msg.message && !hasMedia && (
+                          {msg.message && !msg.urlpdf && !hasBase64Content && (
                             <div className="px-3.5 py-2">
                               <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
                                 {msg.message}
                               </p>
-                            </div>
-                          )}
-
-                          {/* Caption (para imagens) */}
-                          {msg.caption && (
-                            <div className="mt-2 px-2 text-sm">
-                              {msg.caption}
                             </div>
                           )}
 
