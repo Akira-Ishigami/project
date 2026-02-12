@@ -1309,7 +1309,10 @@ export default function AttendantDashboard() {
                           {formatTime(contact.lastMessageTime)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-slate-500 truncate">
+                        {getPhoneNumber(contact.phoneNumber)}
+                      </p>
+                      <div className="flex items-center justify-between gap-2 mt-1">
                         <p className="text-sm text-slate-600 truncate flex-1">
                           {contact.lastMessage}
                         </p>
@@ -1319,33 +1322,6 @@ export default function AttendantDashboard() {
                           </span>
                         )}
                       </div>
-                      {/* Badge de departamento se não for do meu departamento */}
-                      {filterMode === 'all' && contact.department_id !== attendant?.department_id && (
-                        <div className="mt-1.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full border border-amber-200">
-                            <Building2 className="w-3 h-3" />
-                            Outro departamento
-                          </span>
-                        </div>
-                      )}
-                      {/* Tags do contato */}
-                      {contact.tag_ids && contact.tag_ids.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {contact.tag_ids.map((tagId) => {
-                            const tag = tags.find(t => t.id === tagId);
-                            return tag ? (
-                              <span
-                                key={tagId}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
-                                style={{ backgroundColor: tag.color }}
-                              >
-                                <Tag className="w-2.5 h-2.5" />
-                                {tag.name}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
