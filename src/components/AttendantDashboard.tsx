@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2 } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2 } from 'lucide-react';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
@@ -152,6 +152,23 @@ export default function AttendantDashboard() {
   // Filtro de departamento
   type FilterMode = 'mine' | 'all';
   const [filterMode, setFilterMode] = useState<FilterMode>('mine');
+
+  // Modais de transferência e tags
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
+  const [selectedSectorId, setSelectedSectorId] = useState<string>('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
+  // Carregar tags do contato quando abrir o modal
+  useEffect(() => {
+    if (showTagModal && selectedContactData) {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+      setSelectedTagIds(contactDB?.tag_ids || []);
+    }
+  }, [showTagModal, selectedContactData, contactsDB]);
 
   const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -786,6 +803,8 @@ export default function AttendantDashboard() {
         return;
       }
 
+      const oldDepartmentId = contactDB.department_id;
+
       const { error } = await supabase
         .from('contacts')
         .update({
@@ -795,6 +814,13 @@ export default function AttendantDashboard() {
         .eq('id', contactDB.id);
 
       if (error) throw error;
+
+      // Criar mensagem de sistema da transferência
+      await createTransferSystemMessage(
+        contactDB.id,
+        oldDepartmentId,
+        attendant.department_id
+      );
 
       setToastMessage('Conversa assumida com sucesso!');
       setShowToast(true);
@@ -808,6 +834,129 @@ export default function AttendantDashboard() {
     } catch (error: any) {
       console.error('Erro ao assumir conversa:', error);
       setToastMessage('Erro ao assumir conversa');
+      setShowToast(true);
+    }
+  };
+
+  // Função para criar mensagem de sistema de transferência
+  const createTransferSystemMessage = async (
+    contactId: string,
+    fromDepartmentId: string | null,
+    toDepartmentId: string
+  ) => {
+    try {
+      const fromDept = departments.find(d => d.id === fromDepartmentId);
+      const toDept = departments.find(d => d.id === toDepartmentId);
+
+      const fromName = fromDept?.name || 'Departamento anterior';
+      const toName = toDept?.name || 'Novo departamento';
+
+      const systemMessage = `📋 Contato transferido de "${fromName}" para "${toName}"`;
+
+      await supabase.from('messages').insert({
+        company_id: attendant?.company_id,
+        numero: contactsDB.find(c => c.id === contactId)?.phone_number,
+        mensagem: systemMessage,
+        'minha?': 'system',
+        tipo: 'text',
+        created_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Erro ao criar mensagem de sistema:', error);
+    }
+  };
+
+  // Função para transferir departamento
+  const handleTransferDepartment = async () => {
+    if (!selectedContactData || !selectedDepartmentId) return;
+
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const oldDepartmentId = contactDB.department_id;
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({
+          department_id: selectedDepartmentId,
+          sector_id: selectedSectorId || null
+        })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      // Criar mensagem de sistema da transferência
+      await createTransferSystemMessage(
+        contactDB.id,
+        oldDepartmentId,
+        selectedDepartmentId
+      );
+
+      setToastMessage('Departamento transferido com sucesso!');
+      setShowToast(true);
+      setShowTransferModal(false);
+
+      // Atualizar o estado local
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, department_id: selectedDepartmentId, sector_id: selectedSectorId || null }
+          : c
+      ));
+
+      // Limpar seleção
+      setSelectedDepartmentId('');
+      setSelectedSectorId('');
+    } catch (error: any) {
+      console.error('Erro ao transferir departamento:', error);
+      setToastMessage('Erro ao transferir departamento');
+      setShowToast(true);
+    }
+  };
+
+  // Função para adicionar/remover tags
+  const handleUpdateTags = async () => {
+    if (!selectedContactData) return;
+
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      // Usar RPC para atualizar tags
+      const { error } = await supabase.rpc('update_contact_tags', {
+        p_contact_id: contactDB.id,
+        p_tag_ids: selectedTagIds
+      });
+
+      if (error) throw error;
+
+      setToastMessage('Tags atualizadas com sucesso!');
+      setShowToast(true);
+      setShowTagModal(false);
+
+      // Atualizar o estado local
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, tag_ids: selectedTagIds }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao atualizar tags:', error);
+      setToastMessage('Erro ao atualizar tags');
       setShowToast(true);
     }
   };
@@ -1146,7 +1295,7 @@ export default function AttendantDashboard() {
                           {formatTime(contact.lastMessageTime)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-sm text-slate-600 truncate flex-1">
                           {contact.lastMessage}
                         </p>
@@ -1156,6 +1305,15 @@ export default function AttendantDashboard() {
                           </span>
                         )}
                       </div>
+                      {/* Badge de departamento se não for do meu departamento */}
+                      {filterMode === 'all' && contact.department_id !== attendant?.department_id && (
+                        <div className="mt-1.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full border border-amber-200">
+                            <Building2 className="w-3 h-3" />
+                            Outro departamento
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1196,6 +1354,26 @@ export default function AttendantDashboard() {
                     </p>
                   </div>
                 </div>
+
+                {/* Botões de Ação */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowTransferModal(true)}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Transferir departamento"
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Transferir
+                  </button>
+                  <button
+                    onClick={() => setShowTagModal(true)}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Adicionar tag"
+                  >
+                    <Tag className="w-4 h-4" />
+                    Tags
+                  </button>
+                </div>
               </div>
 
               {/* Messages Area */}
@@ -1206,6 +1384,7 @@ export default function AttendantDashboard() {
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
+                  const isSystem = msg['minha?'] === 'system';
                   const showDate = index === 0 || formatDate(msg.date_time || msg.created_at || '') !== formatDate(selectedContactData.messages[index - 1]?.date_time || selectedContactData.messages[index - 1]?.created_at || '');
 
                   // Detectar tipo de mídia
@@ -1221,7 +1400,16 @@ export default function AttendantDashboard() {
                           </span>
                         </div>
                       )}
-                      <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
+
+                      {/* Mensagem de Sistema (Transferência) */}
+                      {isSystem ? (
+                        <div className="flex justify-center my-2">
+                          <div className="bg-amber-50 text-amber-800 text-xs px-4 py-2 rounded-lg border border-amber-200 max-w-[80%] text-center font-medium shadow-sm">
+                            {msg.message || msg.mensagem}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                         <div
                           className={`max-w-[70%] ${isSent
                             ? 'bg-blue-600 text-white'
@@ -1337,6 +1525,7 @@ export default function AttendantDashboard() {
                           )}
                         </div>
                       </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1519,6 +1708,158 @@ export default function AttendantDashboard() {
           )}
         </div>
       )}
+
+      {/* Modal de Transferir Departamento */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                Transferir Departamento
+              </h3>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Departamento
+                </label>
+                <select
+                  value={selectedDepartmentId}
+                  onChange={(e) => {
+                    setSelectedDepartmentId(e.target.value);
+                    setSelectedSectorId('');
+                  }}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                >
+                  <option value="">Selecione um departamento</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedDepartmentId && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Setor (opcional)
+                  </label>
+                  <select
+                    value={selectedSectorId}
+                    onChange={(e) => setSelectedSectorId(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                  >
+                    <option value="">Nenhum setor</option>
+                    {sectors
+                      .filter((sector: any) => sector.department_id === selectedDepartmentId)
+                      .map((sector) => (
+                        <option key={sector.id} value={sector.id}>
+                          {sector.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleTransferDepartment}
+                disabled={!selectedDepartmentId}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-sm"
+              >
+                Transferir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Tags */}
+      {showTagModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Tag className="w-6 h-6 text-blue-600" />
+                Gerenciar Tags
+              </h3>
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {tags.length === 0 ? (
+                <p className="text-center text-slate-500 py-8">
+                  Nenhuma tag disponível
+                </p>
+              ) : (
+                tags.map((tag) => (
+                  <label
+                    key={tag.id}
+                    className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer transition-all"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTagIds.includes(tag.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedTagIds([...selectedTagIds, tag.id]);
+                        } else {
+                          setSelectedTagIds(selectedTagIds.filter((id) => id !== tag.id));
+                        }
+                      }}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <span className="flex-1 font-medium text-slate-900">{tag.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowTagModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdateTags}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast de notificação */}
+      {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
     </div>
   );
 }
