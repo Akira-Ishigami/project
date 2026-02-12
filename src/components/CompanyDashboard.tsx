@@ -1798,7 +1798,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -1807,22 +1807,22 @@ export default function CompanyDashboard() {
       )}
 
       {/* Fixed Header with Navigation */}
-      <header className="bg-white border-b-2 border-gray-300 z-50">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm z-50">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-500 rounded-lg flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
+              <MessageSquare className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-gray-900 font-semibold text-base">{company?.name}</h1>
-              <p className="text-xs text-gray-500">Atendimento Multicanal</p>
+              <h1 className="text-slate-900 font-bold text-lg">{company?.name}</h1>
+              <p className="text-xs text-slate-500">Atendimento Multicanal</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab('mensagens')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'mensagens' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'mensagens' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
             >
               <MessageSquare className="w-4 h-4" />
               Mensagens
@@ -1830,28 +1830,28 @@ export default function CompanyDashboard() {
 
             <button
               onClick={() => setActiveTab('departamentos')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'departamentos' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'departamentos' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
             >
               <Briefcase className="w-4 h-4" />
               Departamentos
             </button>
             <button
               onClick={() => setActiveTab('setores')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'setores' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'setores' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
             >
               <FolderTree className="w-4 h-4" />
               Setores
             </button>
             <button
               onClick={() => setActiveTab('atendentes')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'atendentes' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'atendentes' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
             >
               <UserCircle2 className="w-4 h-4" />
               Atendentes
             </button>
             <button
               onClick={() => setActiveTab('tags')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'tags' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md ring-1 ring-sky-200' : 'text-gray-600 hover:bg-gray-100 hover:shadow-sm'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'tags' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
             >
               <Tag className="w-4 h-4" />
               Tags
@@ -1859,16 +1859,16 @@ export default function CompanyDashboard() {
             <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${iaGlobalAtivada
-                ? 'bg-slate-50 ring-1 ring-sky-200 shadow-sm text-blue-700'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
+                ? 'bg-gradient-to-r from-emerald-50 to-blue-50 ring-1 ring-blue-200 shadow-md text-blue-700 hover:shadow-lg'
+                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm'
                 } disabled:opacity-50`}
               title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
             >
               {togglingIaGlobal ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold ${iaGlobalAtivada ? 'bg-gradient-to-r from-blue-500 to-emerald-400 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-700'}`}>
+                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold transition-all duration-200 ${iaGlobalAtivada ? 'bg-gradient-to-r from-blue-500 to-emerald-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white border border-slate-200 text-slate-700'}`}>
                   IA
                 </span>
               )}
@@ -1877,12 +1877,12 @@ export default function CompanyDashboard() {
             <div className="relative ml-2">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                className="relative p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110"
                 title="Notificações"
               >
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg shadow-red-500/40 animate-pulse">
                     {unreadNotificationsCount}
                   </span>
                 )}

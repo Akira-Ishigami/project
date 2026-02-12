@@ -1176,7 +1176,7 @@ export default function AttendantDashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       {/* Toast */}
       {showToast && (
         <Toast
@@ -1186,17 +1186,17 @@ export default function AttendantDashboard() {
       )}
 
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
+      <header className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                className="md:hidden p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -1208,7 +1208,7 @@ export default function AttendantDashboard() {
             </div>
             <button
               onClick={signOut}
-              className="ml-2 p-2.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+              className="ml-2 p-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
@@ -1222,34 +1222,34 @@ export default function AttendantDashboard() {
         {/* Sidebar - Contacts List */}
         <div
           className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[360px] bg-white border-r border-slate-200 flex-col`}
+            } md:flex w-full md:w-[360px] bg-white/95 backdrop-blur-sm border-r border-slate-200/80 flex-col shadow-xl`}
         >
           {error && (
-            <div className="bg-red-50 border-b border-red-200 px-5 py-3 flex items-center gap-3">
+            <div className="bg-red-50 border-b border-red-200 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <p className="text-red-700 text-sm flex-1">{error}</p>
             </div>
           )}
 
           {/* Filtros de Departamento */}
-          <div className="px-4 py-4 border-b border-slate-200 bg-slate-50">
+          <div className="px-4 py-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-blue-50/30">
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('mine')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
                   filterMode === 'mine'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 hover:scale-[1.02] border border-slate-200'
                 }`}
               >
                 Meu Departamento
               </button>
               <button
                 onClick={() => setFilterMode('all')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
                   filterMode === 'all'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 hover:scale-[1.02] border border-slate-200'
                 }`}
               >
                 Todos
@@ -1258,15 +1258,15 @@ export default function AttendantDashboard() {
           </div>
 
           {/* Barra de Pesquisa */}
-          <div className="px-4 py-3 border-b border-slate-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="px-4 py-3 border-b border-slate-200/80">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
               <input
                 type="text"
                 placeholder="Pesquisar contato..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-slate-400"
+                className="w-full bg-slate-50 text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-md transition-all duration-200 placeholder-slate-400"
               />
             </div>
           </div>
@@ -1291,13 +1291,13 @@ export default function AttendantDashboard() {
                     setSelectedContact(contact.phoneNumber);
                     setSidebarOpen(false);
                   }}
-                  className={`px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all ${selectedContact === contact.phoneNumber
-                    ? 'bg-blue-50 border-l-4 border-l-blue-600'
-                    : 'hover:bg-slate-50'
+                  className={`px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all duration-200 ${selectedContact === contact.phoneNumber
+                    ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 border-l-4 border-l-blue-600 shadow-sm'
+                    : 'hover:bg-slate-50 hover:shadow-sm hover:translate-x-0.5'
                     }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-sm">
+                    <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-base flex-shrink-0 shadow-md shadow-blue-500/30 transform hover:scale-110 transition-transform duration-200">
                       {contact.name ? contact.name[0].toUpperCase() : <User className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1314,7 +1314,7 @@ export default function AttendantDashboard() {
                           {contact.lastMessage}
                         </p>
                         {contact.unreadCount > 0 && (
-                          <span className="ml-2 bg-blue-600 text-white text-xs font-semibold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
+                          <span className="ml-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/40 animate-pulse">
                             {contact.unreadCount}
                           </span>
                         )}
@@ -1432,7 +1432,7 @@ export default function AttendantDashboard() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3"
+                className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-slate-50 to-white space-y-3"
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
@@ -1446,8 +1446,8 @@ export default function AttendantDashboard() {
                   return (
                     <div key={msg.id || msg.idmessage || index}>
                       {showDate && (
-                        <div className="flex justify-center my-4">
-                          <span className="bg-white text-slate-600 text-xs px-3 py-1.5 rounded-full shadow-sm font-medium border border-slate-200">
+                        <div className="flex justify-center my-4 animate-in fade-in duration-300">
+                          <span className="bg-white text-slate-600 text-xs px-4 py-2 rounded-full shadow-md font-medium border border-slate-200/80 backdrop-blur-sm">
                             {formatDate(msg.date_time || msg.created_at || '')}
                           </span>
                         </div>
@@ -1457,12 +1457,12 @@ export default function AttendantDashboard() {
                       {isSystemTransfer ? (
                         <SystemMessage message={msg} />
                       ) : (
-                        <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex ${isSent ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-200`}>
                         <div
                           className={`max-w-[70%] ${isSent
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-slate-900 border border-slate-200'
-                            } rounded-2xl shadow-sm overflow-hidden`}
+                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                            : 'bg-white text-slate-900 border border-slate-200 shadow-md'
+                            } rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-200`}
                         >
                           {/* Mídia */}
                           {hasMedia && (
@@ -1594,7 +1594,7 @@ export default function AttendantDashboard() {
 
               {/* File Preview */}
               {filePreview && (
-                <div className="bg-slate-100 border-t border-slate-200 p-4">
+                <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-t border-slate-200/80 p-4 animate-in slide-in-from-bottom duration-200">
                   <div className="max-w-[200px] relative">
                     <button
                       onClick={() => {
@@ -1602,14 +1602,14 @@ export default function AttendantDashboard() {
                         setFilePreview(null);
                         setImageCaption('');
                       }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 hover:scale-110 transition-all duration-200 shadow-lg"
                     >
                       <X className="w-4 h-4" />
                     </button>
                     {selectedFile?.type.startsWith('image/') ? (
-                      <img src={filePreview} alt="Preview" className="max-w-full h-auto rounded-lg shadow-sm" />
+                      <img src={filePreview} alt="Preview" className="max-w-full h-auto rounded-lg shadow-md" />
                     ) : (
-                      <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-md">
                         <FileText className="w-8 h-8 text-blue-600" />
                         <span className="text-sm text-slate-700 truncate">{selectedFile?.name}</span>
                       </div>
@@ -1619,14 +1619,14 @@ export default function AttendantDashboard() {
                       placeholder="Adicionar legenda..."
                       value={imageCaption}
                       onChange={(e) => setImageCaption(e.target.value)}
-                      className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
                     />
                   </div>
                 </div>
               )}
 
               {/* Message Input ou Botão Assumir Conversa */}
-              <div className="bg-white border-t border-slate-200 p-4">
+              <div className="bg-white/95 backdrop-blur-sm border-t border-slate-200/80 p-4 shadow-lg">
                 {filterMode === 'all' && !isContactFromMyDepartment ? (
                   // Mostrar botão para assumir conversa
                   <div className="flex flex-col items-center gap-3 py-4">
@@ -1640,7 +1640,7 @@ export default function AttendantDashboard() {
                     </div>
                     <button
                       onClick={handleAssumeConversation}
-                      className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-2"
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 transition-all duration-200 shadow-md flex items-center gap-2"
                     >
                       <User className="w-5 h-5" />
                       Assumir Conversa
@@ -1665,14 +1665,14 @@ export default function AttendantDashboard() {
                     />
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110"
                       title="Anexar arquivo"
                     >
                       <Paperclip className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => imageInputRef.current?.click()}
-                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110"
                       title="Enviar imagem"
                     >
                     <ImageIcon className="w-5 h-5" />
@@ -1690,7 +1690,7 @@ export default function AttendantDashboard() {
                         }
                       }}
                       placeholder="Digite uma mensagem..."
-                      className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none min-h-[48px] max-h-[120px] transition-all"
+                      className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:shadow-md resize-none min-h-[48px] max-h-[120px] transition-all duration-200"
                       rows={1}
                     />
                     <div className="absolute right-2 bottom-2">
@@ -1704,7 +1704,7 @@ export default function AttendantDashboard() {
                     <button
                       onClick={handleSendMessage}
                       disabled={sending || uploadingFile || (!messageText.trim() && !selectedFile)}
-                      className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                      className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 shadow-md"
                     >
                       {sending || uploadingFile ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
