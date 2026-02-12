@@ -196,6 +196,8 @@ export default function CompanyDashboard() {
   const [tags, setTags] = useState<TagItem[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedSector, setSelectedSector] = useState<string>('');
+  const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
+  const [setorTransferencia, setSetorTransferencia] = useState<string>('');
 
   // Mostra apenas setores do departamento selecionado
   const sectorsFiltered = useMemo(() => {
@@ -220,8 +222,6 @@ export default function CompanyDashboard() {
     if (!receptionDeptId) return;
     setSelectedDepartment(receptionDeptId);
   }, [showTransferModal, selectedDepartment, receptionDeptId]);
-  const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
-  const [setorTransferencia, setSetorTransferencia] = useState<string>('');
   const [, setTransferindo] = useState(false);
   const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
   const [transferSuccessData, setTransferSuccessData] = useState<{
