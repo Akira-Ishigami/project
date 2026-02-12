@@ -991,7 +991,7 @@ export default function AttendantDashboard() {
         .select('instancia, department_id, sector_id, tag_id')
         .eq('numero', selectedContact)
         .eq('apikey_instancia', attendant.api_key)
-        .order('created_at', { ascending: false })
+        .order('date_time', { ascending: false })
         .limit(1);
 
       const instanciaValue = existingMessages?.[0]?.instancia || attendant.name;

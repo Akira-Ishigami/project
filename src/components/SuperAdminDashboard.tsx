@@ -251,7 +251,7 @@ export default function SuperAdminDashboard() {
       supabase
         .from("messages")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("date_time", { ascending: false })
         .limit(100),
       supabase
         .from("sent_messages")
@@ -546,7 +546,7 @@ export default function SuperAdminDashboard() {
         .select('instancia, company_id')
         .eq('numero', selectedChat)
         .eq('apikey_instancia', apiKey)
-        .order('created_at', { ascending: false })
+        .order('date_time', { ascending: false })
         .limit(1);
 
       const instanciaValue = existingMessages?.[0]?.instancia || 'Admin';
