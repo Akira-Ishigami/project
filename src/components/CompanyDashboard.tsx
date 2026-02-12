@@ -9,6 +9,7 @@ import TagsManagement from './TagsManagement';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
+import SystemMessage from './SystemMessage';
 
 interface Contact {
   phoneNumber: string;
@@ -151,6 +152,7 @@ export default function CompanyDashboard() {
       minha: "false",
       pushname: "SISTEMA",
       tipomessage: type,
+      message_type: type,
       message: messageText,
       date_time: nowIso,
       created_at: nowIso,
@@ -2053,6 +2055,28 @@ export default function CompanyDashboard() {
                               </span>
                             )}
                           </div>
+                          {contact.tag_ids && contact.tag_ids.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {contact.tag_ids.slice(0, 3).map((tagId) => {
+                                const tag = tags.find(t => t.id === tagId);
+                                return tag ? (
+                                  <span
+                                    key={tagId}
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
+                                    style={{ backgroundColor: tag.color }}
+                                  >
+                                    <Tag className="w-2.5 h-2.5" />
+                                    {tag.name}
+                                  </span>
+                                ) : null;
+                              })}
+                              {contact.tag_ids.length > 3 && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-slate-600">
+                                  +{contact.tag_ids.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2145,23 +2169,9 @@ export default function CompanyDashboard() {
                       <div className="space-y-3">
                         {msgs.map((msg) => {
                           // Renderizar mensagens de sistema (transferência de departamento)
-                          if (msg.message_type === 'system_transfer') {
+                          if (msg.message_type === 'system_transfer' || msg.tipomessage === 'system_transfer') {
                             console.log('📋 Renderizando mensagem de transferência:', msg);
-                            return (
-                              <div key={msg.id} className="flex justify-center my-4">
-                                <div className="bg-gray-100 rounded-lg px-4 py-2 text-center max-w-sm">
-                                  <p className="text-gray-600 text-sm font-medium">
-                                    📋 {msg.message}
-                                  </p>
-                                  <p className="text-gray-400 text-xs mt-1">
-                                    {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
-                            );
+                            return <SystemMessage key={msg.id} message={{ ...msg, message_type: msg.message_type || msg.tipomessage }} />;
                           }
 
                           // Renderizar notificações de sistema antigas (troca de setor)
