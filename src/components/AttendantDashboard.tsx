@@ -690,13 +690,34 @@ export default function AttendantDashboard() {
         return getMessageTimestamp(a) - getMessageTimestamp(b);
       });
 
-      // Filtrar mensagens de sistema para não aparecer como última mensagem
-      const nonSystemMessages = contact.messages.filter(msg => msg.tipomessage !== 'system');
+      // Filtrar mensagens de sistema e transferência para não aparecer como última mensagem
+      const nonSystemMessages = contact.messages.filter(msg =>
+        msg.tipomessage !== 'system' &&
+        msg.tipomessage !== 'system_transfer' &&
+        msg.tipomessage !== 'system_notification' &&
+        msg.message_type !== 'system_transfer'
+      );
       const lastMsg = nonSystemMessages.length > 0
         ? nonSystemMessages[nonSystemMessages.length - 1]
         : contact.messages[contact.messages.length - 1];
 
-      contact.lastMessage = lastMsg.message || (lastMsg.urlimagem ? 'Imagem' : (lastMsg.urlpdf ? 'Documento' : 'Mensagem'));
+      if (lastMsg) {
+        if (lastMsg.message && lastMsg.message.trim()) {
+          contact.lastMessage = lastMsg.message;
+        } else if (lastMsg.urlimagem || lastMsg.base64?.startsWith('data:image')) {
+          contact.lastMessage = 'Imagem';
+        } else if (lastMsg.urlaudio || lastMsg.base64?.startsWith('data:audio')) {
+          contact.lastMessage = 'Áudio';
+        } else if (lastMsg.urlpdf || lastMsg.base64?.startsWith('data:application/pdf')) {
+          contact.lastMessage = 'Documento';
+        } else if (lastMsg.urlvideo || lastMsg.base64?.startsWith('data:video')) {
+          contact.lastMessage = 'Vídeo';
+        } else {
+          contact.lastMessage = 'Mensagem';
+        }
+      } else {
+        contact.lastMessage = '';
+      }
 
       const lastMsgTime = getMessageTimestamp(lastMsg);
       contact.lastMessageTime = lastMsgTime > 0 ? new Date(lastMsgTime).toISOString() : '';
