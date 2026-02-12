@@ -223,18 +223,6 @@ export default function CompanyDashboard() {
     setSelectedDepartment(receptionDeptId);
   }, [showTransferModal, selectedDepartment, receptionDeptId]);
   const [, setTransferindo] = useState(false);
-  const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
-  const [transferSuccessData, setTransferSuccessData] = useState<{
-    id?: string;
-    api_key?: string;
-    numero_contato?: number;
-    nome_contato?: string;
-    departamento_origem?: string;
-    departamento_destino?: string;
-    data_transferencia?: string;
-    nomedept?: string;
-    nomecontato?: string;
-  } | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [iaGlobalAtivada, setIaGlobalAtivada] = useState(true);
@@ -1184,17 +1172,6 @@ export default function CompanyDashboard() {
       }
 
       if (transferOk) {
-        setTransferSuccessData({
-          // Mantém o modal/estrutura existente sem depender do retorno do backend
-          id: crypto?.randomUUID?.() || String(Date.now()),
-          contact_id: currentContact.id,
-          from_department_id: oldDeptId,
-          to_department_id: deptDestino.id,
-          nomedept: deptDestino.name,
-          nomecontato: currentContact.name,
-        });
-
-        setShowTransferSuccessModal(true);
         setShowTransferModal(false);
 
         setToastMessage(`✅ Contato transferido para ${deptDestino.name}`);
@@ -1911,6 +1888,7 @@ export default function CompanyDashboard() {
         <Toast
           message={toastMessage}
           onClose={() => setShowToast(false)}
+          duration={2500}
         />
       )}
 
@@ -2874,77 +2852,6 @@ export default function CompanyDashboard() {
         </div>
       )}
 
-      {/* Transfer Success Modal */}
-      {showTransferSuccessModal && transferSuccessData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-8 p-8">
-            <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-
-            <h2 className="text-2xl font-bold text-gray-900 mb-1 text-center">
-              Transferência Registrada! ✅
-            </h2>
-
-            <p className="text-sm text-gray-600 mb-6 text-center">Dados salvos no banco de dados</p>
-
-            <div className="bg-gray-50 rounded-xl p-4 space-y-4 mb-6 border border-gray-200">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Contato</p>
-                <p className="text-base font-bold text-gray-900">{transferSuccessData.nomecontato}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Número do Contato</p>
-                <p className="text-base font-mono text-gray-900">{transferSuccessData.numero_contato || transferSuccessData.nome_contato}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Departamento De Origem</p>
-                <p className="text-base font-bold text-gray-700">{transferSuccessData.departamento_origem}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3 bg-green-50 p-3 rounded-lg">
-                <p className="text-xs font-semibold text-green-700 uppercase mb-1">Departamento Destino</p>
-                <p className="text-lg font-bold text-green-700">{transferSuccessData.departamento_destino || transferSuccessData.nomedept}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Data da Transferência</p>
-                <p className="text-sm text-gray-600">
-                  {transferSuccessData.data_transferencia
-                    ? new Date(transferSuccessData.data_transferencia).toLocaleString('pt-BR')
-                    : new Date().toLocaleString('pt-BR')
-                  }
-                </p>
-              </div>
-
-              {transferSuccessData.id && (
-                <div className="border-t border-gray-200 pt-3">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1">ID do Registro</p>
-                  <p className="text-xs font-mono text-gray-500 break-all">{transferSuccessData.id}</p>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-gray-600 mb-6 text-center bg-blue-50 border border-blue-200 rounded-lg p-3">
-              📊 Todos os dados foram salvos na tabela <strong>transferencias</strong> para análise futura.
-            </p>
-
-            <button
-              onClick={() => {
-                setShowTransferSuccessModal(false);
-                setTransferSuccessData(null);
-              }}
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
