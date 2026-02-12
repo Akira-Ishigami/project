@@ -157,11 +157,9 @@ export default function AttendantDashboard() {
   // Modais de transferência e tags
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [showTransferHistoryModal, setShowTransferHistoryModal] = useState(false);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [selectedSectorId, setSelectedSectorId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [transferHistory, setTransferHistory] = useState<any[]>([]);
 
   const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -707,6 +705,11 @@ export default function AttendantDashboard() {
         contact.name = '';
       }
 
+      // Adicionar tags e departamento do contato
+      contact.tag_ids = dbContact?.tag_ids || [];
+      contact.department_id = dbContact?.department_id || null;
+      contact.sector_id = dbContact?.sector_id || null;
+
       // Contar mensagens pendentes (do cliente, não respondidas pela empresa)
       const lastViewedTime = lastViewedMessageTime[contact.phoneNumber] || 0;
       contact.unreadCount = 0;
@@ -877,7 +880,7 @@ export default function AttendantDashboard() {
       const fromName = fromDept?.name || 'Departamento anterior';
       const toName = toDept?.name || 'Novo departamento';
 
-      const systemMessage = `📋 Contato transferido de "${fromName}" para "${toName}"`;
+      const systemMessage = `Contato transferido de "${fromName}" para "${toName}"`;
 
       await supabase.from('messages').insert({
         company_id: attendant?.company_id,
@@ -1009,29 +1012,6 @@ export default function AttendantDashboard() {
     }
   };
 
-  // Função para carregar histórico de transferências
-  const loadTransferHistory = async (contactId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('transferencias')
-        .select(`
-          *,
-          from_department:departments!transferencias_from_department_id_fkey(id, name),
-          to_department:departments!transferencias_to_department_id_fkey(id, name)
-        `)
-        .eq('contact_id', contactId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setTransferHistory(data || []);
-      setShowTransferHistoryModal(true);
-    } catch (error) {
-      console.error('Erro ao carregar histórico de transferências:', error);
-      setToastMessage('Erro ao carregar histórico');
-      setShowToast(true);
-    }
-  };
 
   useEffect(() => {
     if (!selectedContact && filteredContacts.length > 0) {
@@ -1467,21 +1447,6 @@ export default function AttendantDashboard() {
 
                 {/* Botões de Ação */}
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const contactDB = contactsDB.find(c =>
-                        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
-                      );
-                      if (contactDB) {
-                        loadTransferHistory(contactDB.id);
-                      }
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
-                    title="Histórico de transferências"
-                  >
-                    <ArrowRightLeft className="w-4 h-4" />
-                    Histórico
-                  </button>
                   <button
                     onClick={() => setShowTransferModal(true)}
                     className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
@@ -1944,12 +1909,17 @@ export default function AttendantDashboard() {
                       checked={selectedTagIds.includes(tag.id)}
                       onChange={(e) => {
                         if (e.target.checked) {
+                          if (selectedTagIds.length >= 5) {
+                            setToastMessage('Máximo de 5 tags por contato');
+                            setShowToast(true);
+                            return;
+                          }
                           setSelectedTagIds([...selectedTagIds, tag.id]);
                         } else {
                           setSelectedTagIds(selectedTagIds.filter((id) => id !== tag.id));
                         }
                       }}
-                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                     />
                     <span
                       className="w-4 h-4 rounded-full flex-shrink-0"
@@ -1973,77 +1943,6 @@ export default function AttendantDashboard() {
                 className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm"
               >
                 Salvar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Histórico de Transferências */}
-      {showTransferHistoryModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                Histórico de Transferências
-              </h3>
-              <button
-                onClick={() => setShowTransferHistoryModal(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {transferHistory.length === 0 ? (
-              <p className="text-center text-slate-500 py-8">
-                Nenhuma transferência registrada para este contato
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {transferHistory.map((transfer) => (
-                  <div
-                    key={transfer.id}
-                    className="bg-slate-50 rounded-lg p-4 border border-slate-200"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <ArrowRightLeft className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-medium text-slate-700">
-                            {transfer.from_department?.name || 'Departamento anterior'}
-                          </span>
-                          <ArrowRightLeft className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm font-medium text-slate-900">
-                            {transfer.to_department?.name || 'Novo departamento'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500">
-                          {new Date(transfer.created_at).toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6">
-              <button
-                onClick={() => setShowTransferHistoryModal(false)}
-                className="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all font-medium"
-              >
-                Fechar
               </button>
             </div>
           </div>
