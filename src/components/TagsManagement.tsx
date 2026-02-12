@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Loader2, Tag } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 
 interface TagData {
   id: string;
@@ -30,6 +31,11 @@ export default function TagsManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; tag: TagData | null }>({
+    isOpen: false,
+    tag: null,
+  });
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -111,19 +117,17 @@ export default function TagsManagement() {
     setShowForm(true);
   };
 
-  /**
-   * DELETE SEGURO:
-   * - Remove vínculos primeiro (contact_tags / message_tags)
-   * - Limpa messages.tag_id se usar esse campo
-   * - Apaga a tag por último
-   *
-   * Se houver erro, loga qual etapa falhou.
-   */
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a tag "${name}"?`)) return;
+  const handleDelete = (tag: TagData) => {
+    setDeleteModal({ isOpen: true, tag });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteModal.tag) return;
+
+    setDeleting(true);
     try {
-      console.log('[TAG DELETE] start', { id, name });
+      const { id } = deleteModal.tag;
+      console.log('[TAG DELETE] start', { id });
 
       // 1) apaga vínculos com contatos
       {
@@ -166,16 +170,18 @@ export default function TagsManagement() {
         if (error) throw error;
       }
 
+      setDeleteModal({ isOpen: false, tag: null });
       fetchTags();
     } catch (error: any) {
       console.error('Erro ao excluir tag:', error);
-      // Mostra mensagem melhor se vier do Supabase
       const msg =
         error?.message ||
         error?.details ||
         error?.hint ||
         'Erro ao excluir tag';
       alert(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -188,7 +194,7 @@ export default function TagsManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
       </div>
     );
   }
@@ -205,7 +211,7 @@ export default function TagsManagement() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 hover:scale-105 transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:scale-105 transition-all shadow-md"
           >
             <Plus className="w-5 h-5" />
             Nova Tag
@@ -240,7 +246,7 @@ export default function TagsManagement() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Ex: Urgente, VIP, Orçamento"
-                className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               />
             </div>
 
@@ -258,7 +264,7 @@ export default function TagsManagement() {
                     }
                     className={`relative p-3 rounded-xl transition-all ${
                       formData.color === color.value
-                        ? 'ring-2 ring-offset-2 ring-teal-500 scale-110'
+                        ? 'ring-2 ring-offset-2 ring-blue-500 scale-110'
                         : 'hover:scale-105'
                     }`}
                     style={{ backgroundColor: color.value }}
@@ -278,7 +284,7 @@ export default function TagsManagement() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 transition-all disabled:opacity-50 shadow-md font-medium"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all disabled:opacity-50 shadow-md font-medium"
               >
                 {saving ? (
                   <span className="flex items-center justify-center gap-2">
@@ -305,8 +311,8 @@ export default function TagsManagement() {
 
       {tags.length === 0 ? (
         <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-12 text-center shadow-md">
-          <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Tag className="w-10 h-10 text-purple-500" />
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Tag className="w-10 h-10 text-blue-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Nenhuma tag cadastrada
@@ -317,36 +323,36 @@ export default function TagsManagement() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl p-4 shadow-md hover:shadow-lg transition-all group"
+              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-3">
                 <div
-                  className="w-8 h-8 rounded-lg shadow-sm"
+                  className="w-14 h-14 rounded-xl shadow-md"
                   style={{ backgroundColor: tag.color }}
                 ></div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(tag)}
-                    className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                     title="Editar"
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(tag.id, tag.name)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                    onClick={() => handleDelete(tag)}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                     title="Excluir"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <h3 className="text-sm font-bold text-gray-900 truncate mb-2">
+              <h3 className="font-bold text-gray-900 truncate mb-2">
                 {tag.name}
               </h3>
 
@@ -358,15 +364,25 @@ export default function TagsManagement() {
                 {tag.name}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-gray-200/50">
-                <p className="text-xs text-gray-400">
-                  {new Date(tag.created_at).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
+              <p className="text-xs text-gray-400 mt-4">
+                Criado em {new Date(tag.created_at).toLocaleDateString('pt-BR')}
+              </p>
             </div>
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, tag: null })}
+        onConfirm={confirmDelete}
+        title="Excluir Tag"
+        message={`Tem certeza que deseja excluir a tag "${deleteModal.tag?.name}"?\n\nEsta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmColor="red"
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Loader2, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 
 interface Department {
   id: string;
@@ -20,6 +21,11 @@ export default function DepartmentsManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; dept: Department | null }>({
+    isOpen: false,
+    dept: null,
+  });
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -129,25 +135,32 @@ export default function DepartmentsManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (dept: Department) => {
+  const handleDelete = (dept: Department) => {
     if (isRecepcao(dept)) {
       alert('❌ O departamento Recepção não pode ser removido.');
       return;
     }
+    setDeleteModal({ isOpen: true, dept });
+  };
 
-    if (!confirm(`Deseja excluir o departamento "${dept.name}"?`)) return;
+  const confirmDelete = async () => {
+    if (!deleteModal.dept) return;
 
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('departments')
         .delete()
-        .eq('id', dept.id);
+        .eq('id', deleteModal.dept.id);
 
       if (error) throw error;
+      setDeleteModal({ isOpen: false, dept: null });
       fetchDepartments();
     } catch (err) {
       console.error('Erro ao excluir departamento:', err);
       alert('Erro ao excluir departamento');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -181,7 +194,7 @@ export default function DepartmentsManagement() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:scale-105 transition-all shadow-md"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:scale-105 transition-all shadow-md"
           >
             <Plus className="w-5 h-5" />
             Novo Departamento
@@ -224,7 +237,7 @@ export default function DepartmentsManagement() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 bg-teal-600 text-white py-2 rounded-xl"
+                className="flex-1 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2 rounded-xl disabled:opacity-50 transition-all font-medium"
               >
                 {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
               </button>
@@ -252,13 +265,13 @@ export default function DepartmentsManagement() {
               className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
             >
               <div className="flex justify-between mb-3">
-                <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
                   <Briefcase className="text-white w-6 h-6" />
                 </div>
 
                 {!recepcao && (
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(dept)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all">
+                    <button onClick={() => handleEdit(dept)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(dept)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
@@ -284,6 +297,18 @@ export default function DepartmentsManagement() {
           );
         })}
       </div>
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, dept: null })}
+        onConfirm={confirmDelete}
+        title="Excluir Departamento"
+        message={`Tem certeza que deseja excluir o departamento "${deleteModal.dept?.name}"?\n\nEsta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmColor="red"
+        loading={deleting}
+      />
     </div>
   );
 }

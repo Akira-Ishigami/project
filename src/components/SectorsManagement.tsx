@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Loader2, FolderTree } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 
 interface Department {
   id: string;
@@ -26,6 +27,11 @@ export default function SectorsManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; sector: Sector | null }>({
+    isOpen: false,
+    sector: null,
+  });
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -125,22 +131,28 @@ export default function SectorsManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o setor "${name}"?`)) {
-      return;
-    }
+  const handleDelete = (sector: Sector) => {
+    setDeleteModal({ isOpen: true, sector });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteModal.sector) return;
+
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('sectors')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteModal.sector.id);
 
       if (error) throw error;
+      setDeleteModal({ isOpen: false, sector: null });
       fetchData();
     } catch (error) {
       console.error('Erro ao excluir setor:', error);
       alert('Erro ao excluir setor');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -150,27 +162,10 @@ export default function SectorsManagement() {
     setEditingId(null);
   };
 
-  const groupBySector = () => {
-    const grouped: { [key: string]: { department: Department; sectors: Sector[] } } = {};
-
-    sectors.forEach((sector) => {
-      const deptId = sector.department_id;
-      if (!grouped[deptId]) {
-        grouped[deptId] = {
-          department: sector.department || { id: deptId, name: 'Departamento Desconhecido' },
-          sectors: [],
-        };
-      }
-      grouped[deptId].sectors.push(sector);
-    });
-
-    return Object.values(grouped);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
       </div>
     );
   }
@@ -185,7 +180,7 @@ export default function SectorsManagement() {
         {!showForm && departments.length > 0 && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 hover:scale-105 transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:scale-105 transition-all shadow-md"
           >
             <Plus className="w-5 h-5" />
             Novo Setor
@@ -226,7 +221,7 @@ export default function SectorsManagement() {
                 required
                 value={formData.department_id}
                 onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               >
                 <option value="">Selecione um departamento</option>
                 {departments.map((dept) => (
@@ -247,7 +242,7 @@ export default function SectorsManagement() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Atendimento, Suporte, Financeiro"
-                className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               />
             </div>
 
@@ -260,29 +255,23 @@ export default function SectorsManagement() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Descreva as responsabilidades deste setor"
                 rows={3}
-                className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all resize-none"
+                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all resize-none"
               />
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3">
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 transition-all disabled:opacity-50 shadow-md font-medium"
+                className="flex-1 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2 rounded-xl disabled:opacity-50 transition-all font-medium"
               >
-                {saving ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Salvando...
-                  </span>
-                ) : (
-                  editingId ? 'Atualizar' : 'Criar Setor'
-                )}
+                {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
               </button>
+
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
+                className="px-4 py-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-all"
               >
                 Cancelar
               </button>
@@ -293,66 +282,68 @@ export default function SectorsManagement() {
 
       {departments.length > 0 && sectors.length === 0 ? (
         <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-12 text-center shadow-md">
-          <div className="w-20 h-20 bg-gradient-to-br from-teal-100 to-teal-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FolderTree className="w-10 h-10 text-teal-500" />
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FolderTree className="w-10 h-10 text-blue-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum setor cadastrado</h3>
           <p className="text-sm text-gray-500">Comece criando o primeiro setor para seus departamentos</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {groupBySector().map(({ department, sectors: deptSectors }) => (
-            <div key={department.id} className="bg-white/50 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md">
-              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200/50">
-                <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
-                  <FolderTree className="w-5 h-5 text-white" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sectors.map((sector) => (
+            <div
+              key={sector.id}
+              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
+            >
+              <div className="flex justify-between mb-3">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <FolderTree className="text-white w-6 h-6" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">{department.name}</h3>
-                  <p className="text-xs text-gray-500">{deptSectors.length} {deptSectors.length === 1 ? 'setor' : 'setores'}</p>
+
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => handleEdit(sector)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(sector)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {deptSectors.map((sector) => (
-                  <div
-                    key={sector.id}
-                    className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-all group hover:-translate-y-0.5 border-l-4 border-teal-100"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="text-base font-bold text-gray-900">{sector.name}</h4>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleEdit(sector)}
-                          className="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
-                          title="Editar"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(sector.id, sector.name)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+              <h3 className="font-bold text-gray-900">{sector.name}</h3>
 
-                    {sector.description && (
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">{sector.description}</p>
-                    )}
+              {sector.department && (
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-medium">Departamento:</span> {sector.department.name}
+                </p>
+              )}
 
-                    <p className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-200/50">
-                      Criado em {new Date(sector.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {sector.description && (
+                <p className="text-sm text-gray-600 mt-2">
+                  {sector.description}
+                </p>
+              )}
+
+              <p className="text-xs text-gray-400 mt-4">
+                Criado em{' '}
+                {new Date(sector.created_at).toLocaleDateString('pt-BR')}
+              </p>
             </div>
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, sector: null })}
+        onConfirm={confirmDelete}
+        title="Excluir Setor"
+        message={`Tem certeza que deseja excluir o setor "${deleteModal.sector?.name}"?\n\nEsta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmColor="red"
+        loading={deleting}
+      />
     </div>
   );
 }

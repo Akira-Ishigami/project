@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Loader2, UserCircle2, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 
 interface Department {
   id: string;
@@ -40,6 +41,11 @@ export default function AttendantsManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [maxAttendants, setMaxAttendants] = useState<number>(5);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; attendant: Attendant | null }>({
+    isOpen: false,
+    attendant: null,
+  });
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -211,22 +217,28 @@ export default function AttendantsManagement() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o atendente "${name}"?`)) {
-      return;
-    }
+  const handleDelete = (attendant: Attendant) => {
+    setDeleteModal({ isOpen: true, attendant });
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteModal.attendant) return;
+
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('attendants')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteModal.attendant.id);
 
       if (error) throw error;
+      setDeleteModal({ isOpen: false, attendant: null });
       fetchData();
     } catch (error) {
       console.error('Erro ao excluir atendente:', error);
       alert('Erro ao excluir atendente');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -300,7 +312,7 @@ export default function AttendantsManagement() {
         {!showForm && canAddMore && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 hover:scale-105 transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:scale-105 transition-all shadow-md"
           >
             <Plus className="w-5 h-5" />
             Novo Atendente
@@ -472,7 +484,7 @@ export default function AttendantsManagement() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-xl hover:from-teal-600 hover:to-teal-700 transition-all disabled:opacity-50 shadow-md font-medium"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl transition-all disabled:opacity-50 shadow-md font-medium"
               >
                 {saving ? (
                   <span className="flex items-center justify-center gap-2">
@@ -518,13 +530,13 @@ export default function AttendantsManagement() {
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleEdit(attendant)}
-                    className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all"
+                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                     title="Editar"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(attendant.id, attendant.name)}
+                    onClick={() => handleDelete(attendant)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                     title="Excluir"
                   >
@@ -579,6 +591,18 @@ export default function AttendantsManagement() {
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, attendant: null })}
+        onConfirm={confirmDelete}
+        title="Excluir Atendente"
+        message={`Tem certeza que deseja excluir o atendente "${deleteModal.attendant?.name}"?\n\nEsta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmColor="red"
+        loading={deleting}
+      />
     </div>
   );
 }
