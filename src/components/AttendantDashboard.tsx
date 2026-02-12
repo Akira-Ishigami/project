@@ -690,7 +690,12 @@ export default function AttendantDashboard() {
         return getMessageTimestamp(a) - getMessageTimestamp(b);
       });
 
-      const lastMsg = contact.messages[contact.messages.length - 1];
+      // Filtrar mensagens de sistema para não aparecer como última mensagem
+      const nonSystemMessages = contact.messages.filter(msg => msg.tipomessage !== 'system');
+      const lastMsg = nonSystemMessages.length > 0
+        ? nonSystemMessages[nonSystemMessages.length - 1]
+        : contact.messages[contact.messages.length - 1];
+
       contact.lastMessage = lastMsg.message || (lastMsg.urlimagem ? 'Imagem' : (lastMsg.urlpdf ? 'Documento' : 'Mensagem'));
 
       const lastMsgTime = getMessageTimestamp(lastMsg);
