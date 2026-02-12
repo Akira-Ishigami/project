@@ -1201,7 +1201,6 @@ export default function CompanyDashboard() {
 
         setDepartamentoTransferencia('');
         setSetorTransferencia('');
-        setShowTransferModal(false);
 
         // Mensagem 100% UI (não gravar em messages)
         const oldDeptName = departments.find((d: any) => d.id === oldDeptId)?.name || 'Desconhecido';
