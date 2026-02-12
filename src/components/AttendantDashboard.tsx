@@ -4,6 +4,7 @@ import { supabase, Message } from '../lib/supabase';
 import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2 } from 'lucide-react';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
+import SystemMessage from './SystemMessage';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
 
 interface Contact {
@@ -490,7 +491,20 @@ export default function AttendantDashboard() {
     try {
       const { data, error } = await supabase
         .from('contacts')
-        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, tag_ids, last_message, last_message_time, created_at, updated_at')
+        .select(`
+          id,
+          company_id,
+          phone_number,
+          name,
+          department_id,
+          sector_id,
+          tag_id,
+          last_message,
+          last_message_time,
+          created_at,
+          updated_at,
+          contact_tags(tag_id)
+        `)
         .eq('company_id', attendant.company_id)
         .order('last_message_time', { ascending: false });
 
@@ -498,7 +512,7 @@ export default function AttendantDashboard() {
 
       const normalized = (data || []).map((c: any) => ({
         ...c,
-        tag_ids: Array.isArray(c.tag_ids) ? c.tag_ids : [],
+        tag_ids: c.contact_tags?.map((ct: any) => ct.tag_id) || [],
       }));
 
       setContactsDB(normalized);
@@ -855,10 +869,14 @@ export default function AttendantDashboard() {
 
       await supabase.from('messages').insert({
         company_id: attendant?.company_id,
+        apikey_instancia: attendant?.api_key,
         numero: contactsDB.find(c => c.id === contactId)?.phone_number,
-        mensagem: systemMessage,
-        'minha?': 'system',
-        tipo: 'text',
+        message: systemMessage,
+        'minha?': 'false',
+        tipomessage: 'system',
+        message_type: 'system_transfer',
+        department_id: toDepartmentId,
+        contact_id: contactId,
         created_at: new Date().toISOString(),
       });
     } catch (error) {
@@ -937,12 +955,17 @@ export default function AttendantDashboard() {
       }
 
       // Usar RPC para atualizar tags
-      const { error } = await supabase.rpc('update_contact_tags', {
+      const { data, error } = await supabase.rpc('update_contact_tags', {
         p_contact_id: contactDB.id,
         p_tag_ids: selectedTagIds
       });
 
       if (error) throw error;
+
+      // Verificar se o RPC retornou sucesso
+      if (data && !data.success) {
+        throw new Error(data.error || 'Erro desconhecido');
+      }
 
       setToastMessage('Tags atualizadas com sucesso!');
       setShowToast(true);
@@ -954,9 +977,12 @@ export default function AttendantDashboard() {
           ? { ...c, tag_ids: selectedTagIds }
           : c
       ));
+
+      // Recarregar contatos para garantir sincronização
+      await fetchContacts();
     } catch (error: any) {
       console.error('Erro ao atualizar tags:', error);
-      setToastMessage('Erro ao atualizar tags');
+      setToastMessage(`Erro ao atualizar tags: ${error.message || 'Erro desconhecido'}`);
       setShowToast(true);
     }
   };
@@ -1384,7 +1410,7 @@ export default function AttendantDashboard() {
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
-                  const isSystem = msg['minha?'] === 'system';
+                  const isSystemTransfer = msg.message_type === 'system_transfer';
                   const showDate = index === 0 || formatDate(msg.date_time || msg.created_at || '') !== formatDate(selectedContactData.messages[index - 1]?.date_time || selectedContactData.messages[index - 1]?.created_at || '');
 
                   // Detectar tipo de mídia
@@ -1402,12 +1428,8 @@ export default function AttendantDashboard() {
                       )}
 
                       {/* Mensagem de Sistema (Transferência) */}
-                      {isSystem ? (
-                        <div className="flex justify-center my-2">
-                          <div className="bg-amber-50 text-amber-800 text-xs px-4 py-2 rounded-lg border border-amber-200 max-w-[80%] text-center font-medium shadow-sm">
-                            {msg.message || msg.mensagem}
-                          </div>
-                        </div>
+                      {isSystemTransfer ? (
+                        <SystemMessage message={msg} />
                       ) : (
                         <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                         <div
