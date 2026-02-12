@@ -944,6 +944,7 @@ export default function CompanyDashboard() {
         const { error: fallbackErr } = await supabase.from("transferencias").insert([
           {
             company_id: company.id,
+            api_key: company.api_key,
             contact_id: contactId,
             from_department_id: oldDepartmentId,
             to_department_id: newDepartmentId,
@@ -1161,6 +1162,7 @@ export default function CompanyDashboard() {
         const { error: insErr } = await supabase.from('transferencias').insert([
           {
             company_id: company.id,
+            api_key: company.api_key,
             contact_id: currentContact.id,
             from_department_id: oldDeptId,
             to_department_id: deptDestino.id,
