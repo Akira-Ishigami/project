@@ -765,6 +765,53 @@ export default function AttendantDashboard() {
     return (Date.now() - lastTs) < 5 * 60 * 1000;
   })();
 
+  // Verificar se o contato pertence ao departamento do atendente
+  const isContactFromMyDepartment = useMemo(() => {
+    if (!selectedContactData || !attendant?.department_id) return false;
+    return selectedContactData.department_id === attendant.department_id;
+  }, [selectedContactData, attendant?.department_id]);
+
+  // Função para assumir a conversa (transferir para o departamento do atendente)
+  const handleAssumeConversation = async () => {
+    if (!selectedContactData || !attendant?.department_id) return;
+
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({
+          department_id: attendant.department_id,
+          sector_id: attendant.sector_id || null
+        })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      setToastMessage('Conversa assumida com sucesso!');
+      setShowToast(true);
+
+      // Atualizar o estado local
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, department_id: attendant.department_id, sector_id: attendant.sector_id || null }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao assumir conversa:', error);
+      setToastMessage('Erro ao assumir conversa');
+      setShowToast(true);
+    }
+  };
+
   useEffect(() => {
     if (!selectedContact && filteredContacts.length > 0) {
       setSelectedContact(filteredContacts[0].phoneNumber);
@@ -1310,7 +1357,7 @@ export default function AttendantDashboard() {
 
               {/* File Preview */}
               {filePreview && (
-                <div className="bg-gray-100 border-t border-gray-200 p-4">
+                <div className="bg-slate-100 border-t border-slate-200 p-4">
                   <div className="max-w-[200px] relative">
                     <button
                       onClick={() => {
@@ -1323,11 +1370,11 @@ export default function AttendantDashboard() {
                       <X className="w-4 h-4" />
                     </button>
                     {selectedFile?.type.startsWith('image/') ? (
-                      <img src={filePreview} alt="Preview" className="max-w-full h-auto rounded-lg" />
+                      <img src={filePreview} alt="Preview" className="max-w-full h-auto rounded-lg shadow-sm" />
                     ) : (
-                      <div className="flex items-center gap-2 bg-white p-3 rounded-lg">
+                      <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                         <FileText className="w-8 h-8 text-blue-600" />
-                        <span className="text-sm text-gray-700 truncate">{selectedFile?.name}</span>
+                        <span className="text-sm text-slate-700 truncate">{selectedFile?.name}</span>
                       </div>
                     )}
                     <input
@@ -1335,41 +1382,62 @@ export default function AttendantDashboard() {
                       placeholder="Adicionar legenda..."
                       value={imageCaption}
                       onChange={(e) => setImageCaption(e.target.value)}
-                      className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                      className="w-full mt-2 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                     />
                   </div>
                 </div>
               )}
 
-              {/* Message Input */}
-              <div className="bg-white border-t border-gray-200 p-4">
-                <div className="flex items-end gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt"
-                  />
-                  <input
-                    type="file"
-                    ref={imageInputRef}
-                    onChange={handleImageSelect}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                    title="Anexar arquivo"
-                  >
-                    <Paperclip className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => imageInputRef.current?.click()}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                    title="Enviar imagem"
-                  >
+              {/* Message Input ou Botão Assumir Conversa */}
+              <div className="bg-white border-t border-slate-200 p-4">
+                {filterMode === 'all' && !isContactFromMyDepartment ? (
+                  // Mostrar botão para assumir conversa
+                  <div className="flex flex-col items-center gap-3 py-4">
+                    <div className="text-center">
+                      <p className="text-sm text-slate-600 mb-2">
+                        Este contato pertence a outro departamento
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Assuma a conversa para poder enviar mensagens
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleAssumeConversation}
+                      className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-2"
+                    >
+                      <User className="w-5 h-5" />
+                      Assumir Conversa
+                    </button>
+                  </div>
+                ) : (
+                  // Input normal de mensagem
+                  <div className="flex items-end gap-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.txt"
+                    />
+                    <input
+                      type="file"
+                      ref={imageInputRef}
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Anexar arquivo"
+                    >
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Enviar imagem"
+                    >
                     <ImageIcon className="w-5 h-5" />
                   </button>
                   <div className="flex-1 relative">
@@ -1385,7 +1453,7 @@ export default function AttendantDashboard() {
                         }
                       }}
                       placeholder="Digite uma mensagem..."
-                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 resize-none min-h-[48px] max-h-[120px]"
+                      className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none min-h-[48px] max-h-[120px] transition-all"
                       rows={1}
                     />
                     <div className="absolute right-2 bottom-2">
@@ -1396,25 +1464,26 @@ export default function AttendantDashboard() {
                       />
                     </div>
                   </div>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={sending || uploadingFile || (!messageText.trim() && !selectedFile)}
-                    className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {sending || uploadingFile ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={sending || uploadingFile || (!messageText.trim() && !selectedFile)}
+                      className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                    >
+                      {sending || uploadingFile ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-[#E5DDD5]">
-              <div className="text-center text-gray-500">
-                <MessageSquare className="w-24 h-24 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Selecione um contato para começar</p>
+            <div className="flex-1 flex items-center justify-center bg-slate-50">
+              <div className="text-center text-slate-500">
+                <MessageSquare className="w-24 h-24 mx-auto mb-4 text-slate-300" />
+                <p className="text-lg font-medium text-slate-600">Selecione um contato para começar</p>
               </div>
             </div>
           )}
