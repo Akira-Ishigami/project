@@ -416,85 +416,22 @@ export default function CompanyDashboard() {
 
   const processReactions = (messages: any[]) => {
     try {
-      // Extrair reações
-      const reactions = messages.filter(m => m?.tipomessage === 'reactionMessage');
-
-      if (reactions.length === 0) return messages;
-
-      console.log('😊 Reações encontradas:', reactions.length);
-
-      // Mapear reações por ID da mensagem alvo
-      const reactionMap = new Map<string, Array<{ emoji: string; count: number }>>();
-
       const looksLikeEmoji = (v?: string | null) =>
-        !!v && v.length <= 6 && /[^\w\d]/.test(v);
+        !!v && v.length <= 6 && /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]|[\uD800-\uDBFF][\uDC00-\uDFFF]/u.test(v || '');
 
-      reactions.forEach(reaction => {
-        try {
-          let targetId = reaction?.reaction_target_id as string | null;
-          let emoji = reaction?.message as string | null;
+      return messages.map(msg => {
+        if (!msg?.idmessage) return { ...msg, reactions: [] };
 
-          // ✅ Fallback: se emoji tá em reaction_target_id, swap
-          if (looksLikeEmoji(targetId) && !looksLikeEmoji(emoji)) {
-            const tmp = targetId;
-            targetId = emoji;
-            emoji = tmp;
-          }
-
-          // ✅ Outros fallbacks
-          if (!emoji && looksLikeEmoji(reaction?.caption)) emoji = reaction.caption;
-          if (!targetId && reaction?.idmessage) targetId = reaction.idmessage;
-
-          console.log(`😊 Reação: targetId=${targetId}, emoji=${emoji}`);
-
-          if (!targetId || !emoji) {
-            console.warn('⚠️ Reação inválida: falta reaction_target_id ou message', reaction);
-            return;
-          }
-
-          if (!reactionMap.has(targetId)) {
-            reactionMap.set(targetId, []);
-          }
-
-          const reactionList = reactionMap.get(targetId)!;
-          const existing = reactionList.find(r => r.emoji === emoji);
-
-          if (existing) {
-            existing.count++;
-          } else {
-            reactionList.push({ emoji, count: 1 });
-          }
-        } catch (err) {
-          console.error('❌ Erro ao processar reação:', err, reaction);
-        }
-      });
-
-      console.log('🔍 Mapa de reações:', reactionMap);
-
-      // Adicionar reações às mensagens originais
-      const filtered = messages.filter(m => m?.tipomessage !== 'reactionMessage');
-
-      return filtered.map(msg => {
-        try {
-          const msgReactions = (reactionMap.get(msg?.idmessage) || reactionMap.get(msg?.message) || reactionMap.get(msg?.id) || []) as Array<{ emoji: string; count: number }>;
-
-          if (msgReactions.length > 0) {
-            console.log(`✨ Mensagem ${msg?.idmessage} tem ${msgReactions.length} reações:`, msgReactions);
-          } else if (reactionMap.size > 0) {
-            console.log(`❌ Mensagem ${msg?.idmessage} NÃO tem reações. Chaves disponíveis:`, Array.from(reactionMap.keys()));
-          }
+        if (msg.reaction_target_id && looksLikeEmoji(msg.reaction_target_id)) {
+          console.log(`✨ Mensagem ${msg.idmessage} tem reação: ${msg.reaction_target_id}`);
 
           return {
             ...msg,
-            reactions: msgReactions
-          };
-        } catch (err) {
-          console.error('❌ Erro ao adicionar reações à mensagem:', err);
-          return {
-            ...msg,
-            reactions: []
+            reactions: [{ emoji: msg.reaction_target_id, count: 1 }]
           };
         }
+
+        return { ...msg, reactions: [] };
       });
     } catch (err) {
       console.error('❌ Erro geral ao processar reações:', err);
