@@ -567,6 +567,7 @@ export default function AttendantDashboard() {
 
       if (error) throw error;
 
+      console.log('Tags carregadas:', data);
       setTags(data || []);
     } catch (error) {
       console.error('Erro ao carregar tags:', error);
@@ -803,9 +804,13 @@ export default function AttendantDashboard() {
       const contactDB = contactsDB.find(c =>
         normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
       );
+      console.log('useEffect executado - Carregando tags do contato:', contactDB?.tag_ids);
       setSelectedTagIds(contactDB?.tag_ids || []);
+    } else if (!showTagModal) {
+      // Limpar ao fechar modal
+      console.log('Modal fechado, limpando tags');
     }
-  }, [showTagModal, selectedContactData, contactsDB]);
+  }, [showTagModal]);
 
   // Função para assumir a conversa (transferir para o departamento do atendente)
   const handleAssumeConversation = async () => {
@@ -882,7 +887,7 @@ export default function AttendantDashboard() {
 
       const systemMessage = `Contato transferido de "${fromName}" para "${toName}"`;
 
-      await supabase.from('messages').insert({
+      const messageData = {
         company_id: attendant?.company_id,
         apikey_instancia: attendant?.api_key,
         numero: contactsDB.find(c => c.id === contactId)?.phone_number,
@@ -893,7 +898,17 @@ export default function AttendantDashboard() {
         department_id: toDepartmentId,
         contact_id: contactId,
         created_at: new Date().toISOString(),
-      });
+      };
+
+      console.log('Criando mensagem de sistema:', messageData);
+
+      const { data, error } = await supabase.from('messages').insert(messageData).select();
+
+      if (error) {
+        console.error('Erro ao inserir mensagem de sistema:', error);
+      } else {
+        console.log('Mensagem de sistema criada com sucesso:', data);
+      }
     } catch (error) {
       console.error('Erro ao criar mensagem de sistema:', error);
     }
@@ -1477,6 +1492,17 @@ export default function AttendantDashboard() {
                   const isSystemTransfer = msg.message_type === 'system_transfer';
                   const showDate = index === 0 || formatDate(msg.date_time || msg.created_at || '') !== formatDate(selectedContactData.messages[index - 1]?.date_time || selectedContactData.messages[index - 1]?.created_at || '');
 
+                  // Log para debug
+                  if (msg.message_type === 'system_transfer' || msg.tipomessage === 'system') {
+                    console.log('Mensagem de sistema detectada:', {
+                      id: msg.id,
+                      message: msg.message,
+                      message_type: msg.message_type,
+                      tipomessage: msg.tipomessage,
+                      isSystemTransfer
+                    });
+                  }
+
                   // Detectar tipo de mídia
                   const messageType = getMessageTypeFromTipomessage(msg.tipomessage);
                   const hasMedia = messageType && ['image', 'audio', 'document', 'sticker', 'video'].includes(messageType);
@@ -1908,15 +1934,22 @@ export default function AttendantDashboard() {
                       type="checkbox"
                       checked={selectedTagIds.includes(tag.id)}
                       onChange={(e) => {
+                        console.log('Checkbox clicked:', tag.name, e.target.checked);
+                        console.log('Current selectedTagIds:', selectedTagIds);
+
                         if (e.target.checked) {
                           if (selectedTagIds.length >= 5) {
                             setToastMessage('Máximo de 5 tags por contato');
                             setShowToast(true);
                             return;
                           }
-                          setSelectedTagIds([...selectedTagIds, tag.id]);
+                          const newTags = [...selectedTagIds, tag.id];
+                          console.log('Adding tag. New tags:', newTags);
+                          setSelectedTagIds(newTags);
                         } else {
-                          setSelectedTagIds(selectedTagIds.filter((id) => id !== tag.id));
+                          const newTags = selectedTagIds.filter((id) => id !== tag.id);
+                          console.log('Removing tag. New tags:', newTags);
+                          setSelectedTagIds(newTags);
                         }
                       }}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
