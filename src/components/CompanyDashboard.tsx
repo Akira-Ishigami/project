@@ -2697,8 +2697,8 @@ export default function CompanyDashboard() {
 
       {/* Modal de Transferir Departamento */}
       {showTransferModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative z-[10000]">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <ArrowRightLeft className="w-6 h-6 text-blue-600" />
