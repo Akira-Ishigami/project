@@ -19,11 +19,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log('===== DELETE ATTENDANT FUNCTION STARTED =====');
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization");
 
+    console.log('Request headers:', {
+      authorization: authHeader ? 'present' : 'missing',
+      contentType: req.headers.get("Content-Type")
+    });
+
     if (!authHeader) {
+      console.error('Missing Authorization header');
       return new Response(
         JSON.stringify({ error: "Unauthorized - Missing Authorization header" }),
         {

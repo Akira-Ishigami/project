@@ -227,6 +227,8 @@ export default function AttendantsManagement() {
     setDeleting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session check:', { hasSession: !!session, token: session?.access_token?.substring(0, 20) });
+
       if (!session) {
         throw new Error('Não autenticado');
       }
