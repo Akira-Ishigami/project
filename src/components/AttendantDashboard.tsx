@@ -1432,7 +1432,7 @@ export default function AttendantDashboard() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-slate-50 to-white space-y-3"
+                className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3"
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
@@ -1446,8 +1446,8 @@ export default function AttendantDashboard() {
                   return (
                     <div key={msg.id || msg.idmessage || index}>
                       {showDate && (
-                        <div className="flex justify-center my-4 animate-in fade-in duration-300">
-                          <span className="bg-white text-slate-600 text-xs px-4 py-2 rounded-full shadow-md font-medium border border-slate-200/80 backdrop-blur-sm">
+                        <div className="flex justify-center my-4">
+                          <span className="bg-white text-slate-600 text-xs px-3 py-1.5 rounded-full shadow-sm font-medium border border-slate-200">
                             {formatDate(msg.date_time || msg.created_at || '')}
                           </span>
                         </div>
@@ -1457,114 +1457,119 @@ export default function AttendantDashboard() {
                       {isSystemTransfer ? (
                         <SystemMessage message={msg} />
                       ) : (
-                        <div className={`flex ${isSent ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-200`}>
+                        <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[70%] ${isSent
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
-                            : 'bg-white text-slate-900 border border-slate-200 shadow-md'
-                            } rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-200`}
+                          className={`max-w-[70%] rounded-[16px] ${isSent
+                            ? 'bg-[#2563EB] text-white rounded-br-sm shadow-sm'
+                            : 'bg-[#F1F5F9] text-[#0F172A] rounded-bl-sm shadow-sm'
+                            }`}
                         >
+                          {/* Nome do remetente */}
+                          <div className="px-3 pt-2 pb-1">
+                            <span className={`text-xs font-semibold ${isSent ? 'text-white' : 'text-gray-900'}`}>
+                              {isSent ? (attendant?.name || 'Atendente') : (selectedContactData.name || selectedContactData.phoneNumber)}
+                            </span>
+                          </div>
                           {/* Mídia */}
-                          {hasMedia && (
-                            <div className="relative">
-                              {messageType === 'image' && msg.urlimagem && (
-                                <img
-                                  src={normalizeBase64(msg.urlimagem, 'image')}
-                                  alt="Imagem"
-                                  className="max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'image'), 'image')}
-                                />
-                              )}
-                              {messageType === 'sticker' && msg.urlimagem && (
-                                <img
-                                  src={normalizeBase64(msg.urlimagem, 'sticker')}
-                                  alt="Sticker"
-                                  className="max-w-[200px] h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'sticker'), 'sticker')}
-                                />
-                              )}
-                              {messageType === 'video' && msg.urlimagem && (
-                                <video
-                                  src={normalizeBase64(msg.urlimagem, 'video')}
-                                  controls
-                                  className="max-w-full h-auto"
-                                />
-                              )}
-                              {messageType === 'audio' && msg.urlimagem && (
-                                <div className="p-3 flex items-center gap-3">
-                                  <button
-                                    onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.urlimagem!)}
-                                    className={`p-2 rounded-full transition-colors ${
-                                      isSent
-                                        ? 'bg-white/20 hover:bg-white/30 text-white'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                    }`}
-                                  >
-                                    {playingAudio === (msg.id || msg.idmessage) ? (
-                                      <Pause className="w-5 h-5" />
-                                    ) : (
-                                      <Play className="w-5 h-5" />
-                                    )}
-                                  </button>
-                                  <div className="flex-1">
-                                    <p className={`text-sm font-medium ${isSent ? 'text-white' : 'text-slate-900'}`}>
-                                      {msg.message || 'Áudio'}
-                                    </p>
-                                    <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
-                                      Clique para {playingAudio === (msg.id || msg.idmessage) ? 'pausar' : 'reproduzir'}
-                                    </p>
-                                  </div>
-                                  <Mic className={`w-5 h-5 ${isSent ? 'text-blue-100' : 'text-blue-500'}`} />
+                          {messageType === 'image' && msg.urlimagem && (
+                            <div className="p-1">
+                              <img
+                                src={normalizeBase64(msg.urlimagem, 'image')}
+                                alt="Imagem"
+                                className="rounded-xl max-w-full h-auto cursor-pointer hover:opacity-95 transition"
+                                style={{ maxHeight: '300px' }}
+                                onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'image'), 'image')}
+                              />
+                            </div>
+                          )}
+                          {messageType === 'sticker' && msg.urlimagem && (
+                            <div className="p-2">
+                              <img
+                                src={normalizeBase64(msg.urlimagem, 'sticker')}
+                                alt="Figurinha"
+                                className="rounded-lg max-w-[250px] h-auto cursor-pointer hover:opacity-90 transition"
+                                style={{ maxHeight: '250px' }}
+                                onClick={() => openImageModal(normalizeBase64(msg.urlimagem!, 'sticker'), 'sticker')}
+                              />
+                            </div>
+                          )}
+                          {messageType === 'video' && msg.urlimagem && (
+                            <div className="p-1">
+                              <video
+                                src={normalizeBase64(msg.urlimagem, 'video')}
+                                controls
+                                className="rounded-xl max-w-full h-auto"
+                                style={{ maxHeight: '300px' }}
+                              />
+                            </div>
+                          )}
+                          {messageType === 'audio' && msg.urlimagem && (
+                            <div className="p-3">
+                              <div className={`flex items-center gap-3 p-3 rounded-xl ${isSent ? 'bg-[#2563EB]' : 'bg-[#F1F5F9]'}`}>
+                                <button
+                                  onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.urlimagem!)}
+                                  className={`p-2 rounded-full ${isSent ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} transition`}
+                                >
+                                  {playingAudio === (msg.id || msg.idmessage) ? (
+                                    <Pause className="w-5 h-5 text-white" />
+                                  ) : (
+                                    <Play className="w-5 h-5 text-white" />
+                                  )}
+                                </button>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">
+                                    {msg.message || 'Áudio'}
+                                  </p>
+                                  <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
+                                    Clique para {playingAudio === (msg.id || msg.idmessage) ? 'pausar' : 'reproduzir'}
+                                  </p>
                                 </div>
-                              )}
-                              {messageType === 'document' && (msg.urlpdf || msg.urldocumento) && (
-                                <div className="p-3">
-                                  <button
-                                    onClick={() => downloadBase64File(
-                                      normalizeBase64(msg.urlpdf || msg.urldocumento || '', 'document'),
-                                      msg.message || 'documento.pdf'
-                                    )}
-                                    className={`flex items-center gap-3 p-2.5 rounded-xl w-full ${
-                                      isSent ? 'bg-white/20 hover:bg-white/30' : 'bg-slate-50 hover:bg-slate-100'
-                                    } transition`}
-                                  >
-                                    <FileText className={`w-8 h-8 flex-shrink-0 ${isSent ? 'text-white' : 'text-blue-600'}`} />
-                                    <div className="flex-1 min-w-0 text-left">
-                                      <p className={`text-sm font-medium truncate ${isSent ? 'text-white' : 'text-slate-900'}`}>
-                                        {msg.message || 'Documento'}
-                                      </p>
-                                      <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
-                                        Clique para baixar
-                                      </p>
-                                    </div>
-                                    <Download className={`w-5 h-5 flex-shrink-0 ${isSent ? 'text-white' : 'text-blue-600'}`} />
-                                  </button>
+                                <Mic className={`w-5 h-5 ${isSent ? 'text-blue-100' : 'text-blue-500'}`} />
+                              </div>
+                            </div>
+                          )}
+                          {messageType === 'document' && (msg.urlpdf || msg.urldocumento) && (
+                            <div className="p-2">
+                              <button
+                                onClick={() => downloadBase64File(
+                                  normalizeBase64(msg.urlpdf || msg.urldocumento || '', 'document'),
+                                  msg.message || 'documento.pdf'
+                                )}
+                                className={`flex items-center gap-2 p-2.5 rounded-xl w-full ${isSent ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-50 hover:bg-gray-100'} transition`}
+                              >
+                                <FileText className="w-8 h-8 flex-shrink-0" />
+                                <div className="flex-1 min-w-0 text-left">
+                                  <p className="text-sm font-medium truncate">
+                                    {msg.message || 'Documento'}
+                                  </p>
+                                  <p className={`text-[11px] ${isSent ? 'text-blue-100' : 'text-gray-500'}`}>
+                                    Clique para baixar
+                                  </p>
                                 </div>
-                              )}
+                                <Download className="w-5 h-5 flex-shrink-0" />
+                              </button>
                             </div>
                           )}
 
                           {/* Texto da mensagem */}
                           {msg.message && !hasMedia && (
-                            <div className="px-4 py-2">
-                              <p className={`text-[14px] leading-[1.4] whitespace-pre-wrap break-words ${isSent ? 'text-white' : 'text-slate-900'}`}>
+                            <div className="px-3.5 py-2">
+                              <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
                                 {msg.message}
                               </p>
                             </div>
                           )}
 
                           {/* Caption (para imagens) */}
-                          {msg.caption && msg.caption !== msg.message && (
-                            <div className={`px-4 py-2 ${isSent ? 'border-t border-white/20' : 'border-t border-slate-200'}`}>
-                              <p className={`text-sm whitespace-pre-wrap break-words ${isSent ? 'text-white/90' : 'text-slate-700'}`}>
-                                {msg.caption}
-                              </p>
+                          {msg.caption && (
+                            <div className="mt-2 px-2 text-sm">
+                              {msg.caption}
                             </div>
                           )}
 
                           {/* Footer com hora e check */}
-                          <div className="px-4 pb-2 flex items-center justify-end gap-1">
-                            <span className={`text-[10px] ${isSent ? 'text-blue-100' : 'text-slate-500'}`}>
+                          <div className="px-3.5 pb-1.5 flex items-center justify-end gap-1">
+                            <span className={`text-[10px] ${isSent ? 'text-blue-100' : 'text-[#64748B]'}`}>
                               {formatTime(msg.date_time || msg.created_at || '')}
                             </span>
                             {isSent && (
@@ -1574,17 +1579,17 @@ export default function AttendantDashboard() {
 
                           {/* Reações */}
                           {msg.reactions && msg.reactions.length > 0 && (
-                            <div className="px-4 pb-2 flex flex-wrap gap-1">
+                            <div className="px-3.5 pb-2 flex flex-wrap gap-1">
                               {msg.reactions.map((reaction, idx) => (
-                                <span
+                                <div
                                   key={idx}
-                                  className="bg-white border border-gray-200 rounded-full px-2 py-1 text-xs flex items-center gap-1"
+                                  className="bg-gray-100 rounded-full px-2 py-1 flex items-center gap-1 text-sm"
                                 >
                                   <span>{reaction.emoji}</span>
                                   {reaction.count > 1 && (
-                                    <span className="text-gray-600">{reaction.count}</span>
+                                    <span className="text-xs text-gray-600 font-medium">{reaction.count}</span>
                                   )}
-                                </span>
+                                </div>
                               ))}
                             </div>
                           )}
