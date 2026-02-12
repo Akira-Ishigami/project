@@ -839,6 +839,7 @@ export default function AttendantDashboard() {
         .from('transferencias')
         .insert({
           company_id: attendant?.company_id,
+          api_key: attendant?.api_key,
           contact_id: contactDB.id,
           from_department_id: oldDepartmentId,
           to_department_id: attendant.department_id
@@ -896,6 +897,7 @@ export default function AttendantDashboard() {
         .from('transferencias')
         .insert({
           company_id: attendant?.company_id,
+          api_key: attendant?.api_key,
           contact_id: contactDB.id,
           from_department_id: oldDepartmentId,
           to_department_id: selectedDepartmentId
