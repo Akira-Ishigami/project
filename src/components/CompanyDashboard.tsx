@@ -204,6 +204,13 @@ export default function CompanyDashboard() {
     return sectors.filter((s: any) => s.department_id === deptId);
   }, [sectors, selectedDepartment]);
 
+  // Setores filtrados para transferência
+  const sectorsFilteredTransfer = useMemo(() => {
+    const deptId = (departamentoTransferencia || '').trim();
+    if (!deptId) return [];
+    return sectors.filter((s: any) => s.department_id === deptId);
+  }, [sectors, departamentoTransferencia]);
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // ✅ Ao abrir o modal de transferência, se o contato não tiver departamento, já seleciona a Recepção
@@ -214,6 +221,7 @@ export default function CompanyDashboard() {
     setSelectedDepartment(receptionDeptId);
   }, [showTransferModal, selectedDepartment, receptionDeptId]);
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
+  const [setorTransferencia, setSetorTransferencia] = useState<string>('');
   const [, setTransferindo] = useState(false);
   const [showTransferSuccessModal, setShowTransferSuccessModal] = useState(false);
   const [transferSuccessData, setTransferSuccessData] = useState<{
@@ -1144,9 +1152,19 @@ export default function CompanyDashboard() {
 
       // Tentativa 2: Fallback (update contacts + insert transferencias)
       if (!transferOk) {
+        const updateData: any = { department_id: deptDestino.id };
+
+        // Se um setor foi selecionado, incluir na atualização
+        if (setorTransferencia) {
+          updateData.sector_id = setorTransferencia;
+        } else {
+          // Se não selecionou setor, limpar o setor existente
+          updateData.sector_id = null;
+        }
+
         const { error: updErr } = await supabase
           .from('contacts')
-          .update({ department_id: deptDestino.id })
+          .update(updateData)
           .eq('id', currentContact.id)
           .eq('company_id', company.id);
 
@@ -1182,6 +1200,7 @@ export default function CompanyDashboard() {
         setShowToast(true);
 
         setDepartamentoTransferencia('');
+        setSetorTransferencia('');
         setShowTransferModal(false);
 
         // Mensagem 100% UI (não gravar em messages)
@@ -2208,6 +2227,7 @@ export default function CompanyDashboard() {
                       setSelectedDepartment(currentContact?.department_id || receptionDeptId || '');
                       setSelectedSector(currentContact?.sector_id || '');
                       setDepartamentoTransferencia('');
+                      setSetorTransferencia('');
                       setShowTransferModal(true);
                     }}
                     className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all flex items-center gap-2 shadow-sm"
@@ -2703,7 +2723,11 @@ export default function CompanyDashboard() {
                 Transferir Departamento
               </h3>
               <button
-                onClick={() => setShowTransferModal(false)}
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setDepartamentoTransferencia('');
+                  setSetorTransferencia('');
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -2717,7 +2741,10 @@ export default function CompanyDashboard() {
                 </label>
                 <select
                   value={departamentoTransferencia}
-                  onChange={(e) => setDepartamentoTransferencia(e.target.value)}
+                  onChange={(e) => {
+                    setDepartamentoTransferencia(e.target.value);
+                    setSetorTransferencia('');
+                  }}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                 >
                   <option value="">Selecione um departamento</option>
@@ -2728,11 +2755,34 @@ export default function CompanyDashboard() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Setor (Opcional)
+                </label>
+                <select
+                  value={setorTransferencia}
+                  onChange={(e) => setSetorTransferencia(e.target.value)}
+                  disabled={!departamentoTransferencia}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all disabled:bg-slate-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Selecione um setor</option>
+                  {sectorsFilteredTransfer.map((sector) => (
+                    <option key={sector.id} value={sector.id}>
+                      {sector.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setShowTransferModal(false)}
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setDepartamentoTransferencia('');
+                  setSetorTransferencia('');
+                }}
                 className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium"
               >
                 Cancelar
