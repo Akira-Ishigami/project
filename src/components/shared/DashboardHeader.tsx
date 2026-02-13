@@ -39,12 +39,16 @@ export default function DashboardHeader({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200 overflow-hidden">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
+              hasLogo
+                ? 'bg-white border border-slate-200'
+                : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
+            }`}>
               {hasLogo ? (
                 <img
                   src={settings.logoUrl}
                   alt="Logo"
-                  className="w-full h-full object-contain p-1"
+                  className="w-full h-full object-cover rounded-xl"
                 />
               ) : (
                 <MessageSquare className="w-6 h-6 text-white" />
