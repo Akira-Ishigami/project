@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -39,6 +39,8 @@ interface ContactDB {
   created_at: string;
   updated_at: string;
   tag_ids?: string[];
+  pinned?: boolean;
+  ia_ativada?: boolean;
 }
 
 interface Department {
@@ -185,6 +187,7 @@ export default function CompanyDashboard() {
   const [imageModalType, setImageModalType] = useState<'image' | 'sticker' | 'video'>('image');
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; phoneNumber: string } | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
 
   // ✅ ID do departamento "Recepção" (criado automaticamente no banco)
@@ -1593,6 +1596,15 @@ export default function CompanyDashboard() {
     }
   }, [selectedContact]);
 
+  // Fechar menu de contexto ao clicar fora
+  useEffect(() => {
+    if (contextMenu) {
+      const handleClick = () => closeContextMenu();
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
   // Contar mensagens pendentes (novas mensagens que não foram vistas)
   useEffect(() => {
     if (!selectedContact || !selectedContactData?.messages) {
@@ -1711,6 +1723,107 @@ export default function CompanyDashboard() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, phoneNumber: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, phoneNumber });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleTogglePin = async (phoneNumber: string) => {
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const newPinnedState = !contactDB.pinned;
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({ pinned: newPinnedState })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      setToastMessage(newPinnedState ? 'Contato fixado!' : 'Contato desfixado!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, pinned: newPinnedState }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao fixar/desafixar contato:', error);
+      setToastMessage('Erro ao fixar contato');
+      setShowToast(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleToggleIA = async (phoneNumber: string) => {
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const newIAState = !contactDB.ia_ativada;
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({ ia_ativada: newIAState })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      setToastMessage(newIAState ? 'IA ativada para este contato!' : 'IA desativada para este contato!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, ia_ativada: newIAState }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao alterar IA do contato:', error);
+      setToastMessage('Erro ao alterar IA');
+      setShowToast(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleContextMenuTag = (phoneNumber: string) => {
+    setSelectedContact(phoneNumber);
+    const contactDB = contactsDB.find(c =>
+      normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+    );
+    if (contactDB) {
+      setSelectedTagIds(contactDB.tag_ids || []);
+      setShowTagModal(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleContextMenuTransfer = (phoneNumber: string) => {
+    setSelectedContact(phoneNumber);
+    setShowTransferModal(true);
+    closeContextMenu();
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -2077,6 +2190,7 @@ export default function CompanyDashboard() {
                           setSidebarOpen(false);
                         }
                       }}
+                      onContextMenu={(e) => handleContextMenu(e, contact.phoneNumber)}
                       className={`group cursor-pointer p-3.5 rounded-xl transition-all duration-200 ${
                         selectedContact === contact.phoneNumber
                           ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 shadow-md shadow-blue-200/40 border border-blue-200/50'
@@ -2837,6 +2951,50 @@ export default function CompanyDashboard() {
         </div>
       )}
 
+      {/* Menu de contexto (clique direito) */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white rounded-lg shadow-2xl border border-slate-200 py-2 z-50 min-w-[200px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleTogglePin(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Pin className="w-4 h-4" />
+            {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.pinned
+              ? 'Desafixar contato'
+              : 'Fixar contato'}
+          </button>
+          <button
+            onClick={() => handleToggleIA(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Bot className="w-4 h-4" />
+            {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
+              ? 'Desativar IA'
+              : 'Ativar IA'}
+          </button>
+          <button
+            onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Tag className="w-4 h-4" />
+            Adicionar tag
+          </button>
+          <button
+            onClick={() => handleContextMenuTransfer(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Transferir departamento
+          </button>
+        </div>
+      )}
+
+      {/* Toast de notificação */}
+      {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
     </div>
   );
 }
