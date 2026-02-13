@@ -2205,9 +2205,19 @@ export default function CompanyDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-semibold text-slate-900 truncate text-sm">
-                              {contact.name || getPhoneNumber(contact.phoneNumber)}
-                            </h3>
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <h3 className="font-semibold text-slate-900 truncate text-sm">
+                                {contact.name || getPhoneNumber(contact.phoneNumber)}
+                              </h3>
+                              {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber))?.pinned && (
+                                <Pin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" />
+                              )}
+                              {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber))?.ia_ativada ? (
+                                <Bot className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                              ) : (
+                                <Bot className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                              )}
+                            </div>
                             <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
                               {formatTime(contact.lastMessageTime)}
                             </span>
