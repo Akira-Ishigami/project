@@ -694,7 +694,6 @@ export default function CompanyDashboard() {
       } = await supabase.auth.getSession();
 
       if (sessErr || !session?.access_token) {
-        console.error('Sem sessão ativa para verificar notificações');
         return;
       }
 
@@ -705,7 +704,6 @@ export default function CompanyDashboard() {
       });
 
       if (error) {
-        console.error('Erro ao verificar notificações de pagamento:', error);
         return;
       }
 
@@ -714,7 +712,7 @@ export default function CompanyDashboard() {
       // Recarregar notificações após verificação
       await fetchNotifications();
     } catch (error) {
-      console.error('Erro ao verificar notificações de pagamento:', error);
+      // Silenciar erros de notificações de pagamento
     }
   };
 
