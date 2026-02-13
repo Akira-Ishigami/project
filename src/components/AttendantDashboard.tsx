@@ -1548,14 +1548,26 @@ export default function AttendantDashboard() {
                       ) : (
                         <div className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[70%] rounded-[16px] ${isSent
-                            ? 'bg-[#2563EB] text-white rounded-br-sm shadow-sm'
-                            : 'bg-[#F1F5F9] text-[#0F172A] rounded-bl-sm shadow-sm'
-                            }`}
+                          className={`max-w-[70%] rounded-[16px] shadow-sm ${isSent ? 'rounded-br-sm' : 'rounded-bl-sm'}`}
+                          style={{
+                            backgroundColor: isSent
+                              ? 'var(--color-outgoing-bg, #3b82f6)'
+                              : 'var(--color-incoming-bg, #f1f5f9)',
+                            color: isSent
+                              ? 'var(--color-outgoing-text, #ffffff)'
+                              : 'var(--color-incoming-text, #1e293b)'
+                          }}
                         >
                           {/* Nome do remetente */}
                           <div className="px-3 pt-2 pb-1">
-                            <span className={`text-xs font-semibold ${isSent ? 'text-white' : 'text-gray-900'}`}>
+                            <span
+                              className="text-xs font-semibold"
+                              style={{
+                                color: isSent
+                                  ? 'var(--color-outgoing-text, #ffffff)'
+                                  : 'var(--color-incoming-text, #1e293b)'
+                              }}
+                            >
                               {isSent ? (attendant?.name || 'Atendente') : (selectedContactData.name || selectedContactData.phoneNumber)}
                             </span>
                           </div>
@@ -1627,7 +1639,14 @@ export default function AttendantDashboard() {
                           {hasBase64Content && (base64Type === 'audio' || tipoFromField === 'audio') &&
                             base64Type !== 'image' && tipoFromField !== 'image' && (
                               <div className="p-3">
-                                <div className={`flex items-center gap-3 p-3 rounded-xl ${isSent ? 'bg-[#2563EB]' : 'bg-[#F1F5F9]'}`}>
+                                <div
+                                  className="flex items-center gap-3 p-3 rounded-xl"
+                                  style={{
+                                    backgroundColor: isSent
+                                      ? 'var(--color-outgoing-bg, #3b82f6)'
+                                      : 'var(--color-incoming-bg, #f1f5f9)'
+                                  }}
+                                >
                                   <button
                                     onClick={() => handleAudioPlay(msg.id || msg.idmessage || '', msg.base64!)}
                                     className={`p-2 rounded-full ${isSent ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-500 hover:bg-blue-600'} transition`}
