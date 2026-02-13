@@ -2222,11 +2222,6 @@ export default function CompanyDashboard() {
                               {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber))?.pinned && (
                                 <Pin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" />
                               )}
-                              {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber))?.ia_ativada ? (
-                                <Bot className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                              ) : (
-                                <Bot className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                              )}
                             </div>
                             <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
                               {formatTime(contact.lastMessageTime)}
