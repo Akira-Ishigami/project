@@ -1025,6 +1025,17 @@ export default function AttendantDashboard() {
     }
   }, [filteredContacts.length, selectedContact]);
 
+  // Verificar se o contato selecionado ainda está no filtro atual
+  useEffect(() => {
+    if (selectedContact && filteredContacts.length > 0) {
+      const isContactInFilter = filteredContacts.some(c => c.phoneNumber === selectedContact);
+      if (!isContactInFilter) {
+        // Se o contato selecionado não está mais no filtro, selecionar o primeiro contato disponível
+        setSelectedContact(filteredContacts[0].phoneNumber);
+      }
+    }
+  }, [filterMode, filteredContacts, selectedContact]);
+
   // Fechar menu de contexto ao clicar fora
   useEffect(() => {
     if (contextMenu) {
