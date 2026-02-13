@@ -92,14 +92,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     if (saveToDb) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Erro ao obter usuário:', userError);
+          return;
+        }
 
-        const { data: company } = await supabase
+        const { data: company, error: companyError } = await supabase
           .from('companies')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        if (companyError) {
+          console.error('Erro ao buscar empresa:', companyError);
+          return;
+        }
 
         if (company) {
           const companyUpdate: any = {};
@@ -113,37 +121,53 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           if (newSettings.accentColor !== undefined) companyUpdate.accent_color = newSettings.accentColor;
 
           if (Object.keys(companyUpdate).length > 0) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('companies')
               .update(companyUpdate)
               .eq('id', company.id);
+
+            if (updateError) {
+              console.error('Erro ao atualizar empresa:', updateError);
+            }
           }
 
-          const themeUpdate: any = {};
-          if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
-          if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
-          if (newSettings.incomingMessageColor !== undefined) themeUpdate.background_color = newSettings.incomingMessageColor;
-          if (newSettings.incomingTextColor !== undefined) themeUpdate.text_color = newSettings.incomingTextColor;
+          const themeUpdate: any = {
+            primary_color: newSettings.primaryColor || settings.primaryColor,
+            secondary_color: newSettings.accentColor || settings.accentColor,
+            accent_color: newSettings.accentColor || settings.accentColor,
+            background_color: newSettings.incomingMessageColor || settings.incomingMessageColor,
+            text_color: newSettings.incomingTextColor || settings.incomingTextColor,
+          };
 
-          if (Object.keys(themeUpdate).length > 0) {
-            const { data: existingTheme } = await supabase
+          const { data: existingTheme } = await supabase
+            .from('theme_settings')
+            .select('id')
+            .eq('company_id', company.id)
+            .maybeSingle();
+
+          if (existingTheme) {
+            const { error: themeError } = await supabase
               .from('theme_settings')
-              .select('id')
-              .eq('company_id', company.id)
-              .maybeSingle();
+              .update(themeUpdate)
+              .eq('company_id', company.id);
 
-            if (existingTheme) {
-              await supabase
-                .from('theme_settings')
-                .update(themeUpdate)
-                .eq('company_id', company.id);
+            if (themeError) {
+              console.error('Erro ao atualizar theme_settings:', themeError);
             } else {
-              await supabase
-                .from('theme_settings')
-                .insert({
-                  company_id: company.id,
-                  ...themeUpdate
-                });
+              console.log('theme_settings atualizado com sucesso');
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('theme_settings')
+              .insert({
+                company_id: company.id,
+                ...themeUpdate
+              });
+
+            if (insertError) {
+              console.error('Erro ao inserir theme_settings:', insertError);
+            } else {
+              console.log('theme_settings inserido com sucesso');
             }
           }
         }
