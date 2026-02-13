@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
 import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
@@ -102,6 +103,7 @@ type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags'
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
+  const { settings } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
@@ -1840,11 +1842,21 @@ export default function CompanyDashboard() {
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm z-50">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
-              <MessageSquare className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200 overflow-hidden">
+              {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
+                <img
+                  src={settings.logoUrl}
+                  alt="Logo"
+                  className="w-full h-full object-contain p-1"
+                />
+              ) : (
+                <MessageSquare className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
-              <h1 className="text-slate-900 font-bold text-lg">{company?.name}</h1>
+              <h1 className="text-slate-900 font-bold text-lg">
+                {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : company?.name}
+              </h1>
               <p className="text-xs text-slate-500">Atendimento Multicanal</p>
             </div>
           </div>

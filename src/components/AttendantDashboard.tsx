@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
 import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin, Bot } from 'lucide-react';
 import Toast from './Toast';
@@ -86,6 +87,7 @@ function normalizeDbPhone(input?: string | null): string {
 
 export default function AttendantDashboard() {
   const { attendant, signOut } = useAuth();
+  const { settings } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1305,11 +1307,21 @@ export default function AttendantDashboard() {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
-                <MessageSquare className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200 overflow-hidden">
+                {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
+                  <img
+                    src={settings.logoUrl}
+                    alt="Logo"
+                    className="w-full h-full object-contain p-1"
+                  />
+                ) : (
+                  <MessageSquare className="w-6 h-6 text-white" />
+                )}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">ChatFlow</h1>
+                <h1 className="text-xl font-bold text-slate-900">
+                  {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : 'ChatFlow'}
+                </h1>
                 <p className="text-slate-500 text-sm mt-0.5">
                   {attendant?.name || 'Atendente'}
                 </p>
