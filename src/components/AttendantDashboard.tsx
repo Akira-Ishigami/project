@@ -558,7 +558,7 @@ export default function AttendantDashboard() {
         }
         if (type === 'UPDATE') {
           return prevContacts.map((c) =>
-            c.id === contact.id ? { ...contact, tag_ids: contact.tag_ids || [] } : c
+            c.id === contact.id ? { ...c, ...contact, tag_ids: contact.tag_ids || c.tag_ids || [] } : c
           );
         }
         if (type === 'DELETE') {

@@ -15,6 +15,8 @@ interface ContactDB {
   created_at: string;
   updated_at: string;
   tag_ids?: string[];
+  pinned?: boolean;
+  ia_ativada?: boolean;
 }
 
 interface UseRealtimeContactsProps {

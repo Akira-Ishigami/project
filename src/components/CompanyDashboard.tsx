@@ -543,7 +543,7 @@ export default function CompanyDashboard() {
     try {
       const { data: contactsData, error: contactsError } = await supabase
         .from('contacts')
-        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, last_message, last_message_time, created_at, updated_at')
+        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, last_message, last_message_time, created_at, updated_at, pinned, ia_ativada')
         .eq('company_id', company.id)
         .order('last_message_time', { ascending: false });
 
@@ -1299,7 +1299,7 @@ export default function CompanyDashboard() {
           return prevContacts.filter(c => c.id !== contact.id);
         }
         if (contactExists) {
-          return prevContacts.map(c => c.id === contact.id ? contact : c);
+          return prevContacts.map(c => c.id === contact.id ? { ...c, ...contact } : c);
         }
         return [...prevContacts, contact];
       });
