@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin, Bot } from 'lucide-react';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
@@ -34,6 +34,7 @@ interface ContactDB {
   updated_at: string;
   tag_ids?: string[];
   pinned?: boolean;
+  ia_ativada?: boolean;
 }
 
 interface Department {
@@ -445,6 +446,7 @@ export default function AttendantDashboard() {
           created_at,
           updated_at,
           pinned,
+          ia_ativada,
           contact_tags(tag_id)
         `)
         .eq('company_id', attendant.company_id)
@@ -996,6 +998,43 @@ export default function AttendantDashboard() {
     } catch (error: any) {
       console.error('Erro ao fixar/desafixar contato:', error);
       setToastMessage('Erro ao fixar contato');
+      setShowToast(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleToggleIA = async (phoneNumber: string) => {
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const newIAState = !contactDB.ia_ativada;
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({ ia_ativada: newIAState })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      setToastMessage(newIAState ? 'IA ativada para este contato!' : 'IA desativada para este contato!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, ia_ativada: newIAState }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao alterar IA do contato:', error);
+      setToastMessage('Erro ao alterar IA');
       setShowToast(true);
     }
     closeContextMenu();
@@ -2049,6 +2088,15 @@ export default function AttendantDashboard() {
             {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.pinned
               ? 'Desafixar contato'
               : 'Fixar contato'}
+          </button>
+          <button
+            onClick={() => handleToggleIA(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Bot className="w-4 h-4" />
+            {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
+              ? 'Desativar IA'
+              : 'Ativar IA'}
           </button>
           <button
             onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
