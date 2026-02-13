@@ -999,7 +999,8 @@ export default function AttendantDashboard() {
       ));
     } catch (error: any) {
       console.error('Erro ao fixar/desafixar contato:', error);
-      setToastMessage('Erro ao fixar contato');
+      const errorMessage = error.message || 'Erro desconhecido';
+      setToastMessage(`Erro ao fixar contato: ${errorMessage}`);
       setShowToast(true);
     }
     closeContextMenu();
@@ -1036,7 +1037,8 @@ export default function AttendantDashboard() {
       ));
     } catch (error: any) {
       console.error('Erro ao alterar IA do contato:', error);
-      setToastMessage('Erro ao alterar IA');
+      const errorMessage = error.message || 'Erro desconhecido';
+      setToastMessage(`Erro ao alterar IA: ${errorMessage}`);
       setShowToast(true);
     }
     closeContextMenu();
