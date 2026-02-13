@@ -1966,7 +1966,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden transition-colors duration-300">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -1976,7 +1976,7 @@ export default function CompanyDashboard() {
       )}
 
       {/* Fixed Header with Navigation */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm z-50">
+      <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm z-50 transition-colors duration-300">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button

@@ -34,12 +34,12 @@ export default function MessageInput({
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm border-t border-slate-200/80 p-4 shadow-lg">
+    <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-t border-slate-200/80 dark:border-slate-700/80 p-4 shadow-lg transition-colors duration-300">
       <div className="flex items-end gap-2">
         <button
           onClick={onFileSelect}
           disabled={disabled}
-          className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Anexar arquivo"
         >
           <Paperclip className="w-5 h-5" />
@@ -48,7 +48,7 @@ export default function MessageInput({
         <button
           onClick={onImageSelect}
           disabled={disabled}
-          className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Enviar imagem"
         >
           <ImageIcon className="w-5 h-5" />
@@ -62,7 +62,7 @@ export default function MessageInput({
             onPaste={onPaste}
             disabled={disabled}
             placeholder={placeholder}
-            className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:shadow-md resize-none min-h-[48px] max-h-[120px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 pr-12 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50 focus:shadow-md resize-none min-h-[48px] max-h-[120px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder-slate-400 dark:placeholder-slate-500"
             rows={1}
           />
           <div className="absolute right-2 bottom-2">
