@@ -1027,11 +1027,17 @@ export default function AttendantDashboard() {
 
   // Verificar se o contato selecionado ainda está no filtro atual
   useEffect(() => {
-    if (selectedContact && filteredContacts.length > 0) {
+    if (selectedContact) {
       const isContactInFilter = filteredContacts.some(c => c.phoneNumber === selectedContact);
       if (!isContactInFilter) {
-        // Se o contato selecionado não está mais no filtro, selecionar o primeiro contato disponível
-        setSelectedContact(filteredContacts[0].phoneNumber);
+        // Se o contato selecionado não está mais no filtro
+        if (filteredContacts.length > 0) {
+          // Selecionar o primeiro contato disponível
+          setSelectedContact(filteredContacts[0].phoneNumber);
+        } else {
+          // Limpar a seleção se não houver contatos
+          setSelectedContact('');
+        }
       }
     }
   }, [filterMode, filteredContacts, selectedContact]);
