@@ -100,4 +100,22 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full hover:bg-slate-400;
   }
+
+  .message-incoming {
+    background-color: var(--color-incoming-bg, #f1f5f9);
+    color: var(--color-incoming-text, #1e293b);
+  }
+
+  .message-outgoing {
+    background-color: var(--color-outgoing-bg, #3b82f6);
+    color: var(--color-outgoing-text, #ffffff);
+  }
+
+  .btn-primary {
+    background: var(--color-primary, #3b82f6);
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
 }

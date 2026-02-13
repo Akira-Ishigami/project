@@ -1,4 +1,5 @@
 import { MessageSquare, LogOut, Menu, Bell } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface DashboardHeaderProps {
   userName: string;
@@ -21,6 +22,11 @@ export default function DashboardHeader({
   unreadCount = 0,
   onToggleNotifications
 }: DashboardHeaderProps) {
+  const { settings } = useTheme();
+
+  const displayName = settings.displayName || 'ChatFlow';
+  const hasLogo = settings.logoUrl && settings.logoUrl.trim() !== '';
+
   return (
     <header className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80 sticky top-0 z-30">
       <div className="px-6 py-4">
@@ -33,11 +39,19 @@ export default function DashboardHeader({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
-              <MessageSquare className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200 overflow-hidden">
+              {hasLogo ? (
+                <img
+                  src={settings.logoUrl}
+                  alt="Logo"
+                  className="w-full h-full object-contain p-1"
+                />
+              ) : (
+                <MessageSquare className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">ChatFlow</h1>
+              <h1 className="text-xl font-bold text-slate-900">{displayName}</h1>
               <p className="text-slate-500 text-sm mt-0.5">{userRole}</p>
             </div>
           </div>

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
 import TagsManagement from './TagsManagement';
+import SettingsPanel from './SettingsPanel';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
@@ -97,7 +98,7 @@ function normalizeDbPhone(input?: string | null): string {
 }
 
 
-type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags';
+type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags' | 'configuracoes';
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
@@ -1886,6 +1887,13 @@ export default function CompanyDashboard() {
               Tags
             </button>
             <button
+              onClick={() => setActiveTab('configuracoes')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'configuracoes' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
+            >
+              <Settings className="w-4 h-4" />
+              Configurações
+            </button>
+            <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
@@ -2589,6 +2597,8 @@ export default function CompanyDashboard() {
             <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
               <TagsManagement />
             </div>
+          ) : activeTab === 'configuracoes' ? (
+            <SettingsPanel />
           ) : null}
         </div>
       </div>
