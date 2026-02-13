@@ -1990,7 +1990,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden transition-colors duration-300">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:bg-[#0f172a] overflow-hidden transition-colors duration-300">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -2000,7 +2000,7 @@ export default function CompanyDashboard() {
       )}
 
       {/* Fixed Header with Navigation */}
-      <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm z-50 transition-colors duration-300">
+      <header className="bg-white/80 dark:bg-[#1e293b]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-600/50 shadow-sm z-50 transition-colors duration-300">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -3014,7 +3014,7 @@ export default function CompanyDashboard() {
       {/* Menu de contexto (clique direito) */}
       {contextMenu && (
         <div
-          className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-50 min-w-[200px] transition-colors duration-300"
+          className="fixed bg-white dark:bg-[#1e293b] rounded-lg shadow-2xl border border-slate-200 dark:border-slate-600 py-2 z-50 min-w-[200px] transition-colors duration-300"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >

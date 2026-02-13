@@ -64,30 +64,30 @@ export default function SettingsPanel() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 p-8 transition-colors duration-300">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 dark:bg-[#0f172a] p-8 transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="animate-fadeIn">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Configurações de Aparência</h1>
-          <p className="text-slate-600 dark:text-slate-400">Personalize a aparência do seu sistema</p>
+          <p className="text-slate-600 dark:text-slate-300">Personalize a aparência do seu sistema</p>
         </div>
 
         {/* Logo Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-700 animate-slideUp transition-colors duration-300">
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-600 animate-slideUp transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg">
               <Image className="text-blue-600 dark:text-blue-400" size={24} />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Logo do Sistema</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Substitua o ícone padrão pelo logo da sua empresa</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Substitua o ícone padrão pelo logo da sua empresa</p>
             </div>
           </div>
 
           <div className="space-y-4">
             {localSettings.logoUrl ? (
               <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden bg-white dark:bg-slate-700 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden bg-white dark:bg-[#334155] flex items-center justify-center">
                   <img
                     src={localSettings.logoUrl}
                     alt="Logo"
@@ -113,15 +113,15 @@ export default function SettingsPanel() {
             ) : (
               <button
                 onClick={() => logoInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200 group"
+                className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-[#334155]/50 transition-all duration-200 group"
               >
                 <div className="flex flex-col items-center gap-3">
-                  <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-full group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
-                    <Upload className="text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" size={32} />
+                  <div className="p-4 bg-slate-100 dark:bg-[#334155] rounded-full group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-colors">
+                    <Upload className="text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400" size={32} />
                   </div>
                   <div className="text-center">
                     <p className="font-medium text-slate-900 dark:text-white">Clique para fazer upload</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">PNG, JPG ou SVG (máx. 2MB)</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">PNG, JPG ou SVG (máx. 2MB)</p>
                   </div>
                 </div>
               </button>
@@ -137,14 +137,14 @@ export default function SettingsPanel() {
         </div>
 
         {/* Display Name */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-700 animate-slideUp transition-colors duration-300" style={{ animationDelay: '0.1s' }}>
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-600 animate-slideUp transition-colors duration-300" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+            <div className="p-2 bg-green-100 dark:bg-green-500/20 rounded-lg">
               <Type className="text-green-600 dark:text-green-400" size={24} />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Nome de Exibição</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Nome que aparece no topo do sistema (apenas visual)</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Nome que aparece no topo do sistema (apenas visual)</p>
             </div>
           </div>
 
@@ -153,31 +153,31 @@ export default function SettingsPanel() {
             value={localSettings.displayName}
             onChange={(e) => setLocalSettings((prev) => ({ ...prev, displayName: e.target.value }))}
             placeholder="Digite o nome da sua empresa"
-            className="w-full px-4 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all placeholder-slate-400 dark:placeholder-slate-500"
+            className="w-full px-4 py-3 bg-white dark:bg-[#334155] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all placeholder-slate-400 dark:placeholder-slate-400"
           />
         </div>
 
         {/* Message Colors */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-700 animate-slideUp transition-colors duration-300" style={{ animationDelay: '0.2s' }}>
+        <div className="bg-white dark:bg-[#1e293b] rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-600 animate-slideUp transition-colors duration-300" style={{ animationDelay: '0.2s' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+            <div className="p-2 bg-purple-100 dark:bg-purple-500/20 rounded-lg">
               <Palette className="text-purple-600 dark:text-purple-400" size={24} />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Cores das Mensagens</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Personalize as cores das mensagens recebidas e enviadas</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Personalize as cores das mensagens recebidas e enviadas</p>
             </div>
           </div>
 
           <div className="space-y-6">
             {/* Incoming Messages */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
                 Mensagens Recebidas
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">Cor de Fundo</label>
+                  <label className="block text-xs text-slate-600 dark:text-slate-300 mb-2">Cor de Fundo</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -189,7 +189,7 @@ export default function SettingsPanel() {
                       type="text"
                       value={localSettings.incomingMessageColor}
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, incomingMessageColor: e.target.value }))}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
+                      className="flex-1 px-3 py-2 bg-white dark:bg-[#334155] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
                     />
                   </div>
                   <div className="grid grid-cols-5 gap-2 mt-2">
@@ -197,7 +197,7 @@ export default function SettingsPanel() {
                       <button
                         key={preset.color}
                         onClick={() => setLocalSettings((prev) => ({ ...prev, incomingMessageColor: preset.color }))}
-                        className="h-8 rounded-md border-2 border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform"
+                        className="h-8 rounded-md border-2 border-slate-300 dark:border-slate-500 hover:scale-110 transition-transform"
                         style={{ backgroundColor: preset.color }}
                         title={preset.name}
                       />
@@ -205,7 +205,7 @@ export default function SettingsPanel() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">Cor do Texto</label>
+                  <label className="block text-xs text-slate-600 dark:text-slate-300 mb-2">Cor do Texto</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -217,7 +217,7 @@ export default function SettingsPanel() {
                       type="text"
                       value={localSettings.incomingTextColor}
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, incomingTextColor: e.target.value }))}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
+                      className="flex-1 px-3 py-2 bg-white dark:bg-[#334155] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -226,12 +226,12 @@ export default function SettingsPanel() {
 
             {/* Outgoing Messages */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">
                 Mensagens Enviadas
               </label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">Cor de Fundo</label>
+                  <label className="block text-xs text-slate-600 dark:text-slate-300 mb-2">Cor de Fundo</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -243,7 +243,7 @@ export default function SettingsPanel() {
                       type="text"
                       value={localSettings.outgoingMessageColor}
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, outgoingMessageColor: e.target.value }))}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
+                      className="flex-1 px-3 py-2 bg-white dark:bg-[#334155] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
                     />
                   </div>
                   <div className="grid grid-cols-5 gap-2 mt-2">
@@ -251,7 +251,7 @@ export default function SettingsPanel() {
                       <button
                         key={preset.color}
                         onClick={() => setLocalSettings((prev) => ({ ...prev, outgoingMessageColor: preset.color }))}
-                        className="h-8 rounded-md border-2 border-slate-300 dark:border-slate-600 hover:scale-110 transition-transform"
+                        className="h-8 rounded-md border-2 border-slate-300 dark:border-slate-500 hover:scale-110 transition-transform"
                         style={{ backgroundColor: preset.color }}
                         title={preset.name}
                       />
@@ -259,7 +259,7 @@ export default function SettingsPanel() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-2">Cor do Texto</label>
+                  <label className="block text-xs text-slate-600 dark:text-slate-300 mb-2">Cor do Texto</label>
                   <div className="flex gap-2">
                     <input
                       type="color"
@@ -271,7 +271,7 @@ export default function SettingsPanel() {
                       type="text"
                       value={localSettings.outgoingTextColor}
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, outgoingTextColor: e.target.value }))}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
+                      className="flex-1 px-3 py-2 bg-white dark:bg-[#334155] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -279,8 +279,8 @@ export default function SettingsPanel() {
             </div>
 
             {/* Preview */}
-            <div className="border-2 border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/50">
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-3">Pré-visualização</p>
+            <div className="border-2 border-slate-200 dark:border-slate-600 rounded-xl p-4 bg-slate-50 dark:bg-[#0f172a]">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-3">Pré-visualização</p>
               <div className="space-y-3">
                 <div className="flex">
                   <div

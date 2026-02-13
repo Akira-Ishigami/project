@@ -110,6 +110,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
 
         if (company) {
+          console.log('=== SALVANDO CONFIGURAÇÕES ===');
+          console.log('Company ID:', company.id);
+          console.log('Configurações recebidas:', newSettings);
+
           const companyUpdate: any = {};
           if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
           if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
@@ -121,13 +125,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           if (newSettings.accentColor !== undefined) companyUpdate.accent_color = newSettings.accentColor;
 
           if (Object.keys(companyUpdate).length > 0) {
-            const { error: updateError } = await supabase
+            console.log('Atualizando companies com:', companyUpdate);
+            const { error: updateError, data: updateData } = await supabase
               .from('companies')
               .update(companyUpdate)
-              .eq('id', company.id);
+              .eq('id', company.id)
+              .select();
 
             if (updateError) {
-              console.error('Erro ao atualizar empresa:', updateError);
+              console.error('❌ Erro ao atualizar empresa:', updateError);
+            } else {
+              console.log('✅ Empresa atualizada:', updateData);
             }
           }
 
@@ -139,6 +147,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             text_color: newSettings.incomingTextColor || settings.incomingTextColor,
           };
 
+          console.log('Salvando theme_settings:', themeUpdate);
+
           const { data: existingTheme } = await supabase
             .from('theme_settings')
             .select('id')
@@ -146,30 +156,36 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           if (existingTheme) {
-            const { error: themeError } = await supabase
+            console.log('Atualizando theme_settings existente, ID:', existingTheme.id);
+            const { error: themeError, data: themeData } = await supabase
               .from('theme_settings')
               .update(themeUpdate)
-              .eq('company_id', company.id);
+              .eq('company_id', company.id)
+              .select();
 
             if (themeError) {
-              console.error('Erro ao atualizar theme_settings:', themeError);
+              console.error('❌ Erro ao atualizar theme_settings:', themeError);
             } else {
-              console.log('theme_settings atualizado com sucesso');
+              console.log('✅ theme_settings atualizado:', themeData);
             }
           } else {
-            const { error: insertError } = await supabase
+            console.log('Inserindo novo theme_settings');
+            const { error: insertError, data: insertData } = await supabase
               .from('theme_settings')
               .insert({
                 company_id: company.id,
                 ...themeUpdate
-              });
+              })
+              .select();
 
             if (insertError) {
-              console.error('Erro ao inserir theme_settings:', insertError);
+              console.error('❌ Erro ao inserir theme_settings:', insertError);
             } else {
-              console.log('theme_settings inserido com sucesso');
+              console.log('✅ theme_settings inserido:', insertData);
             }
           }
+
+          console.log('=== FIM DO SALVAMENTO ===');
         }
       } catch (error) {
         console.error('Erro ao salvar tema no banco:', error);
