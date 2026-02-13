@@ -1313,7 +1313,7 @@ export default function AttendantDashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
       {/* Toast */}
       {showToast && (
         <Toast
@@ -1323,19 +1323,19 @@ export default function AttendantDashboard() {
       )}
 
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
+      <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80 dark:border-slate-700/80 transition-colors duration-300">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+                className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-all duration-200"
               >
                 <Menu className="w-6 h-6" />
               </button>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
                 settings.logoUrl && settings.logoUrl.trim() !== ''
-                  ? 'bg-white border border-slate-200'
+                  ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600'
                   : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
               }`}>
                 {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
@@ -1349,10 +1349,10 @@ export default function AttendantDashboard() {
                 )}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white transition-colors duration-200">
                   {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : 'ChatFlow'}
                 </h1>
-                <p className="text-slate-500 text-sm mt-0.5">
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5 transition-colors duration-200">
                   {attendant?.name || 'Atendente'}
                 </p>
               </div>
@@ -1360,14 +1360,14 @@ export default function AttendantDashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleDarkMode}
-                className="p-2.5 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+                className="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-all duration-200"
                 title={darkMode ? "Modo claro" : "Modo escuro"}
               >
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button
                 onClick={signOut}
-                className="ml-2 p-2.5 text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
+                className="ml-2 p-2.5 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-all duration-200"
                 title="Sair"
               >
                 <LogOut className="w-5 h-5" />
@@ -1382,24 +1382,24 @@ export default function AttendantDashboard() {
         {/* Sidebar - Contacts List */}
         <div
           className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[360px] bg-white/95 backdrop-blur-sm border-r border-slate-200/80 flex-col shadow-xl`}
+            } md:flex w-full md:w-[360px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/80 flex-col shadow-xl transition-colors duration-300`}
         >
           {error && (
-            <div className="bg-red-50 border-b border-red-200 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700 text-sm flex-1">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
+              <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" />
+              <p className="text-red-700 dark:text-red-300 text-sm flex-1">{error}</p>
             </div>
           )}
 
           {/* Filtros de Departamento */}
-          <div className="px-4 py-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-blue-50/30">
+          <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-750 transition-colors duration-300">
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('mine')}
                 className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
                   filterMode === 'mine'
                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 hover:scale-[1.02] border border-slate-200'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 hover:scale-[1.02] border border-slate-200 dark:border-slate-600'
                 }`}
               >
                 Meu Departamento
@@ -1409,7 +1409,7 @@ export default function AttendantDashboard() {
                 className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
                   filterMode === 'all'
                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 hover:scale-[1.02] border border-slate-200'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 hover:scale-[1.02] border border-slate-200 dark:border-slate-600'
                 }`}
               >
                 Todos
