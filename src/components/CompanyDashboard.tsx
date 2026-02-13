@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, Moon, Sun } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -105,7 +105,7 @@ type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags'
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
-  const { settings, loadCompanyTheme } = useTheme();
+  const { settings, loadCompanyTheme, darkMode, toggleDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
@@ -1743,7 +1743,31 @@ export default function CompanyDashboard() {
 
   const handleContextMenu = (e: React.MouseEvent, phoneNumber: string) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, phoneNumber });
+
+    const menuWidth = 200;
+    const menuHeight = 180;
+    const padding = 10;
+
+    let x = e.clientX;
+    let y = e.clientY;
+
+    if (x + menuWidth > window.innerWidth - padding) {
+      x = window.innerWidth - menuWidth - padding;
+    }
+
+    if (y + menuHeight > window.innerHeight - padding) {
+      y = window.innerHeight - menuHeight - padding;
+    }
+
+    if (x < padding) {
+      x = padding;
+    }
+
+    if (y < padding) {
+      y = padding;
+    }
+
+    setContextMenu({ x, y, phoneNumber });
   };
 
   const closeContextMenu = () => {
@@ -2151,8 +2175,15 @@ export default function CompanyDashboard() {
               )}
             </div>
             <button
+              onClick={toggleDarkMode}
+              className="ml-2 p-2.5 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-all duration-200"
+              title={darkMode ? "Modo claro" : "Modo escuro"}
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <button
               onClick={signOut}
-              className="ml-2 p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+              className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
               title="Sair"
             >
               <LogOut className="w-5 h-5" />
@@ -2983,13 +3014,13 @@ export default function CompanyDashboard() {
       {/* Menu de contexto (clique direito) */}
       {contextMenu && (
         <div
-          className="fixed bg-white rounded-lg shadow-2xl border border-slate-200 py-2 z-50 min-w-[200px]"
+          className="fixed bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-50 min-w-[200px] transition-colors duration-300"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => handleTogglePin(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
           >
             <Pin className="w-4 h-4" />
             {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.pinned
@@ -2998,7 +3029,7 @@ export default function CompanyDashboard() {
           </button>
           <button
             onClick={() => handleToggleIA(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
           >
             <Bot className="w-4 h-4" />
             {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
@@ -3007,14 +3038,14 @@ export default function CompanyDashboard() {
           </button>
           <button
             onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
           >
             <Tag className="w-4 h-4" />
             Adicionar tag
           </button>
           <button
             onClick={() => handleContextMenuTransfer(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
           >
             <ArrowRightLeft className="w-4 h-4" />
             Transferir departamento

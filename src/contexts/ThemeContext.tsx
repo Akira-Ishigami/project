@@ -102,20 +102,50 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (company) {
-          const dbUpdate: any = {};
-          if (newSettings.displayName !== undefined) dbUpdate.display_name = newSettings.displayName;
-          if (newSettings.logoUrl !== undefined) dbUpdate.logo_url = newSettings.logoUrl;
-          if (newSettings.incomingMessageColor !== undefined) dbUpdate.incoming_message_color = newSettings.incomingMessageColor;
-          if (newSettings.outgoingMessageColor !== undefined) dbUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
-          if (newSettings.incomingTextColor !== undefined) dbUpdate.incoming_text_color = newSettings.incomingTextColor;
-          if (newSettings.outgoingTextColor !== undefined) dbUpdate.outgoing_text_color = newSettings.outgoingTextColor;
-          if (newSettings.primaryColor !== undefined) dbUpdate.primary_color = newSettings.primaryColor;
-          if (newSettings.accentColor !== undefined) dbUpdate.accent_color = newSettings.accentColor;
+          const companyUpdate: any = {};
+          if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
+          if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
+          if (newSettings.incomingMessageColor !== undefined) companyUpdate.incoming_message_color = newSettings.incomingMessageColor;
+          if (newSettings.outgoingMessageColor !== undefined) companyUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
+          if (newSettings.incomingTextColor !== undefined) companyUpdate.incoming_text_color = newSettings.incomingTextColor;
+          if (newSettings.outgoingTextColor !== undefined) companyUpdate.outgoing_text_color = newSettings.outgoingTextColor;
+          if (newSettings.primaryColor !== undefined) companyUpdate.primary_color = newSettings.primaryColor;
+          if (newSettings.accentColor !== undefined) companyUpdate.accent_color = newSettings.accentColor;
 
-          await supabase
-            .from('companies')
-            .update(dbUpdate)
-            .eq('id', company.id);
+          if (Object.keys(companyUpdate).length > 0) {
+            await supabase
+              .from('companies')
+              .update(companyUpdate)
+              .eq('id', company.id);
+          }
+
+          const themeUpdate: any = {};
+          if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
+          if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
+          if (newSettings.incomingMessageColor !== undefined) themeUpdate.background_color = newSettings.incomingMessageColor;
+          if (newSettings.incomingTextColor !== undefined) themeUpdate.text_color = newSettings.incomingTextColor;
+
+          if (Object.keys(themeUpdate).length > 0) {
+            const { data: existingTheme } = await supabase
+              .from('theme_settings')
+              .select('id')
+              .eq('company_id', company.id)
+              .maybeSingle();
+
+            if (existingTheme) {
+              await supabase
+                .from('theme_settings')
+                .update(themeUpdate)
+                .eq('company_id', company.id);
+            } else {
+              await supabase
+                .from('theme_settings')
+                .insert({
+                  company_id: company.id,
+                  ...themeUpdate
+                });
+            }
+          }
         }
       } catch (error) {
         console.error('Erro ao salvar tema no banco:', error);
