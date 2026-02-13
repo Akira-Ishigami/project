@@ -1842,6 +1842,13 @@ export default function CompanyDashboard() {
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 shadow-sm z-50">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+              title={sidebarOpen ? "Fechar menu" : "Abrir menu"}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
               settings.logoUrl && settings.logoUrl.trim() !== ''
                 ? 'bg-white border border-slate-200'
