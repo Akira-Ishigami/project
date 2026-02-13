@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2 } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin } from 'lucide-react';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
@@ -33,6 +33,7 @@ interface ContactDB {
   created_at: string;
   updated_at: string;
   tag_ids?: string[];
+  pinned?: boolean;
 }
 
 interface Department {
@@ -160,6 +161,9 @@ export default function AttendantDashboard() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
   const [selectedSectorId, setSelectedSectorId] = useState<string>('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+
+  // Menu de contexto (clique direito)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; phoneNumber: string } | null>(null);
 
   const handlePasteContent = (e: React.ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const items = e.clipboardData?.items;
@@ -440,6 +444,7 @@ export default function AttendantDashboard() {
           last_message_time,
           created_at,
           updated_at,
+          pinned,
           contact_tags(tag_id)
         `)
         .eq('company_id', attendant.company_id)
@@ -739,8 +744,20 @@ export default function AttendantDashboard() {
       );
     });
 
+    // Ordenar para que contatos fixados apareçam primeiro
+    filtered.sort((a, b) => {
+      const aDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(a.phoneNumber));
+      const bDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(b.phoneNumber));
+      const aPinned = aDB?.pinned || false;
+      const bPinned = bDB?.pinned || false;
+
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+
     return filtered;
-  }, [contacts, filterMode, attendant?.department_id, searchTerm]);
+  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB]);
 
   const selectedContactData = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact)
@@ -937,12 +954,85 @@ export default function AttendantDashboard() {
     }
   };
 
+  // Funções do menu de contexto
+  const handleContextMenu = (e: React.MouseEvent, phoneNumber: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, phoneNumber });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleTogglePin = async (phoneNumber: string) => {
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const newPinnedState = !contactDB.pinned;
+
+      const { error } = await supabase
+        .from('contacts')
+        .update({ pinned: newPinnedState })
+        .eq('id', contactDB.id);
+
+      if (error) throw error;
+
+      setToastMessage(newPinnedState ? 'Contato fixado!' : 'Contato desfixado!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? { ...c, pinned: newPinnedState }
+          : c
+      ));
+    } catch (error: any) {
+      console.error('Erro ao fixar/desafixar contato:', error);
+      setToastMessage('Erro ao fixar contato');
+      setShowToast(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleContextMenuTag = (phoneNumber: string) => {
+    setSelectedContact(phoneNumber);
+    const contactDB = contactsDB.find(c =>
+      normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+    );
+    if (contactDB) {
+      setSelectedTagIds(contactDB.tag_ids || []);
+      setShowTagModal(true);
+    }
+    closeContextMenu();
+  };
+
+  const handleContextMenuTransfer = (phoneNumber: string) => {
+    setSelectedContact(phoneNumber);
+    setShowTransferModal(true);
+    closeContextMenu();
+  };
 
   useEffect(() => {
     if (!selectedContact && filteredContacts.length > 0) {
       setSelectedContact(filteredContacts[0].phoneNumber);
     }
   }, [filteredContacts.length, selectedContact]);
+
+  // Fechar menu de contexto ao clicar fora
+  useEffect(() => {
+    if (contextMenu) {
+      const handleClick = () => closeContextMenu();
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
 
   useEffect(() => {
     if (selectedContact) {
@@ -1254,6 +1344,7 @@ export default function AttendantDashboard() {
                     setSelectedContact(contact.phoneNumber);
                     setSidebarOpen(false);
                   }}
+                  onContextMenu={(e) => handleContextMenu(e, contact.phoneNumber)}
                   className={`px-4 py-3.5 border-b border-slate-100 cursor-pointer transition-all duration-200 ${selectedContact === contact.phoneNumber
                     ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 border-l-4 border-l-blue-600 shadow-sm'
                     : 'hover:bg-slate-50 hover:shadow-sm hover:translate-x-0.5'
@@ -1265,9 +1356,14 @@ export default function AttendantDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-slate-900 truncate text-sm">
-                          {contact.name || getPhoneNumber(contact.phoneNumber)}
-                        </h3>
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-900 truncate text-sm">
+                            {contact.name || getPhoneNumber(contact.phoneNumber)}
+                          </h3>
+                          {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber))?.pinned && (
+                            <Pin className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                          )}
+                        </div>
                         <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
                           {formatTime(contact.lastMessageTime)}
                         </span>
@@ -1918,6 +2014,39 @@ export default function AttendantDashboard() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Menu de contexto (clique direito) */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white rounded-lg shadow-2xl border border-slate-200 py-2 z-50 min-w-[200px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleTogglePin(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Pin className="w-4 h-4" />
+            {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.pinned
+              ? 'Desafixar contato'
+              : 'Fixar contato'}
+          </button>
+          <button
+            onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <Tag className="w-4 h-4" />
+            Adicionar tag
+          </button>
+          <button
+            onClick={() => handleContextMenuTransfer(contextMenu.phoneNumber)}
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-center gap-3 text-slate-700"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Transferir departamento
+          </button>
         </div>
       )}
 
