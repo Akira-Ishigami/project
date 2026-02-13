@@ -148,14 +148,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowGoodbye(true);
 
     setTimeout(async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      try {
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.warn('Erro ao fazer logout (ignorado):', error);
+      }
+
+      setUser(null);
       setCompany(null);
       setAttendant(null);
       setIsAttendant(false);
       setIsSuperAdmin(false);
       setShowGoodbye(false);
-    }, 5000);
+    }, 2000);
   };
 
   return (
