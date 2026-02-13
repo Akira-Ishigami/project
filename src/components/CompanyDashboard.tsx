@@ -1835,7 +1835,7 @@ export default function CompanyDashboard() {
         normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
       );
       if (contactDB) {
-        setSelectedTagIds(contactDB.tag_ids || []);
+        setSelectedTags(contactDB.tag_ids || []);
         setShowTagModal(true);
       } else {
         setToastMessage('Contato não encontrado');
