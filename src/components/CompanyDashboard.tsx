@@ -1538,6 +1538,18 @@ export default function CompanyDashboard() {
     });
 
     contacts.sort((a, b) => {
+      // Buscar informações de pinned do banco
+      const contactA = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(a.phoneNumber));
+      const contactB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(b.phoneNumber));
+
+      const aPinned = contactA?.pinned || false;
+      const bPinned = contactB?.pinned || false;
+
+      // Contatos fixados sempre primeiro
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
+      // Se ambos fixados ou ambos não fixados, ordenar por data
       const dateA = new Date(a.lastMessageTime).getTime();
       const dateB = new Date(b.lastMessageTime).getTime();
       return dateB - dateA;
