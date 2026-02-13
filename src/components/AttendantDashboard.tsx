@@ -87,7 +87,7 @@ function normalizeDbPhone(input?: string | null): string {
 
 export default function AttendantDashboard() {
   const { attendant, signOut } = useAuth();
-  const { settings } = useTheme();
+  const { settings, loadCompanyTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -518,6 +518,12 @@ export default function AttendantDashboard() {
       console.error('Erro ao carregar tags:', error);
     }
   };
+
+  useEffect(() => {
+    if (attendant?.company_id) {
+      loadCompanyTheme(attendant.company_id);
+    }
+  }, [attendant?.company_id, loadCompanyTheme]);
 
   useEffect(() => {
     fetchMessages();
@@ -1058,14 +1064,20 @@ export default function AttendantDashboard() {
 
   const handleContextMenuTag = (phoneNumber: string) => {
     setSelectedContact(phoneNumber);
-    const contactDB = contactsDB.find(c =>
-      normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
-    );
-    if (contactDB) {
-      setSelectedTagIds(contactDB.tag_ids || []);
-      setShowTagModal(true);
-    }
     closeContextMenu();
+
+    setTimeout(() => {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+      if (contactDB) {
+        setSelectedTagIds(contactDB.tag_ids || []);
+        setShowTagModal(true);
+      } else {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+      }
+    }, 50);
   };
 
   const handleContextMenuTransfer = (phoneNumber: string) => {

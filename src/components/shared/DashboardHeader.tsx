@@ -1,4 +1,4 @@
-import { MessageSquare, LogOut, Menu, Bell } from 'lucide-react';
+import { MessageSquare, LogOut, Menu, Bell, Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface DashboardHeaderProps {
@@ -22,7 +22,7 @@ export default function DashboardHeader({
   unreadCount = 0,
   onToggleNotifications
 }: DashboardHeaderProps) {
-  const { settings } = useTheme();
+  const { settings, darkMode, toggleDarkMode } = useTheme();
 
   const displayName = settings.displayName || 'ChatFlow';
   const hasLogo = settings.logoUrl && settings.logoUrl.trim() !== '';
@@ -61,6 +61,14 @@ export default function DashboardHeader({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2.5 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+              title={darkMode ? "Modo claro" : "Modo escuro"}
+            >
+              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
             {showNotifications && onToggleNotifications && (
               <button
                 onClick={onToggleNotifications}

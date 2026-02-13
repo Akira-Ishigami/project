@@ -105,7 +105,7 @@ type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags'
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
-  const { settings } = useTheme();
+  const { settings, loadCompanyTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
@@ -220,6 +220,12 @@ export default function CompanyDashboard() {
   }, [sectors, departamentoTransferencia]);
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (company?.id) {
+      loadCompanyTheme(company.id);
+    }
+  }, [company?.id, loadCompanyTheme]);
 
   // ✅ Ao abrir o modal de transferência, se o contato não tiver departamento, já seleciona a Recepção
   useEffect(() => {
@@ -1822,14 +1828,20 @@ export default function CompanyDashboard() {
 
   const handleContextMenuTag = (phoneNumber: string) => {
     setSelectedContact(phoneNumber);
-    const contactDB = contactsDB.find(c =>
-      normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
-    );
-    if (contactDB) {
-      setSelectedTagIds(contactDB.tag_ids || []);
-      setShowTagModal(true);
-    }
     closeContextMenu();
+
+    setTimeout(() => {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(phoneNumber)
+      );
+      if (contactDB) {
+        setSelectedTagIds(contactDB.tag_ids || []);
+        setShowTagModal(true);
+      } else {
+        setToastMessage('Contato não encontrado');
+        setShowToast(true);
+      }
+    }, 50);
   };
 
   const handleContextMenuTransfer = (phoneNumber: string) => {

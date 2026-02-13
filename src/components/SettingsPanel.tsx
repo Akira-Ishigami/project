@@ -33,8 +33,8 @@ export default function SettingsPanel() {
     setLocalSettings((prev) => ({ ...prev, logoUrl: '' }));
   };
 
-  const handleSave = () => {
-    updateSettings(localSettings);
+  const handleSave = async () => {
+    await updateSettings(localSettings, true);
     setToastMessage('✅ Configurações salvas com sucesso!');
     setShowToast(true);
   };
