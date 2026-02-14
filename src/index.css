@@ -3,114 +3,162 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Light Mode Colors */
+    --bg-primary: 255 255 255;
+    --bg-secondary: 248 250 252;
+    --bg-tertiary: 241 245 249;
+    --bg-hover: 248 250 252;
+
+    --text-primary: 15 23 42;
+    --text-secondary: 71 85 105;
+    --text-tertiary: 100 116 139;
+
+    --border-primary: 226 232 240;
+    --border-secondary: 203 213 225;
+
+    --card-bg: 255 255 255;
+    --card-border: 226 232 240;
+
+    --input-bg: 255 255 255;
+    --input-border: 226 232 240;
+    --input-text: 15 23 42;
+
+    --sidebar-bg: 255 255 255;
+    --header-bg: 255 255 255;
+
+    --message-incoming-bg: 241 245 249;
+    --message-incoming-text: 30 41 59;
+    --message-outgoing-bg: 59 130 246;
+    --message-outgoing-text: 255 255 255;
+  }
+
+  .dark {
+    /* Dark Mode Colors - ChatGPT Style */
+    --bg-primary: 0 0 0;
+    --bg-secondary: 10 10 10;
+    --bg-tertiary: 20 20 20;
+    --bg-hover: 26 26 26;
+
+    --text-primary: 236 236 241;
+    --text-secondary: 172 172 190;
+    --text-tertiary: 142 142 160;
+
+    --border-primary: 38 38 38;
+    --border-secondary: 51 51 51;
+
+    --card-bg: 20 20 20;
+    --card-border: 38 38 38;
+
+    --input-bg: 32 32 35;
+    --input-border: 51 51 51;
+    --input-text: 236 236 241;
+
+    --sidebar-bg: 0 0 0;
+    --header-bg: 0 0 0;
+
+    --message-incoming-bg: 32 32 35;
+    --message-incoming-text: 236 236 241;
+    --message-outgoing-bg: 59 130 246;
+    --message-outgoing-text: 255 255 255;
+  }
+
   * {
-    @apply transition-colors duration-150;
+    @apply transition-colors duration-200;
   }
 
   body {
     @apply antialiased;
-  }
-
-  .dark body {
-    background: #000000;
-    color: #e5e7eb;
-  }
-
-  .dark header {
-    background: rgba(0, 0, 0, 0.95);
-    border-color: rgba(38, 38, 38, 0.8);
-  }
-
-  .dark .bg-white {
-    background: #141414;
-  }
-
-  .dark .bg-slate-50 {
-    background: #0a0a0a;
-  }
-
-  .dark .bg-slate-100 {
-    background: #0a0a0a;
-  }
-
-  .dark .bg-gray-50 {
-    background: #0a0a0a;
-  }
-
-  .dark .bg-gray-100 {
-    background: #141414;
-  }
-
-  .dark .text-slate-900 {
-    @apply text-slate-100;
-  }
-
-  .dark .text-slate-800 {
-    @apply text-slate-200;
-  }
-
-  .dark .text-slate-700 {
-    @apply text-slate-300;
-  }
-
-  .dark .text-slate-600 {
-    @apply text-slate-400;
-  }
-
-  .dark .text-slate-500 {
-    @apply text-slate-400;
-  }
-
-  .dark .text-gray-900 {
-    color: #e5e7eb;
-  }
-
-  .dark .text-gray-800 {
-    color: #d1d5db;
-  }
-
-  .dark .text-gray-700 {
-    color: #9ca3af;
-  }
-
-  .dark .text-gray-600 {
-    color: #6b7280;
-  }
-
-  .dark .border-slate-200 {
-    border-color: #262626;
-  }
-
-  .dark .border-slate-300 {
-    border-color: #333333;
-  }
-
-  .dark .border-gray-200 {
-    border-color: #262626;
-  }
-
-  .dark .border-gray-300 {
-    border-color: #333333;
-  }
-
-  .dark .hover\:bg-slate-50:hover {
-    background: #1a1a1a;
-  }
-
-  .dark .hover\:bg-slate-100:hover {
-    background: #1a1a1a;
-  }
-
-  .dark .hover\:bg-gray-50:hover {
-    background: #1a1a1a;
-  }
-
-  .dark .hover\:bg-gray-100:hover {
-    background: #202020;
+    background: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
   }
 }
 
 @layer utilities {
+  /* Background Utilities */
+  .bg-app-primary {
+    background-color: rgb(var(--bg-primary));
+  }
+
+  .bg-app-secondary {
+    background-color: rgb(var(--bg-secondary));
+  }
+
+  .bg-app-tertiary {
+    background-color: rgb(var(--bg-tertiary));
+  }
+
+  .bg-app-hover {
+    background-color: rgb(var(--bg-hover));
+  }
+
+  .bg-app-card {
+    background-color: rgb(var(--card-bg));
+  }
+
+  .bg-app-sidebar {
+    background-color: rgb(var(--sidebar-bg));
+  }
+
+  .bg-app-header {
+    background-color: rgb(var(--header-bg));
+  }
+
+  .bg-app-input {
+    background-color: rgb(var(--input-bg));
+  }
+
+  /* Text Utilities */
+  .text-app-primary {
+    color: rgb(var(--text-primary));
+  }
+
+  .text-app-secondary {
+    color: rgb(var(--text-secondary));
+  }
+
+  .text-app-tertiary {
+    color: rgb(var(--text-tertiary));
+  }
+
+  .text-app-input {
+    color: rgb(var(--input-text));
+  }
+
+  /* Border Utilities */
+  .border-app-primary {
+    border-color: rgb(var(--border-primary));
+  }
+
+  .border-app-secondary {
+    border-color: rgb(var(--border-secondary));
+  }
+
+  .border-app-card {
+    border-color: rgb(var(--card-border));
+  }
+
+  .border-app-input {
+    border-color: rgb(var(--input-border));
+  }
+
+  /* Message Utilities */
+  .message-incoming {
+    background-color: rgb(var(--message-incoming-bg));
+    color: rgb(var(--message-incoming-text));
+  }
+
+  .message-outgoing {
+    background-color: rgb(var(--message-outgoing-bg));
+    color: rgb(var(--message-outgoing-text));
+  }
+
+  /* Hover States */
+  .hover-app:hover {
+    background-color: rgb(var(--bg-hover));
+  }
+
+  /* Animations */
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -130,15 +178,6 @@
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  @keyframes pulse-glow {
-    0%, 100% {
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 30px rgba(6, 182, 212, 0.6);
     }
   }
 
@@ -174,10 +213,6 @@
     opacity: 0;
   }
 
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
   .animate-slide-in {
     animation: slideIn 0.3s ease-out forwards;
   }
@@ -186,41 +221,26 @@
     animation: scaleIn 0.2s ease-out forwards;
   }
 
+  /* Scrollbar */
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-slate-100 rounded-full;
-  }
-
-  .dark .scrollbar-thin::-webkit-scrollbar-track {
-    background: #0a0a0a;
+    background: rgb(var(--bg-secondary));
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full hover:bg-slate-400;
+    background: rgb(var(--border-secondary));
+    border-radius: 4px;
   }
 
-  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #333333;
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--text-tertiary));
   }
 
-  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #4a4a4a;
-  }
-
-  .message-incoming {
-    background-color: var(--color-incoming-bg, #f1f5f9);
-    color: var(--color-incoming-text, #1e293b);
-  }
-
-  .message-outgoing {
-    background-color: var(--color-outgoing-bg, #3b82f6);
-    color: var(--color-outgoing-text, #ffffff);
-  }
-
+  /* Primary Button */
   .btn-primary {
     background: var(--color-primary, #3b82f6);
   }
