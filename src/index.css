@@ -3,161 +3,16 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Light Mode Colors */
-    --bg-primary: 255 255 255;
-    --bg-secondary: 248 250 252;
-    --bg-tertiary: 241 245 249;
-    --bg-hover: 248 250 252;
-
-    --text-primary: 15 23 42;
-    --text-secondary: 71 85 105;
-    --text-tertiary: 100 116 139;
-
-    --border-primary: 226 232 240;
-    --border-secondary: 203 213 225;
-
-    --card-bg: 255 255 255;
-    --card-border: 226 232 240;
-
-    --input-bg: 255 255 255;
-    --input-border: 226 232 240;
-    --input-text: 15 23 42;
-
-    --sidebar-bg: 255 255 255;
-    --header-bg: 255 255 255;
-
-    --message-incoming-bg: 241 245 249;
-    --message-incoming-text: 30 41 59;
-    --message-outgoing-bg: 59 130 246;
-    --message-outgoing-text: 255 255 255;
-  }
-
-  .dark {
-    /* Dark Mode Colors - ChatGPT Style */
-    --bg-primary: 0 0 0;
-    --bg-secondary: 10 10 10;
-    --bg-tertiary: 20 20 20;
-    --bg-hover: 26 26 26;
-
-    --text-primary: 236 236 241;
-    --text-secondary: 172 172 190;
-    --text-tertiary: 142 142 160;
-
-    --border-primary: 38 38 38;
-    --border-secondary: 51 51 51;
-
-    --card-bg: 20 20 20;
-    --card-border: 38 38 38;
-
-    --input-bg: 32 32 35;
-    --input-border: 51 51 51;
-    --input-text: 236 236 241;
-
-    --sidebar-bg: 0 0 0;
-    --header-bg: 0 0 0;
-
-    --message-incoming-bg: 32 32 35;
-    --message-incoming-text: 236 236 241;
-    --message-outgoing-bg: 59 130 246;
-    --message-outgoing-text: 255 255 255;
-  }
-
   * {
     @apply transition-colors duration-200;
   }
 
   body {
-    @apply antialiased;
-    background: rgb(var(--bg-primary));
-    color: rgb(var(--text-primary));
+    @apply antialiased bg-white text-slate-900;
   }
 }
 
 @layer utilities {
-  /* Background Utilities */
-  .bg-app-primary {
-    background-color: rgb(var(--bg-primary));
-  }
-
-  .bg-app-secondary {
-    background-color: rgb(var(--bg-secondary));
-  }
-
-  .bg-app-tertiary {
-    background-color: rgb(var(--bg-tertiary));
-  }
-
-  .bg-app-hover {
-    background-color: rgb(var(--bg-hover));
-  }
-
-  .bg-app-card {
-    background-color: rgb(var(--card-bg));
-  }
-
-  .bg-app-sidebar {
-    background-color: rgb(var(--sidebar-bg));
-  }
-
-  .bg-app-header {
-    background-color: rgb(var(--header-bg));
-  }
-
-  .bg-app-input {
-    background-color: rgb(var(--input-bg));
-  }
-
-  /* Text Utilities */
-  .text-app-primary {
-    color: rgb(var(--text-primary));
-  }
-
-  .text-app-secondary {
-    color: rgb(var(--text-secondary));
-  }
-
-  .text-app-tertiary {
-    color: rgb(var(--text-tertiary));
-  }
-
-  .text-app-input {
-    color: rgb(var(--input-text));
-  }
-
-  /* Border Utilities */
-  .border-app-primary {
-    border-color: rgb(var(--border-primary));
-  }
-
-  .border-app-secondary {
-    border-color: rgb(var(--border-secondary));
-  }
-
-  .border-app-card {
-    border-color: rgb(var(--card-border));
-  }
-
-  .border-app-input {
-    border-color: rgb(var(--input-border));
-  }
-
-  /* Message Utilities */
-  .message-incoming {
-    background-color: rgb(var(--message-incoming-bg));
-    color: rgb(var(--message-incoming-text));
-  }
-
-  .message-outgoing {
-    background-color: rgb(var(--message-outgoing-bg));
-    color: rgb(var(--message-outgoing-text));
-  }
-
-  /* Hover States */
-  .hover-app:hover {
-    background-color: rgb(var(--bg-hover));
-  }
-
   /* Animations */
   @keyframes fadeIn {
     from {
@@ -228,16 +83,26 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: rgb(var(--bg-secondary));
+    @apply bg-slate-100;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgb(var(--border-secondary));
-    border-radius: 4px;
+    @apply bg-slate-300 rounded;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--text-tertiary));
+    @apply bg-slate-400;
+  }
+
+  /* Message Utilities */
+  .message-incoming {
+    background-color: var(--color-incoming-bg, #f1f5f9);
+    color: var(--color-incoming-text, #1e293b);
+  }
+
+  .message-outgoing {
+    background-color: var(--color-outgoing-bg, #3b82f6);
+    color: var(--color-outgoing-text, #ffffff);
   }
 
   /* Primary Button */
