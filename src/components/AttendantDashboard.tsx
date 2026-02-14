@@ -1313,7 +1313,7 @@ export default function AttendantDashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black transition-colors duration-300">
       {/* Toast */}
       {showToast && (
         <Toast
@@ -1392,7 +1392,7 @@ export default function AttendantDashboard() {
           )}
 
           {/* Filtros de Departamento */}
-          <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-750 transition-colors duration-300">
+          <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-black dark:to-black transition-colors duration-300">
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterMode('mine')}

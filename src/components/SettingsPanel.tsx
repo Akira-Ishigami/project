@@ -68,7 +68,7 @@ export default function SettingsPanel() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 dark:bg-[#0f172a] p-8 transition-colors duration-300">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 dark:bg-black p-8 transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="animate-fadeIn">
@@ -283,7 +283,7 @@ export default function SettingsPanel() {
             </div>
 
             {/* Preview */}
-            <div className="border-2 border-slate-200 dark:border-slate-600 rounded-xl p-4 bg-slate-50 dark:bg-[#0f172a]">
+            <div className="border-2 border-slate-200 dark:border-slate-600 rounded-xl p-4 bg-slate-50 dark:bg-black">
               <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-3">Pré-visualização</p>
               <div className="space-y-3">
                 <div className="flex">

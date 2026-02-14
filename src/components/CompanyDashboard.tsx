@@ -1990,7 +1990,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:bg-[#0f172a] overflow-hidden transition-colors duration-300">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:bg-black overflow-hidden transition-colors duration-300">
       {showToast && (
         <Toast
           message={toastMessage}

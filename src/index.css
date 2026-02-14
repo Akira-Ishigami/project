@@ -12,25 +12,33 @@
   }
 
   .dark body {
-    background: #0b0f19;
+    background: #000000;
     color: #e5e7eb;
   }
 
   .dark header {
-    background: rgba(15, 23, 42, 0.8);
-    border-color: rgba(71, 85, 105, 0.8);
+    background: rgba(0, 0, 0, 0.95);
+    border-color: rgba(38, 38, 38, 0.8);
   }
 
   .dark .bg-white {
-    background: #111827;
+    background: #141414;
   }
 
   .dark .bg-slate-50 {
-    background: #0f172a;
+    background: #0a0a0a;
   }
 
   .dark .bg-slate-100 {
-    background: #0f172a;
+    background: #0a0a0a;
+  }
+
+  .dark .bg-gray-50 {
+    background: #0a0a0a;
+  }
+
+  .dark .bg-gray-100 {
+    background: #141414;
   }
 
   .dark .text-slate-900 {
@@ -53,20 +61,52 @@
     @apply text-slate-400;
   }
 
+  .dark .text-gray-900 {
+    color: #e5e7eb;
+  }
+
+  .dark .text-gray-800 {
+    color: #d1d5db;
+  }
+
+  .dark .text-gray-700 {
+    color: #9ca3af;
+  }
+
+  .dark .text-gray-600 {
+    color: #6b7280;
+  }
+
   .dark .border-slate-200 {
-    @apply border-slate-700;
+    border-color: #262626;
   }
 
   .dark .border-slate-300 {
-    @apply border-slate-600;
+    border-color: #333333;
+  }
+
+  .dark .border-gray-200 {
+    border-color: #262626;
+  }
+
+  .dark .border-gray-300 {
+    border-color: #333333;
   }
 
   .dark .hover\:bg-slate-50:hover {
-    @apply bg-slate-700;
+    background: #1a1a1a;
   }
 
   .dark .hover\:bg-slate-100:hover {
-    @apply bg-slate-700;
+    background: #1a1a1a;
+  }
+
+  .dark .hover\:bg-gray-50:hover {
+    background: #1a1a1a;
+  }
+
+  .dark .hover\:bg-gray-100:hover {
+    background: #202020;
   }
 }
 
@@ -156,7 +196,7 @@
   }
 
   .dark .scrollbar-thin::-webkit-scrollbar-track {
-    background: #1e293b;
+    background: #0a0a0a;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
@@ -164,11 +204,11 @@
   }
 
   .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #475569;
+    background: #333333;
   }
 
   .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
+    background: #4a4a4a;
   }
 
   .message-incoming {

@@ -55,7 +55,7 @@ export default function ContactsSidebar({
       )}
 
       {filterSlot && (
-        <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-slate-800 dark:to-slate-750 transition-colors duration-300">
+        <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-black dark:to-black transition-colors duration-300">
           {filterSlot}
         </div>
       )}
@@ -90,7 +90,7 @@ export default function ContactsSidebar({
               onContextMenu={(e) => onContextMenu?.(e, contact.phoneNumber)}
               className={`px-4 py-3.5 border-b border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all duration-200 ${
                 selectedContact === contact.phoneNumber
-                  ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-800/20 border-l-4 border-l-blue-600 dark:border-l-blue-400 shadow-sm'
+                  ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/80 dark:to-blue-950/60 border-l-4 border-l-blue-600 dark:border-l-blue-400 shadow-sm'
                   : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-sm hover:translate-x-0.5'
               }`}
             >
