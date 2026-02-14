@@ -77,6 +77,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       setCompanyId(id);
 
+      // Load from theme_settings table (primary source)
       const { data: themeData, error: themeError } = await supabase
         .from('theme_settings')
         .select('*')
@@ -87,24 +88,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         console.error('Error loading theme settings:', themeError);
       }
 
-      const { data: companyData } = await supabase
+      // Load from companies table as fallback for display_name and logo_url
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('display_name, logo_url')
         .eq('id', id)
         .maybeSingle();
 
-      if (themeData || companyData) {
-        setSettings({
-          displayName: themeData?.display_name || companyData?.display_name || '',
-          logoUrl: themeData?.logo_url || companyData?.logo_url || '',
-          incomingMessageColor: themeData?.incoming_message_color || defaultSettings.incomingMessageColor,
-          outgoingMessageColor: themeData?.outgoing_message_color || defaultSettings.outgoingMessageColor,
-          incomingTextColor: themeData?.incoming_text_color || defaultSettings.incomingTextColor,
-          outgoingTextColor: themeData?.outgoing_text_color || defaultSettings.outgoingTextColor,
-          primaryColor: themeData?.primary_color || defaultSettings.primaryColor,
-          accentColor: themeData?.accent_color || defaultSettings.accentColor,
-        });
+      if (companyError) {
+        console.error('Error loading company data:', companyError);
       }
+
+      // Apply settings with proper priority: theme_settings > companies > defaults
+      setSettings({
+        displayName: themeData?.display_name || companyData?.display_name || defaultSettings.displayName,
+        logoUrl: themeData?.logo_url || companyData?.logo_url || defaultSettings.logoUrl,
+        incomingMessageColor: themeData?.incoming_message_color || defaultSettings.incomingMessageColor,
+        outgoingMessageColor: themeData?.outgoing_message_color || defaultSettings.outgoingMessageColor,
+        incomingTextColor: themeData?.incoming_text_color || defaultSettings.incomingTextColor,
+        outgoingTextColor: themeData?.outgoing_text_color || defaultSettings.outgoingTextColor,
+        primaryColor: themeData?.primary_color || defaultSettings.primaryColor,
+        accentColor: themeData?.accent_color || defaultSettings.accentColor,
+      });
+
+      console.log('Theme loaded successfully from theme_settings');
     } catch (error) {
       console.error('Error loading company theme:', error);
     }
@@ -124,9 +131,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
         if (!id) {
           console.error('Company ID not found');
-          return;
+          throw new Error('Company ID not found');
         }
 
+        // Prepare theme_settings update object
         const themeUpdate: any = {};
         if (newSettings.displayName !== undefined) themeUpdate.display_name = newSettings.displayName;
         if (newSettings.logoUrl !== undefined) themeUpdate.logo_url = newSettings.logoUrl;
@@ -135,15 +143,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
         if (newSettings.outgoingTextColor !== undefined) themeUpdate.outgoing_text_color = newSettings.outgoingTextColor;
         if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
-        if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
+        if (newSettings.accentColor !== undefined) themeUpdate.accentColor = newSettings.accentColor;
 
-        const { data: existingTheme } = await supabase
+        // Check if theme_settings record exists
+        const { data: existingTheme, error: checkError } = await supabase
           .from('theme_settings')
           .select('id')
           .eq('company_id', id)
           .maybeSingle();
 
+        if (checkError) {
+          console.error('Error checking theme settings:', checkError);
+          throw checkError;
+        }
+
+        // Save to theme_settings table (primary storage)
         if (existingTheme) {
+          // Update existing record
           const { error } = await supabase
             .from('theme_settings')
             .update(themeUpdate)
@@ -154,6 +170,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             throw error;
           }
         } else {
+          // Insert new record
           const { error } = await supabase
             .from('theme_settings')
             .insert({
@@ -167,6 +184,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // Also update companies table for backward compatibility (logo and display name only)
         const companyUpdate: any = {};
         if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
         if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
@@ -179,10 +197,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
           if (companyError) {
             console.error('Error updating company:', companyError);
+            // Don't throw - companies table update is secondary
           }
         }
 
-        console.log('Theme settings saved successfully');
+        console.log('Theme settings saved successfully to theme_settings table');
       } catch (error) {
         console.error('Error saving theme settings:', error);
         throw error;
