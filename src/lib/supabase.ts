@@ -17,6 +17,9 @@ export interface Company {
   email: string;
   user_id: string;
   is_super_admin: boolean;
+  display_name?: string;
+  logo_url?: string;
+  ia_ativada?: boolean;
   created_at: string;
 }
 

@@ -2,8 +2,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 
 interface ThemeSettings {
-  displayName: string;
-  logoUrl: string;
   incomingMessageColor: string;
   outgoingMessageColor: string;
   incomingTextColor: string;
@@ -20,8 +18,6 @@ interface ThemeContextType {
 }
 
 const defaultSettings: ThemeSettings = {
-  displayName: '',
-  logoUrl: '',
   incomingMessageColor: '#f1f5f9',
   outgoingMessageColor: '#3b82f6',
   incomingTextColor: '#1e293b',
@@ -36,7 +32,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ThemeSettings>(defaultSettings);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
-  // Apply custom color variables
   useEffect(() => {
     document.documentElement.style.setProperty('--color-primary', settings.primaryColor);
     document.documentElement.style.setProperty('--color-accent', settings.accentColor);
@@ -46,13 +41,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.style.setProperty('--color-outgoing-text', settings.outgoingTextColor);
   }, [settings]);
 
-  // Get company ID for current user
   const getCurrentCompanyId = async (): Promise<string | null> => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) return null;
 
-      // Check if user is a company
       const { data: company } = await supabase
         .from('companies')
         .select('id')
@@ -61,7 +54,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
       if (company) return company.id;
 
-      // Check if user is an attendant
       const { data: attendant } = await supabase
         .from('attendants')
         .select('company_id')
@@ -77,12 +69,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Load theme from theme_settings table
   const loadCompanyTheme = async (id: string) => {
     try {
       setCompanyId(id);
 
-      // Get theme settings from theme_settings table
       const { data: themeData, error: themeError } = await supabase
         .from('theme_settings')
         .select('*')
@@ -93,23 +83,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         console.error('Error loading theme settings:', themeError);
       }
 
-      // Get company data for display_name and logo_url
-      const { data: companyData } = await supabase
-        .from('companies')
-        .select('display_name, logo_url')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (themeData || companyData) {
+      if (themeData) {
         setSettings({
-          displayName: themeData?.display_name || companyData?.display_name || '',
-          logoUrl: themeData?.logo_url || companyData?.logo_url || '',
-          incomingMessageColor: themeData?.incoming_message_color || defaultSettings.incomingMessageColor,
-          outgoingMessageColor: themeData?.outgoing_message_color || defaultSettings.outgoingMessageColor,
-          incomingTextColor: themeData?.incoming_text_color || defaultSettings.incomingTextColor,
-          outgoingTextColor: themeData?.outgoing_text_color || defaultSettings.outgoingTextColor,
-          primaryColor: themeData?.primary_color || defaultSettings.primaryColor,
-          accentColor: themeData?.accent_color || defaultSettings.accentColor,
+          incomingMessageColor: themeData.incoming_message_color || defaultSettings.incomingMessageColor,
+          outgoingMessageColor: themeData.outgoing_message_color || defaultSettings.outgoingMessageColor,
+          incomingTextColor: themeData.incoming_text_color || defaultSettings.incomingTextColor,
+          outgoingTextColor: themeData.outgoing_text_color || defaultSettings.outgoingTextColor,
+          primaryColor: themeData.primary_color || defaultSettings.primaryColor,
+          accentColor: themeData.accent_color || defaultSettings.accentColor,
         });
       }
     } catch (error) {
@@ -117,7 +98,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Update settings
   const updateSettings = async (newSettings: Partial<ThemeSettings>, saveToDb = false) => {
     const merged = { ...settings, ...newSettings };
     setSettings(merged);
@@ -135,10 +115,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Save to theme_settings table
         const themeUpdate: any = {};
-        if (newSettings.displayName !== undefined) themeUpdate.display_name = newSettings.displayName;
-        if (newSettings.logoUrl !== undefined) themeUpdate.logo_url = newSettings.logoUrl;
         if (newSettings.incomingMessageColor !== undefined) themeUpdate.incoming_message_color = newSettings.incomingMessageColor;
         if (newSettings.outgoingMessageColor !== undefined) themeUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
         if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
@@ -146,7 +123,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
         if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
 
-        // Check if theme_settings exists for this company
         const { data: existingTheme } = await supabase
           .from('theme_settings')
           .select('id')
@@ -154,7 +130,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (existingTheme) {
-          // Update existing theme
           const { error } = await supabase
             .from('theme_settings')
             .update(themeUpdate)
@@ -165,7 +140,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             throw error;
           }
         } else {
-          // Insert new theme
           const { error } = await supabase
             .from('theme_settings')
             .insert({
@@ -176,22 +150,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           if (error) {
             console.error('Error inserting theme settings:', error);
             throw error;
-          }
-        }
-
-        // Also update companies table for display_name and logo_url
-        const companyUpdate: any = {};
-        if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
-        if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
-
-        if (Object.keys(companyUpdate).length > 0) {
-          const { error: companyError } = await supabase
-            .from('companies')
-            .update(companyUpdate)
-            .eq('id', id);
-
-          if (companyError) {
-            console.error('Error updating company:', companyError);
           }
         }
 

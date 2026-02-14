@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, Moon, Sun } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -105,7 +105,7 @@ type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags'
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
-  const { settings, loadCompanyTheme, darkMode, toggleDarkMode } = useTheme();
+  const { settings, loadCompanyTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
@@ -2011,13 +2011,13 @@ export default function CompanyDashboard() {
               <Menu className="w-6 h-6" />
             </button>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
-              settings.logoUrl && settings.logoUrl.trim() !== ''
+              company?.logo_url && company?.logo_url.trim() !== ''
                 ? 'bg-white border border-slate-200'
                 : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
             }`}>
-              {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
+              {company?.logo_url && company?.logo_url.trim() !== '' ? (
                 <img
-                  src={settings.logoUrl}
+                  src={company?.logo_url}
                   alt="Logo"
                   className="w-full h-full object-cover rounded-xl"
                 />
@@ -2027,7 +2027,7 @@ export default function CompanyDashboard() {
             </div>
             <div>
               <h1 className="text-slate-900 font-bold text-lg">
-                {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : company?.name}
+                {company?.display_name && company?.display_name.trim() !== '' ? company?.display_name : company?.name}
               </h1>
               <p className="text-xs text-slate-500">Atendimento Multicanal</p>
             </div>
@@ -2174,13 +2174,6 @@ export default function CompanyDashboard() {
                 </div>
               )}
             </div>
-            <button
-              onClick={toggleDarkMode}
-              className="ml-2 p-2.5 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-all duration-200"
-              title={darkMode ? "Modo claro" : "Modo escuro"}
-            >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
             <button
               onClick={signOut}
               className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
