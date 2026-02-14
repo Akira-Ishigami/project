@@ -12,23 +12,25 @@
   }
 
   .dark body {
-    @apply bg-slate-900 text-slate-100;
+    background: #0b0f19;
+    color: #e5e7eb;
   }
 
   .dark header {
-    @apply bg-slate-800/80 border-slate-700/80;
+    background: rgba(15, 23, 42, 0.8);
+    border-color: rgba(71, 85, 105, 0.8);
   }
 
   .dark .bg-white {
-    @apply bg-slate-800;
+    background: #111827;
   }
 
   .dark .bg-slate-50 {
-    @apply bg-slate-700;
+    background: #0f172a;
   }
 
   .dark .bg-slate-100 {
-    @apply bg-slate-700;
+    background: #0f172a;
   }
 
   .dark .text-slate-900 {
@@ -153,8 +155,20 @@
     @apply bg-slate-100 rounded-full;
   }
 
+  .dark .scrollbar-thin::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full hover:bg-slate-400;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
   }
 
   .message-incoming {

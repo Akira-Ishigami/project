@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Upload, Image, RotateCcw, Palette, Type, Save } from 'lucide-react';
 import Toast from './Toast';
@@ -10,6 +10,10 @@ export default function SettingsPanel() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [localSettings, setLocalSettings] = useState(settings);
+
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
