@@ -1826,7 +1826,7 @@ export default function AttendantDashboard() {
 
               {/* File Preview */}
               {filePreview && (
-                <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 border-t border-slate-200/80 p-4 animate-in slide-in-from-bottom duration-200">
+                <div className="bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-black dark:to-black border-t border-slate-200/80 dark:border-slate-700/80 p-4 animate-in slide-in-from-bottom duration-200">
                   <div className="max-w-[200px] relative">
                     <button
                       onClick={() => {

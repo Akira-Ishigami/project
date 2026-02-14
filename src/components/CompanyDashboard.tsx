@@ -2221,7 +2221,7 @@ export default function CompanyDashboard() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white">
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white dark:from-black dark:to-black">
               {filteredContacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8">
                   <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-200/50">
@@ -2798,19 +2798,19 @@ export default function CompanyDashboard() {
               </div>
             </div>
           ) : activeTab === 'departamentos' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
               <DepartmentsManagement />
             </div>
           ) : activeTab === 'setores' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
               <SectorsManagement />
             </div>
           ) : activeTab === 'atendentes' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
               <AttendantsManagement />
             </div>
           ) : activeTab === 'tags' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
               <TagsManagement />
             </div>
           ) : activeTab === 'configuracoes' ? (

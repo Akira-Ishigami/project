@@ -204,7 +204,7 @@ export default function DepartmentsManagement() {
 
       {/* FORM */}
       {showForm && (
-        <div className="bg-white/70 dark:bg-[#1e293b] border dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900 border dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md">
           <div className="flex justify-between mb-4">
             <h3 className="font-semibold dark:text-white">
               {editingId ? 'Editar Departamento' : 'Novo Departamento'}
@@ -220,7 +220,7 @@ export default function DepartmentsManagement() {
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               placeholder="Nome do departamento"
-              className="w-full px-4 py-2 border dark:border-slate-600 rounded-xl bg-white dark:bg-[#334155] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
+              className="w-full px-4 py-2 border dark:border-slate-600 rounded-xl bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
             />
 
             <textarea
@@ -230,7 +230,7 @@ export default function DepartmentsManagement() {
               }
               placeholder="Descrição"
               rows={3}
-              className="w-full px-4 py-2 border dark:border-slate-600 rounded-xl bg-white dark:bg-[#334155] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
+              className="w-full px-4 py-2 border dark:border-slate-600 rounded-xl bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-400"
             />
 
             <div className="flex gap-3">
@@ -262,7 +262,7 @@ export default function DepartmentsManagement() {
           return (
             <div
               key={dept.id}
-              className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
+              className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
             >
               <div className="flex justify-between mb-3">
                 <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">

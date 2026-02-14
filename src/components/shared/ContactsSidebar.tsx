@@ -45,7 +45,7 @@ export default function ContactsSidebar({
     <div
       className={`${
         sidebarOpen ? 'flex' : 'hidden'
-      } md:flex w-full md:w-[360px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/80 flex-col shadow-xl transition-colors duration-300`}
+      } md:flex w-full md:w-[360px] bg-white/95 dark:bg-black/95 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/80 flex-col shadow-xl transition-colors duration-300`}
     >
       {error && (
         <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
@@ -68,7 +68,7 @@ export default function ContactsSidebar({
             placeholder="Pesquisar contato..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:shadow-md transition-all duration-200 placeholder-slate-400 dark:placeholder-slate-500"
+            className="w-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-slate-800 focus:shadow-md transition-all duration-200 placeholder-slate-400 dark:placeholder-slate-500"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function ContactsSidebar({
               className={`px-4 py-3.5 border-b border-slate-100 dark:border-slate-700/50 cursor-pointer transition-all duration-200 ${
                 selectedContact === contact.phoneNumber
                   ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/80 dark:to-blue-950/60 border-l-4 border-l-blue-600 dark:border-l-blue-400 shadow-sm'
-                  : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:shadow-sm hover:translate-x-0.5'
+                  : 'hover:bg-slate-50 dark:hover:bg-slate-900/80 hover:shadow-sm hover:translate-x-0.5'
               }`}
             >
               <div className="flex items-start gap-3">

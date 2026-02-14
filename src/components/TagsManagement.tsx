@@ -220,7 +220,7 @@ export default function TagsManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingId ? 'Editar Tag' : 'Nova Tag'}
@@ -246,7 +246,7 @@ export default function TagsManagement() {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Ex: Urgente, VIP, Orçamento"
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 dark:text-white dark:border-slate-600 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
               />
             </div>
 
@@ -310,7 +310,7 @@ export default function TagsManagement() {
       )}
 
       {tags.length === 0 ? (
-        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Tag className="w-10 h-10 text-blue-500" />
           </div>
@@ -327,7 +327,7 @@ export default function TagsManagement() {
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
+              className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-3">
                 <div

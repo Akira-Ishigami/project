@@ -358,7 +358,7 @@ export default function AttendantsManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md animate-in slide-in-from-top duration-300">
+        <div className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md animate-in slide-in-from-top duration-300">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingId ? 'Editar Atendente' : 'Novo Atendente'}
@@ -532,7 +532,7 @@ export default function AttendantsManagement() {
       )}
 
       {attendants.length === 0 ? (
-        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
+        <div className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UserCircle2 className="w-10 h-10 text-blue-500" />
           </div>
@@ -544,7 +544,7 @@ export default function AttendantsManagement() {
           {attendants.map((attendant, index) => (
             <div
               key={attendant.id}
-              className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group animate-in fade-in slide-in-from-bottom"
+              className="bg-white/70 dark:bg-slate-900 backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group animate-in fade-in slide-in-from-bottom"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div className="flex items-start justify-between mb-3">
@@ -577,7 +577,7 @@ export default function AttendantsManagement() {
                     Ativo
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:text-slate-300">
+                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-300">
                     <span className="w-2 h-2 bg-gray-400 rounded-full" />
                     Inativo
                   </span>
