@@ -1334,13 +1334,13 @@ export default function AttendantDashboard() {
                 <Menu className="w-6 h-6" />
               </button>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
-                company?.logo_url && company?.logo_url.trim() !== ''
+                settings.logoUrl && settings.logoUrl.trim() !== ''
                   ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600'
                   : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
               }`}>
-                {company?.logo_url && company?.logo_url.trim() !== '' ? (
+                {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
                   <img
-                    src={company?.logo_url}
+                    src={settings.logoUrl}
                     alt="Logo"
                     className="w-full h-full object-cover rounded-xl"
                   />
@@ -1350,7 +1350,7 @@ export default function AttendantDashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 dark:text-white transition-colors duration-200">
-                  {company?.display_name && company?.display_name.trim() !== '' ? company?.display_name : 'ChatFlow'}
+                  {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : 'ChatFlow'}
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5 transition-colors duration-200">
                   {attendant?.name || 'Atendente'}

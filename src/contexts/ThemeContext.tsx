@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 
 interface ThemeSettings {
+  displayName: string;
+  logoUrl: string;
   incomingMessageColor: string;
   outgoingMessageColor: string;
   incomingTextColor: string;
@@ -18,6 +20,8 @@ interface ThemeContextType {
 }
 
 const defaultSettings: ThemeSettings = {
+  displayName: '',
+  logoUrl: '',
   incomingMessageColor: '#f1f5f9',
   outgoingMessageColor: '#3b82f6',
   incomingTextColor: '#1e293b',
@@ -83,14 +87,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         console.error('Error loading theme settings:', themeError);
       }
 
-      if (themeData) {
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('display_name, logo_url')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (themeData || companyData) {
         setSettings({
-          incomingMessageColor: themeData.incoming_message_color || defaultSettings.incomingMessageColor,
-          outgoingMessageColor: themeData.outgoing_message_color || defaultSettings.outgoingMessageColor,
-          incomingTextColor: themeData.incoming_text_color || defaultSettings.incomingTextColor,
-          outgoingTextColor: themeData.outgoing_text_color || defaultSettings.outgoingTextColor,
-          primaryColor: themeData.primary_color || defaultSettings.primaryColor,
-          accentColor: themeData.accent_color || defaultSettings.accentColor,
+          displayName: themeData?.display_name || companyData?.display_name || '',
+          logoUrl: themeData?.logo_url || companyData?.logo_url || '',
+          incomingMessageColor: themeData?.incoming_message_color || defaultSettings.incomingMessageColor,
+          outgoingMessageColor: themeData?.outgoing_message_color || defaultSettings.outgoingMessageColor,
+          incomingTextColor: themeData?.incoming_text_color || defaultSettings.incomingTextColor,
+          outgoingTextColor: themeData?.outgoing_text_color || defaultSettings.outgoingTextColor,
+          primaryColor: themeData?.primary_color || defaultSettings.primaryColor,
+          accentColor: themeData?.accent_color || defaultSettings.accentColor,
         });
       }
     } catch (error) {
@@ -116,6 +128,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
 
         const themeUpdate: any = {};
+        if (newSettings.displayName !== undefined) themeUpdate.display_name = newSettings.displayName;
+        if (newSettings.logoUrl !== undefined) themeUpdate.logo_url = newSettings.logoUrl;
         if (newSettings.incomingMessageColor !== undefined) themeUpdate.incoming_message_color = newSettings.incomingMessageColor;
         if (newSettings.outgoingMessageColor !== undefined) themeUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
         if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
@@ -150,6 +164,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           if (error) {
             console.error('Error inserting theme settings:', error);
             throw error;
+          }
+        }
+
+        const companyUpdate: any = {};
+        if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
+        if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
+
+        if (Object.keys(companyUpdate).length > 0) {
+          const { error: companyError } = await supabase
+            .from('companies')
+            .update(companyUpdate)
+            .eq('id', id);
+
+          if (companyError) {
+            console.error('Error updating company:', companyError);
           }
         }
 

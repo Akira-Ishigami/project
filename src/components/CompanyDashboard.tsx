@@ -2011,13 +2011,13 @@ export default function CompanyDashboard() {
               <Menu className="w-6 h-6" />
             </button>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
-              company?.logo_url && company?.logo_url.trim() !== ''
+              settings.logoUrl && settings.logoUrl.trim() !== ''
                 ? 'bg-white border border-slate-200'
                 : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
             }`}>
-              {company?.logo_url && company?.logo_url.trim() !== '' ? (
+              {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
                 <img
-                  src={company?.logo_url}
+                  src={settings.logoUrl}
                   alt="Logo"
                   className="w-full h-full object-cover rounded-xl"
                 />
@@ -2027,7 +2027,7 @@ export default function CompanyDashboard() {
             </div>
             <div>
               <h1 className="text-slate-900 font-bold text-lg">
-                {company?.display_name && company?.display_name.trim() !== '' ? company?.display_name : company?.name}
+                {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : company?.name}
               </h1>
               <p className="text-xs text-slate-500">Atendimento Multicanal</p>
             </div>
