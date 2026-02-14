@@ -2375,13 +2375,13 @@ export default function CompanyDashboard() {
                 </div>
               </header>
 
-              <div className="flex-1 overflow-y-auto bg-slate-50 px-3 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
+              <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-black px-3 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
                 <div className="w-full">
                   {Object.entries(messageGroups).map(([date, msgs]) => (
                     <div key={date} className="mb-6">
                       <div className="flex justify-center mb-4">
-                        <div className="bg-white px-3 py-1 rounded-full border border-gray-200">
-                          <p className="text-xs text-gray-600 font-medium">{date}</p>
+                        <div className="bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-gray-200 dark:border-slate-600">
+                          <p className="text-xs text-gray-600 dark:text-slate-300 font-medium">{date}</p>
                         </div>
                       </div>
                       <div className="space-y-3">

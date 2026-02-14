@@ -1571,7 +1571,7 @@ export default function AttendantDashboard() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
-                className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-3"
+                className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-black space-y-3"
               >
                 {selectedContactData.messages.map((msg, index) => {
                   const isSent = msg['minha?'] === 'true';
@@ -1587,7 +1587,7 @@ export default function AttendantDashboard() {
                     <div key={msg.id || msg.idmessage || index}>
                       {showDate && (
                         <div className="flex justify-center my-4">
-                          <span className="bg-white text-slate-600 text-xs px-3 py-1.5 rounded-full shadow-sm font-medium border border-slate-200">
+                          <span className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs px-3 py-1.5 rounded-full shadow-sm font-medium border border-slate-200 dark:border-slate-600">
                             {formatDate(msg.date_time || msg.created_at || '')}
                           </span>
                         </div>
