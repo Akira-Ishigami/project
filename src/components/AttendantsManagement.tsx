@@ -310,8 +310,8 @@ export default function AttendantsManagement() {
     <div className="p-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-gray-900">Atendentes</h2>
-          <p className="text-sm text-gray-500 mt-1">Gerencie os atendentes da sua empresa</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Atendentes</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">Gerencie os atendentes da sua empresa</p>
 
           <div className="flex items-center gap-3 mt-3">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
@@ -347,25 +347,25 @@ export default function AttendantsManagement() {
           <div className="text-center">
             <button
               disabled
-              className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-xl cursor-not-allowed opacity-60 shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 dark:text-slate-300 rounded-xl cursor-not-allowed opacity-60 shadow-sm"
             >
               <Plus className="w-5 h-5" />
               Limite Atingido
             </button>
-            <p className="text-xs text-gray-500 mt-1">Edite ou exclua atendentes existentes</p>
+            <p className="text-xs text-gray-500 dark:text-slate-300 mt-1">Edite ou exclua atendentes existentes</p>
           </div>
         )}
       </div>
 
       {showForm && (
-        <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 mb-6 shadow-md animate-in slide-in-from-top duration-300">
+        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md animate-in slide-in-from-top duration-300">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingId ? 'Editar Atendente' : 'Novo Atendente'}
             </h3>
             <button
               onClick={handleCancel}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 rounded-lg transition-all"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:bg-[#334155] dark:text-white/50 rounded-lg transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -374,7 +374,7 @@ export default function AttendantsManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Nome *
                 </label>
                 <input
@@ -383,12 +383,12 @@ export default function AttendantsManagement() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Nome completo"
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Email *
                 </label>
                 <input
@@ -397,7 +397,7 @@ export default function AttendantsManagement() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="email@exemplo.com"
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                   disabled={!!editingId}
                 />
               </div>
@@ -405,7 +405,7 @@ export default function AttendantsManagement() {
 
             {!editingId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Senha *
                 </label>
                 <input
@@ -415,15 +415,15 @@ export default function AttendantsManagement() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Senha de acesso"
                   minLength={6}
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                 />
-                <p className="text-xs text-gray-500 mt-1">Mínimo de 6 caracteres</p>
+                <p className="text-xs text-gray-500 dark:text-slate-300 mt-1">Mínimo de 6 caracteres</p>
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Telefone
                 </label>
                 <input
@@ -432,12 +432,12 @@ export default function AttendantsManagement() {
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="(00) 00000-0000"
                   maxLength={15}
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Função
                 </label>
                 <input
@@ -445,20 +445,20 @@ export default function AttendantsManagement() {
                   value={formData.function}
                   onChange={(e) => setFormData({ ...formData, function: e.target.value })}
                   placeholder="Ex: Vendedor, Suporte, Gerente"
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Departamento
                 </label>
                 <select
                   value={formData.department_id}
                   onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all"
                 >
                   <option value="">Nenhum</option>
                   {departments.map((dept) => (
@@ -470,14 +470,14 @@ export default function AttendantsManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                   Setor
                 </label>
                 <select
                   value={formData.sector_id}
                   onChange={(e) => setFormData({ ...formData, sector_id: e.target.value })}
                   disabled={!formData.department_id}
-                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-2.5 bg-white/60 border border-gray-200/50 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-400 focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Nenhum</option>
                   {filteredSectors.map((sector) => (
@@ -500,7 +500,7 @@ export default function AttendantsManagement() {
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
                 />
-                <span className="text-sm font-medium text-gray-700">Atendente ativo</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-200">Atendente ativo</span>
               </label>
             </div>
 
@@ -522,7 +522,7 @@ export default function AttendantsManagement() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
+                className="px-4 py-2.5 bg-gray-100 dark:bg-[#334155] dark:text-white text-gray-700 dark:text-slate-200 rounded-xl hover:bg-gray-200 transition-all font-medium"
               >
                 Cancelar
               </button>
@@ -532,19 +532,19 @@ export default function AttendantsManagement() {
       )}
 
       {attendants.length === 0 ? (
-        <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-12 text-center shadow-md">
+        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UserCircle2 className="w-10 h-10 text-blue-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum atendente cadastrado</h3>
-          <p className="text-sm text-gray-500">Clique em "Novo Atendente" para adicionar o primeiro atendente</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Nenhum atendente cadastrado</h3>
+          <p className="text-sm text-gray-500 dark:text-slate-300">Clique em "Novo Atendente" para adicionar o primeiro atendente</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {attendants.map((attendant, index) => (
             <div
               key={attendant.id}
-              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group animate-in fade-in slide-in-from-bottom"
+              className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group animate-in fade-in slide-in-from-bottom"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div className="flex items-start justify-between mb-3">
@@ -570,14 +570,14 @@ export default function AttendantsManagement() {
               </div>
 
               <div className="flex items-start gap-2 mb-2">
-                <h3 className="text-lg font-bold text-gray-900 flex-1">{attendant.name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex-1">{attendant.name}</h3>
                 {attendant.is_active ? (
                   <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                     <span className="w-2 h-2 bg-green-500 rounded-full" />
                     Ativo
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
+                  <span className="inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-600 dark:text-slate-300">
                     <span className="w-2 h-2 bg-gray-400 rounded-full" />
                     Inativo
                   </span>
@@ -585,28 +585,28 @@ export default function AttendantsManagement() {
               </div> 
 
               <div className="space-y-1 mb-3">
-                <p className="text-sm text-gray-600 truncate">{attendant.email}</p>
+                <p className="text-sm text-gray-600 dark:text-slate-300 truncate">{attendant.email}</p>
                 {attendant.phone && (
-                  <p className="text-sm text-gray-600">{attendant.phone}</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{attendant.phone}</p>
                 )}
               </div>
 
               {(attendant.department || attendant.sector) && (
-                <div className="pt-3 border-t border-gray-200/50 space-y-1">
+                <div className="pt-3 border-t border-gray-200/50 dark:border-slate-600 space-y-1">
                   {attendant.department && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-300">
                       <span className="font-medium">Depto:</span> {attendant.department.name}
                     </p>
                   )}
                   {attendant.sector && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-slate-300">
                       <span className="font-medium">Setor:</span> {attendant.sector.name}
                     </p>
                   )}
                 </div>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-200/50">
+              <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-slate-600">
                 <p className="text-xs text-gray-400">
                   Criado em {new Date(attendant.created_at).toLocaleDateString('pt-BR')}
                 </p>

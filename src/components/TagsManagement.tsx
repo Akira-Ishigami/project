@@ -203,8 +203,8 @@ export default function TagsManagement() {
     <div className="p-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tags</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tags</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">
             Crie etiquetas para organizar e identificar conversas
           </p>
         </div>
@@ -220,14 +220,14 @@ export default function TagsManagement() {
       </div>
 
       {showForm && (
-        <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 mb-6 shadow-md">
+        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 mb-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {editingId ? 'Editar Tag' : 'Nova Tag'}
             </h3>
             <button
               onClick={handleCancel}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 rounded-lg transition-all"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:bg-[#334155] dark:text-white/50 rounded-lg transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -235,7 +235,7 @@ export default function TagsManagement() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                 Nome da Tag *
               </label>
               <input
@@ -251,7 +251,7 @@ export default function TagsManagement() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                 Cor *
               </label>
               <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-3">
@@ -300,7 +300,7 @@ export default function TagsManagement() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
+                className="px-4 py-2.5 bg-gray-100 dark:bg-[#334155] dark:text-white text-gray-700 dark:text-slate-200 rounded-xl hover:bg-gray-200 transition-all font-medium"
               >
                 Cancelar
               </button>
@@ -310,14 +310,14 @@ export default function TagsManagement() {
       )}
 
       {tags.length === 0 ? (
-        <div className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-12 text-center shadow-md">
+        <div className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-12 text-center shadow-md">
           <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Tag className="w-10 h-10 text-blue-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Nenhuma tag cadastrada
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-300">
             Crie tags para organizar suas conversas por tipo, prioridade ou
             categoria
           </p>
@@ -327,7 +327,7 @@ export default function TagsManagement() {
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="bg-white/70 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
+              className="bg-white/70 dark:bg-[#1e293b] backdrop-blur-xl border border-gray-200/50 dark:border-slate-600 rounded-2xl p-6 shadow-md hover:shadow-lg transition-all group hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-3">
                 <div
@@ -352,7 +352,7 @@ export default function TagsManagement() {
                 </div>
               </div>
 
-              <h3 className="font-bold text-gray-900 truncate mb-2">
+              <h3 className="font-bold text-gray-900 dark:text-white truncate mb-2">
                 {tag.name}
               </h3>
 
