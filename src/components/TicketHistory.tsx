@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle2, Clock, AlertCircle, User, Calendar, Phone } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, User, Calendar, Phone, FolderOpen } from 'lucide-react';
 import Toast from './Toast';
 
 interface TicketContact {
@@ -118,6 +118,29 @@ export default function TicketHistory() {
     } catch (error) {
       console.error('Erro ao finalizar chamado:', error);
       setToastMessage('Erro ao finalizar chamado');
+      setShowToast(true);
+    }
+  };
+
+  const handleReopenTicket = async (ticketId: string) => {
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .update({
+          ticket_status: 'aberto',
+          ticket_closed_at: null,
+          ticket_closed_by: null,
+        })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      setToastMessage('Chamado reaberto com sucesso!');
+      setShowToast(true);
+      fetchTickets();
+    } catch (error) {
+      console.error('Erro ao reabrir chamado:', error);
+      setToastMessage('Erro ao reabrir chamado');
       setShowToast(true);
     }
   };
@@ -303,7 +326,15 @@ export default function TicketHistory() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {ticket.ticket_status !== 'finalizado' && (
+                        {ticket.ticket_status === 'finalizado' ? (
+                          <button
+                            onClick={() => handleReopenTicket(ticket.id)}
+                            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 shadow-sm transition-all hover:scale-105 flex items-center gap-2 mx-auto"
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                            Abrir Chamado
+                          </button>
+                        ) : (
                           <button
                             onClick={() => handleFinishTicket(ticket.id)}
                             className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm font-medium hover:from-green-600 hover:to-green-700 shadow-sm transition-all hover:scale-105"

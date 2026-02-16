@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, CheckCircle2, FolderOpen } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -1248,6 +1248,54 @@ export default function CompanyDashboard() {
     }
   };
 
+  const handleReopenTicket = async () => {
+    if (!selectedContact || !company?.id) return;
+
+    try {
+      const currentContact = contactsDB.find(
+        (c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact)
+      );
+
+      if (!currentContact?.id) {
+        setToastMessage('❌ Erro: Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('contacts')
+        .update({
+          ticket_status: 'aberto',
+          ticket_closed_at: null,
+          ticket_closed_by: null
+        })
+        .eq('id', currentContact.id)
+        .eq('company_id', company.id);
+
+      if (updateError) throw updateError;
+
+      setToastMessage('✅ Chamado reaberto com sucesso!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === currentContact.id
+          ? {
+              ...c,
+              ticket_status: 'aberto',
+              ticket_closed_at: null,
+              ticket_closed_by: null
+            }
+          : c
+      ));
+
+      fetchContacts();
+    } catch (error: any) {
+      console.error('Erro ao reabrir chamado:', error);
+      setToastMessage('❌ Erro ao reabrir chamado');
+      setShowToast(true);
+    }
+  };
+
   useEffect(() => {
     fetchMessages();
     fetchContacts();
@@ -2379,14 +2427,30 @@ export default function CompanyDashboard() {
                     <Tag className="w-4 h-4" />
                     Tags
                   </button>
-                  <button
-                    onClick={handleCloseTicket}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-sm"
-                    title="Finalizar atendimento"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Finalizar</span>
-                  </button>
+                  {(() => {
+                    const currentContact = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact));
+                    const isFinalized = currentContact?.ticket_status === 'finalizado';
+
+                    return isFinalized ? (
+                      <button
+                        onClick={handleReopenTicket}
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-sm"
+                        title="Abrir chamado"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                        <span className="hidden sm:inline">Abrir Chamado</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleCloseTicket}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-sm"
+                        title="Finalizar atendimento"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Finalizar</span>
+                      </button>
+                    );
+                  })()}
                 </div>
               </header>
 
