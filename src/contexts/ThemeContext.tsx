@@ -141,7 +141,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
         if (newSettings.outgoingTextColor !== undefined) themeUpdate.outgoing_text_color = newSettings.outgoingTextColor;
         if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
-        if (newSettings.accentColor !== undefined) themeUpdate.accentColor = newSettings.accentColor;
+        if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
 
         // Check if theme_settings record exists
         const { data: existingTheme, error: checkError } = await supabase

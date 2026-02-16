@@ -43,20 +43,38 @@ export default function SettingsPanel() {
   };
 
   const presetColors = {
-    incoming: [
-      { name: 'Cinza Claro', color: '#f1f5f9' },
-      { name: 'Verde Claro', color: '#dcfce7' },
-      { name: 'Azul Claro', color: '#dbeafe' },
-      { name: 'Rosa Claro', color: '#fce7f3' },
-      { name: 'Amarelo Claro', color: '#fef3c7' },
-    ],
-    outgoing: [
-      { name: 'Azul', color: '#3b82f6' },
-      { name: 'Verde', color: '#10b981' },
-      { name: 'Roxo', color: '#8b5cf6' },
-      { name: 'Rosa', color: '#ec4899' },
-      { name: 'Laranja', color: '#f97316' },
-    ],
+    incoming: {
+      background: [
+        { name: 'Cinza Claro', color: '#f1f5f9' },
+        { name: 'Verde Claro', color: '#dcfce7' },
+        { name: 'Azul Claro', color: '#dbeafe' },
+        { name: 'Rosa Claro', color: '#fce7f3' },
+        { name: 'Amarelo Claro', color: '#fef3c7' },
+      ],
+      text: [
+        { name: 'Cinza Escuro', color: '#1e293b' },
+        { name: 'Preto', color: '#000000' },
+        { name: 'Cinza', color: '#475569' },
+        { name: 'Verde Escuro', color: '#065f46' },
+        { name: 'Azul Escuro', color: '#1e40af' },
+      ]
+    },
+    outgoing: {
+      background: [
+        { name: 'Azul', color: '#3b82f6' },
+        { name: 'Verde', color: '#10b981' },
+        { name: 'Ciano', color: '#06b6d4' },
+        { name: 'Rosa', color: '#ec4899' },
+        { name: 'Laranja', color: '#f97316' },
+      ],
+      text: [
+        { name: 'Branco', color: '#ffffff' },
+        { name: 'Cinza Claro', color: '#f1f5f9' },
+        { name: 'Creme', color: '#fef3c7' },
+        { name: 'Verde Claro', color: '#dcfce7' },
+        { name: 'Azul Claro', color: '#dbeafe' },
+      ]
+    }
   };
 
   return (
@@ -104,7 +122,7 @@ export default function SettingsPanel() {
                     />
                   </div>
                   <div className="grid grid-cols-5 gap-2 mt-2">
-                    {presetColors.incoming.map((preset) => (
+                    {presetColors.incoming.background.map((preset) => (
                       <button
                         key={preset.color}
                         onClick={() => setLocalSettings((prev) => ({ ...prev, incomingMessageColor: preset.color }))}
@@ -130,6 +148,17 @@ export default function SettingsPanel() {
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, incomingTextColor: e.target.value }))}
                       className="flex-1 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm font-mono"
                     />
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 mt-2">
+                    {presetColors.incoming.text.map((preset) => (
+                      <button
+                        key={preset.color}
+                        onClick={() => setLocalSettings((prev) => ({ ...prev, incomingTextColor: preset.color }))}
+                        className="h-8 rounded-md border-2 border-slate-300 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: preset.color }}
+                        title={preset.name}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -158,7 +187,7 @@ export default function SettingsPanel() {
                     />
                   </div>
                   <div className="grid grid-cols-5 gap-2 mt-2">
-                    {presetColors.outgoing.map((preset) => (
+                    {presetColors.outgoing.background.map((preset) => (
                       <button
                         key={preset.color}
                         onClick={() => setLocalSettings((prev) => ({ ...prev, outgoingMessageColor: preset.color }))}
@@ -184,6 +213,17 @@ export default function SettingsPanel() {
                       onChange={(e) => setLocalSettings((prev) => ({ ...prev, outgoingTextColor: e.target.value }))}
                       className="flex-1 px-3 py-2 bg-white text-slate-900 border border-slate-300 rounded-lg text-sm font-mono"
                     />
+                  </div>
+                  <div className="grid grid-cols-5 gap-2 mt-2">
+                    {presetColors.outgoing.text.map((preset) => (
+                      <button
+                        key={preset.color}
+                        onClick={() => setLocalSettings((prev) => ({ ...prev, outgoingTextColor: preset.color }))}
+                        className="h-8 rounded-md border-2 border-slate-300 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: preset.color }}
+                        title={preset.name}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
