@@ -999,7 +999,7 @@ export default function AttendantDashboard() {
       const { error: updateError } = await supabase
         .from('contacts')
         .update({
-          ticket_status: 'closed',
+          ticket_status: 'finalizado',
           ticket_closed_at: new Date().toISOString(),
           ticket_closed_by: user?.id || null
         })
@@ -1015,7 +1015,7 @@ export default function AttendantDashboard() {
         c.id === contactDB.id
           ? {
               ...c,
-              ticket_status: 'closed',
+              ticket_status: 'finalizado',
               ticket_closed_at: new Date().toISOString(),
               ticket_closed_by: user?.id || null
             }
