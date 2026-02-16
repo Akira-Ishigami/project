@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, CheckCircle2 } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
@@ -1198,6 +1198,45 @@ export default function CompanyDashboard() {
     }
   };
 
+  const handleCloseTicket = async () => {
+    if (!selectedContact || !company?.id) return;
+
+    try {
+      const currentContact = contactsDB.find(
+        (c) => normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContact)
+      );
+
+      if (!currentContact?.id) {
+        setToastMessage('❌ Erro: Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('contacts')
+        .update({ ticket_status: 'closed' })
+        .eq('id', currentContact.id)
+        .eq('company_id', company.id);
+
+      if (updateError) throw updateError;
+
+      setToastMessage('✅ Atendimento finalizado com sucesso!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === currentContact.id
+          ? { ...c, ticket_status: 'closed' }
+          : c
+      ));
+
+      fetchContacts();
+    } catch (error: any) {
+      console.error('Erro ao finalizar atendimento:', error);
+      setToastMessage('❌ Erro ao finalizar atendimento');
+      setShowToast(true);
+    }
+  };
+
   useEffect(() => {
     fetchMessages();
     fetchContacts();
@@ -2328,6 +2367,14 @@ export default function CompanyDashboard() {
                   >
                     <Tag className="w-4 h-4" />
                     Tags
+                  </button>
+                  <button
+                    onClick={handleCloseTicket}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all duration-200 flex items-center gap-2 shadow-sm"
+                    title="Finalizar atendimento"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Finalizar</span>
                   </button>
                 </div>
               </header>

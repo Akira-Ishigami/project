@@ -1,4 +1,4 @@
-import { User, Menu, Tag, ArrowRightLeft, Building2 } from 'lucide-react';
+import { User, Menu, Tag, ArrowRightLeft, Building2, CheckCircle2 } from 'lucide-react';
 
 interface ChatHeaderProps {
   contactName: string;
@@ -6,6 +6,7 @@ interface ChatHeaderProps {
   onToggleSidebar: () => void;
   onOpenTransferModal?: () => void;
   onOpenTagModal?: () => void;
+  onCloseTicket?: () => void;
   tags?: Array<{ id: string; name: string; color: string }>;
   departmentBadge?: {
     show: boolean;
@@ -19,6 +20,7 @@ export default function ChatHeader({
   onToggleSidebar,
   onOpenTransferModal,
   onOpenTagModal,
+  onCloseTicket,
   tags = [],
   departmentBadge
 }: ChatHeaderProps) {
@@ -88,6 +90,17 @@ export default function ChatHeader({
           >
             <Tag className="w-4 h-4" />
             <span className="hidden sm:inline">Tags</span>
+          </button>
+        )}
+
+        {onCloseTicket && (
+          <button
+            onClick={onCloseTicket}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+            title="Finalizar atendimento"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Finalizar</span>
           </button>
         )}
       </div>
