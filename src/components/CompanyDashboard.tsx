@@ -2242,6 +2242,7 @@ export default function CompanyDashboard() {
               onSectorsClick={() => setActiveTab('setores')}
               onAttendantsClick={() => setActiveTab('atendentes')}
               onTagsClick={() => setActiveTab('tags')}
+              activeTab={activeTab}
             />
           </div>
         </div>

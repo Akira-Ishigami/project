@@ -1465,6 +1465,7 @@ export default function AttendantDashboard() {
                 onHistoryClick={() => setCurrentView('historico')}
                 onSettingsClick={() => setCurrentView('configuracoes')}
                 onLogout={signOut}
+                activeTab={currentView}
               />
             </div>
           </div>

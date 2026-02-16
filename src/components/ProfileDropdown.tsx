@@ -12,6 +12,7 @@ interface ProfileDropdownProps {
   onAttendantsClick?: () => void;
   onTagsClick?: () => void;
   showNavigationOptions?: boolean;
+  activeTab?: string;
 }
 
 export default function ProfileDropdown({
@@ -25,6 +26,7 @@ export default function ProfileDropdown({
   onAttendantsClick,
   onTagsClick,
   showNavigationOptions = false,
+  activeTab,
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,50 +76,85 @@ export default function ProfileDropdown({
               {onMessagesClick && (
                 <button
                   onClick={() => handleMenuClick(onMessagesClick)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'mensagens'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <MessageSquare className={`w-5 h-5 ${activeTab === 'mensagens' ? 'text-blue-600' : 'text-blue-600'}`} />
                   <span className="font-medium">Mensagens</span>
+                  {activeTab === 'mensagens' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
                 </button>
               )}
 
               {onDepartmentsClick && (
                 <button
                   onClick={() => handleMenuClick(onDepartmentsClick)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'departamentos'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <Briefcase className="w-5 h-5 text-slate-600" />
+                  <Briefcase className={`w-5 h-5 ${activeTab === 'departamentos' ? 'text-blue-600' : 'text-slate-600'}`} />
                   <span className="font-medium">Departamentos</span>
+                  {activeTab === 'departamentos' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
                 </button>
               )}
 
               {onSectorsClick && (
                 <button
                   onClick={() => handleMenuClick(onSectorsClick)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'setores'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <FolderTree className="w-5 h-5 text-slate-600" />
+                  <FolderTree className={`w-5 h-5 ${activeTab === 'setores' ? 'text-blue-600' : 'text-slate-600'}`} />
                   <span className="font-medium">Setores</span>
+                  {activeTab === 'setores' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
                 </button>
               )}
 
               {onAttendantsClick && (
                 <button
                   onClick={() => handleMenuClick(onAttendantsClick)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'atendentes'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <UserCircle2 className="w-5 h-5 text-slate-600" />
+                  <UserCircle2 className={`w-5 h-5 ${activeTab === 'atendentes' ? 'text-blue-600' : 'text-slate-600'}`} />
                   <span className="font-medium">Atendentes</span>
+                  {activeTab === 'atendentes' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
                 </button>
               )}
 
               {onTagsClick && (
                 <button
                   onClick={() => handleMenuClick(onTagsClick)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'tags'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  <Tag className="w-5 h-5 text-slate-600" />
+                  <Tag className={`w-5 h-5 ${activeTab === 'tags' ? 'text-blue-600' : 'text-slate-600'}`} />
                   <span className="font-medium">Tags</span>
+                  {activeTab === 'tags' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
                 </button>
               )}
 
@@ -127,18 +164,32 @@ export default function ProfileDropdown({
 
           <button
             onClick={() => handleMenuClick(onHistoryClick)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+              activeTab === 'historico'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-slate-700 hover:bg-slate-50'
+            }`}
           >
-            <History className="w-5 h-5 text-blue-600" />
+            <History className={`w-5 h-5 ${activeTab === 'historico' ? 'text-blue-600' : 'text-blue-600'}`} />
             <span className="font-medium">Histórico</span>
+            {activeTab === 'historico' && (
+              <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+            )}
           </button>
 
           <button
             onClick={() => handleMenuClick(onSettingsClick)}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+              activeTab === 'configuracoes'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-slate-700 hover:bg-slate-50'
+            }`}
           >
-            <Settings className="w-5 h-5 text-slate-600" />
+            <Settings className={`w-5 h-5 ${activeTab === 'configuracoes' ? 'text-blue-600' : 'text-slate-600'}`} />
             <span className="font-medium">Configurações</span>
+            {activeTab === 'configuracoes' && (
+              <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+            )}
           </button>
 
           <div className="border-t border-slate-100 mt-2 pt-2">
