@@ -10,6 +10,7 @@ import TagsManagement from './TagsManagement';
 import TicketHistory from './TicketHistory';
 import SettingsPage from './SettingsPage';
 import ProfileDropdown from './ProfileDropdown';
+import NavigationDropdown, { NavigationItem } from './NavigationDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
@@ -109,6 +110,15 @@ export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
   const { settings, loadCompanyTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
+
+  // Navigation items para o dropdown
+  const navigationItems: NavigationItem[] = [
+    { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
+    { id: 'departamentos', label: 'Departamentos', icon: Briefcase },
+    { id: 'setores', label: 'Setores', icon: FolderTree },
+    { id: 'atendentes', label: 'Atendentes', icon: UserCircle2 },
+    { id: 'tags', label: 'Tags', icon: Tag },
+  ];
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2036,42 +2046,11 @@ export default function CompanyDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('mensagens')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'mensagens' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              Mensagens
-            </button>
-
-            <button
-              onClick={() => setActiveTab('departamentos')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'departamentos' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <Briefcase className="w-4 h-4" />
-              Departamentos
-            </button>
-            <button
-              onClick={() => setActiveTab('setores')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'setores' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <FolderTree className="w-4 h-4" />
-              Setores
-            </button>
-            <button
-              onClick={() => setActiveTab('atendentes')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'atendentes' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <UserCircle2 className="w-4 h-4" />
-              Atendentes
-            </button>
-            <button
-              onClick={() => setActiveTab('tags')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'tags' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <Tag className="w-4 h-4" />
-              Tags
-            </button>
+            <NavigationDropdown
+              items={navigationItems}
+              activeItem={activeTab}
+              onItemChange={(itemId) => setActiveTab(itemId as TabType)}
+            />
             <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}

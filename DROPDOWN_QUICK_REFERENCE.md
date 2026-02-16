@@ -5,12 +5,13 @@
 | # | Nome | Trigger | Localização | Itens | Ação Principal |
 |---|------|---------|-------------|-------|----------------|
 | 1 | **Menu de Perfil** | Avatar + Nome ▼ | Header direito | 3 | Navegação e logout |
-| 2 | **Menu de Contexto** | Clique direito | Lista contatos | 4 | Ações em contato |
-| 3 | **Painel Notificações** | Ícone 🔔 | Header direito | N | Avisos do sistema |
-| 4 | **Modal Transferência** | Via contexto | Overlay | 2 dropdowns | Mover contato |
-| 5 | **Modal Tags** | Via contexto | Overlay | Checkboxes | Adicionar tags |
-| 6 | **Filtro Departamento** | Toggle buttons | Sidebar | 2 opções | Filtrar lista |
-| 7 | **Filtro Status** | Buttons | Histórico | 4 opções | Filtrar tickets |
+| 2 | **Dropdown Navegação** | Botão [Seção ▼] | Header centro | 5 | Trocar seção ativa |
+| 3 | **Menu de Contexto** | Clique direito | Lista contatos | 4 | Ações em contato |
+| 4 | **Painel Notificações** | Ícone 🔔 | Header direito | N | Avisos do sistema |
+| 5 | **Modal Transferência** | Via contexto | Overlay | 2 dropdowns | Mover contato |
+| 6 | **Modal Tags** | Via contexto | Overlay | Checkboxes | Adicionar tags |
+| 7 | **Filtro Departamento** | Toggle buttons | Sidebar | 2 opções | Filtrar lista |
+| 8 | **Filtro Status** | Buttons | Histórico | 4 opções | Filtrar tickets |
 
 ---
 
@@ -25,6 +26,46 @@
 **Arquivos:**
 - Componente: `src/components/ProfileDropdown.tsx`
 - Usado em: `CompanyDashboard.tsx`, `AttendantDashboard.tsx`
+
+---
+
+## 🧭 Dropdown de Navegação - Cheatsheet
+
+| Seção | Ícone | Conteúdo | Dashboard |
+|-------|-------|----------|-----------|
+| Mensagens | 📱 | Tela de conversas e atendimento | Company/Attendant |
+| Departamentos | 🏢 | Gerenciamento de departamentos | Company only |
+| Setores | 📁 | Gerenciamento de setores | Company only |
+| Atendentes | 👥 | Gerenciamento de atendentes | Company only |
+| Tags | 🏷️ | Gerenciamento de tags | Company only |
+
+**Arquivos:**
+- Componente: `src/components/NavigationDropdown.tsx`
+- Usado em: `CompanyDashboard.tsx`
+
+**Como usar:**
+```tsx
+const navigationItems: NavigationItem[] = [
+  { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
+  { id: 'departamentos', label: 'Departamentos', icon: Briefcase },
+  { id: 'setores', label: 'Setores', icon: FolderTree },
+  { id: 'atendentes', label: 'Atendentes', icon: UserCircle2 },
+  { id: 'tags', label: 'Tags', icon: Tag },
+];
+
+<NavigationDropdown
+  items={navigationItems}
+  activeItem={activeTab}
+  onItemChange={(itemId) => setActiveTab(itemId as TabType)}
+/>
+```
+
+**Características:**
+- Botão mostra seção ativa com ícone e label
+- Chevron ▼ rotaciona 180° ao abrir
+- Item ativo tem indicador (●) à direita
+- Click fora fecha automaticamente
+- Animação suave de abertura
 
 ---
 

@@ -63,22 +63,37 @@ Este documento descreve todos os menus dropdown e elementos interativos do siste
 
 ---
 
-## 2️⃣ Navegação Principal (Abas)
+## 2️⃣ Dropdown de Navegação Principal
 
-### 🔘 Trigger Elements
-**Localização:** Centro do header
-**Tipo:** Abas de navegação (não dropdown, mas parte da estrutura)
-
-```
-┌──────────┬──────────────┬──────────┬────────────┬──────┐
-│ 📱 Msg  │ 🏢 Depart   │ 📁 Set  │ 👥 Atend  │ 🏷️ Tag │
-└──────────┴──────────────┴──────────┴────────────┴──────┘
-```
-
-### 📂 Estrutura
+### 🔘 Trigger Element
+**Localização:** Centro do header (lado esquerdo)
+**Elemento:** Botão dropdown com ícone + label + chevron ▼
 
 ```
-Navegação Principal
+┌─────────────────────────┐
+│ 📱 Mensagens ▼         │  ← Botão clicável
+└─────────────────────────┘
+```
+
+### 📂 Estrutura do Menu
+
+```
+[Seção Ativa] ▼
+│
+├─────────────────────────────────┐
+│ 📱 Mensagens                ●  │ ← Item ativo (com indicador)
+├─────────────────────────────────┤
+│ 🏢 Departamentos               │
+│ 📁 Setores                     │
+│ 👥 Atendentes                  │
+│ 🏷️ Tags                        │
+└─────────────────────────────────┘
+```
+
+**Mapeamento das seções:**
+
+```
+Navegação Principal ▼
 │
 ├── 📱 Mensagens → Tela de conversas e atendimento
 ├── 🏢 Departamentos → Gerenciamento de departamentos
@@ -89,10 +104,25 @@ Navegação Principal
 
 ### 🎨 Estados Visuais
 
-| Estado | Classe CSS | Aparência |
-|--------|------------|-----------|
-| **Ativo** | `from-blue-500 to-blue-600 text-white shadow-lg` | Gradiente azul com sombra |
-| **Inativo** | `text-slate-600 hover:bg-slate-50` | Cinza, hover com fundo claro |
+| Estado | Descrição |
+|--------|-----------|
+| **Botão fechado** | Gradiente azul com sombra, chevron ▼ para baixo |
+| **Botão aberto** | Gradiente azul com sombra maior, chevron ▲ para cima |
+| **Item ativo** | Fundo azul claro (`bg-blue-50`), texto azul, indicador • |
+| **Item hover** | Fundo cinza claro (`bg-slate-50`) |
+
+### ⚡ Comportamento
+
+- **Abrir:** Click no botão dropdown
+- **Fechar:** Click fora do menu ou ao selecionar um item
+- **Animação:** Slide up ao abrir
+- **Indicador visual:** Chevron rotaciona 180° quando aberto
+- **Item ativo:** Mostra indicador (●) à direita
+
+### 🎯 Dashboards que possuem
+
+- ✅ **CompanyDashboard** (Empresa) - Todas as 5 opções
+- ❌ **AttendantDashboard** (Atendente) - Não possui (usa apenas visualização de mensagens)
 
 ---
 
