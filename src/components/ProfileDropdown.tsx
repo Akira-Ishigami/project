@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, History, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { User, History, Settings, LogOut, ChevronDown, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag } from 'lucide-react';
 
 interface ProfileDropdownProps {
   userName: string;
   onHistoryClick: () => void;
   onSettingsClick: () => void;
   onLogout: () => void;
+  onMessagesClick?: () => void;
+  onDepartmentsClick?: () => void;
+  onSectorsClick?: () => void;
+  onAttendantsClick?: () => void;
+  onTagsClick?: () => void;
+  showNavigationOptions?: boolean;
 }
 
 export default function ProfileDropdown({
@@ -13,6 +19,12 @@ export default function ProfileDropdown({
   onHistoryClick,
   onSettingsClick,
   onLogout,
+  onMessagesClick,
+  onDepartmentsClick,
+  onSectorsClick,
+  onAttendantsClick,
+  onTagsClick,
+  showNavigationOptions = false,
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -56,6 +68,62 @@ export default function ProfileDropdown({
             <p className="text-sm font-semibold text-slate-900">{userName}</p>
             <p className="text-xs text-slate-500 mt-0.5">Conta ativa</p>
           </div>
+
+          {showNavigationOptions && (
+            <>
+              {onMessagesClick && (
+                <button
+                  onClick={() => handleMenuClick(onMessagesClick)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium">Mensagens</span>
+                </button>
+              )}
+
+              {onDepartmentsClick && (
+                <button
+                  onClick={() => handleMenuClick(onDepartmentsClick)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Briefcase className="w-5 h-5 text-slate-600" />
+                  <span className="font-medium">Departamentos</span>
+                </button>
+              )}
+
+              {onSectorsClick && (
+                <button
+                  onClick={() => handleMenuClick(onSectorsClick)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <FolderTree className="w-5 h-5 text-slate-600" />
+                  <span className="font-medium">Setores</span>
+                </button>
+              )}
+
+              {onAttendantsClick && (
+                <button
+                  onClick={() => handleMenuClick(onAttendantsClick)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <UserCircle2 className="w-5 h-5 text-slate-600" />
+                  <span className="font-medium">Atendentes</span>
+                </button>
+              )}
+
+              {onTagsClick && (
+                <button
+                  onClick={() => handleMenuClick(onTagsClick)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <Tag className="w-5 h-5 text-slate-600" />
+                  <span className="font-medium">Tags</span>
+                </button>
+              )}
+
+              <div className="border-t border-slate-100 my-2"></div>
+            </>
+          )}
 
           <button
             onClick={() => handleMenuClick(onHistoryClick)}

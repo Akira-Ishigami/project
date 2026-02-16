@@ -10,7 +10,6 @@ import TagsManagement from './TagsManagement';
 import TicketHistory from './TicketHistory';
 import SettingsPage from './SettingsPage';
 import ProfileDropdown from './ProfileDropdown';
-import NavigationDropdown, { NavigationItem } from './NavigationDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
@@ -110,15 +109,6 @@ export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
   const { settings, loadCompanyTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
-
-  // Navigation items para o dropdown
-  const navigationItems: NavigationItem[] = [
-    { id: 'mensagens', label: 'Mensagens', icon: MessageSquare },
-    { id: 'departamentos', label: 'Departamentos', icon: Briefcase },
-    { id: 'setores', label: 'Setores', icon: FolderTree },
-    { id: 'atendentes', label: 'Atendentes', icon: UserCircle2 },
-    { id: 'tags', label: 'Tags', icon: Tag },
-  ];
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2046,11 +2036,6 @@ export default function CompanyDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <NavigationDropdown
-              items={navigationItems}
-              activeItem={activeTab}
-              onItemChange={(itemId) => setActiveTab(itemId as TabType)}
-            />
             <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}
@@ -2153,6 +2138,12 @@ export default function CompanyDashboard() {
               onHistoryClick={() => setActiveTab('historico')}
               onSettingsClick={() => setActiveTab('configuracoes')}
               onLogout={signOut}
+              showNavigationOptions={true}
+              onMessagesClick={() => setActiveTab('mensagens')}
+              onDepartmentsClick={() => setActiveTab('departamentos')}
+              onSectorsClick={() => setActiveTab('setores')}
+              onAttendantsClick={() => setActiveTab('atendentes')}
+              onTagsClick={() => setActiveTab('tags')}
             />
           </div>
         </div>
