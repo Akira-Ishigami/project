@@ -70,12 +70,12 @@ export default function TicketHistory() {
             } else {
               const { data: companyData } = await supabase
                 .from('companies')
-                .select('display_name')
+                .select('name')
                 .eq('user_id', ticket.ticket_closed_by)
                 .maybeSingle();
 
               if (companyData) {
-                closedByName = companyData.display_name;
+                closedByName = companyData.name;
               }
             }
           }

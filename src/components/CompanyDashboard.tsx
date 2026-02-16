@@ -1212,9 +1212,15 @@ export default function CompanyDashboard() {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+
       const { error: updateError } = await supabase
         .from('contacts')
-        .update({ ticket_status: 'closed' })
+        .update({
+          ticket_status: 'closed',
+          ticket_closed_at: new Date().toISOString(),
+          ticket_closed_by: user?.id || null
+        })
         .eq('id', currentContact.id)
         .eq('company_id', company.id);
 
@@ -1225,7 +1231,12 @@ export default function CompanyDashboard() {
 
       setContactsDB(prev => prev.map(c =>
         c.id === currentContact.id
-          ? { ...c, ticket_status: 'closed' }
+          ? {
+              ...c,
+              ticket_status: 'closed',
+              ticket_closed_at: new Date().toISOString(),
+              ticket_closed_by: user?.id || null
+            }
           : c
       ));
 

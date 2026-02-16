@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin, Bot } from 'lucide-react';
+import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Tag, ArrowRightLeft, Building2, Pin, Bot, CheckCircle2 } from 'lucide-react';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
@@ -980,6 +980,56 @@ export default function AttendantDashboard() {
     }
   };
 
+  const handleCloseTicket = async () => {
+    if (!selectedContactData || !attendant?.company_id) return;
+
+    try {
+      const contactDB = contactsDB.find(c =>
+        normalizeDbPhone(c.phone_number) === normalizeDbPhone(selectedContactData.phoneNumber)
+      );
+
+      if (!contactDB) {
+        setToastMessage('❌ Erro: Contato não encontrado');
+        setShowToast(true);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error: updateError } = await supabase
+        .from('contacts')
+        .update({
+          ticket_status: 'closed',
+          ticket_closed_at: new Date().toISOString(),
+          ticket_closed_by: user?.id || null
+        })
+        .eq('id', contactDB.id)
+        .eq('company_id', attendant.company_id);
+
+      if (updateError) throw updateError;
+
+      setToastMessage('✅ Atendimento finalizado com sucesso!');
+      setShowToast(true);
+
+      setContactsDB(prev => prev.map(c =>
+        c.id === contactDB.id
+          ? {
+              ...c,
+              ticket_status: 'closed',
+              ticket_closed_at: new Date().toISOString(),
+              ticket_closed_by: user?.id || null
+            }
+          : c
+      ));
+
+      await fetchContacts();
+    } catch (error: any) {
+      console.error('Erro ao finalizar atendimento:', error);
+      setToastMessage('❌ Erro ao finalizar atendimento');
+      setShowToast(true);
+    }
+  };
+
   // Funções do menu de contexto
   const handleContextMenu = (e: React.MouseEvent, phoneNumber: string) => {
     e.preventDefault();
@@ -1565,6 +1615,14 @@ export default function AttendantDashboard() {
                   >
                     <Tag className="w-4 h-4" />
                     Tags
+                  </button>
+                  <button
+                    onClick={handleCloseTicket}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-all flex items-center gap-2 shadow-sm"
+                    title="Finalizar atendimento"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Finalizar</span>
                   </button>
                 </div>
               </div>
