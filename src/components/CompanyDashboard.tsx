@@ -7,7 +7,9 @@ import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
 import TagsManagement from './TagsManagement';
-import SettingsPanel from './SettingsPanel';
+import TicketHistory from './TicketHistory';
+import SettingsPage from './SettingsPage';
+import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
@@ -101,7 +103,7 @@ function normalizeDbPhone(input?: string | null): string {
 }
 
 
-type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags' | 'configuracoes';
+type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags' | 'historico' | 'configuracoes';
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
@@ -2071,13 +2073,6 @@ export default function CompanyDashboard() {
               Tags
             </button>
             <button
-              onClick={() => setActiveTab('configuracoes')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${activeTab === 'configuracoes' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]' : 'text-slate-600 hover:bg-slate-50 hover:scale-[1.02]'}`}
-            >
-              <Settings className="w-4 h-4" />
-              Configurações
-            </button>
-            <button
               onClick={handleToggleIaGlobal}
               disabled={togglingIaGlobal}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
@@ -2174,13 +2169,12 @@ export default function CompanyDashboard() {
                 </div>
               )}
             </div>
-            <button
-              onClick={signOut}
-              className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            <ProfileDropdown
+              userName={company?.name || 'Empresa'}
+              onHistoryClick={() => setActiveTab('historico')}
+              onSettingsClick={() => setActiveTab('configuracoes')}
+              onLogout={signOut}
+            />
           </div>
         </div>
       </header>
@@ -2806,8 +2800,10 @@ export default function CompanyDashboard() {
             <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
               <TagsManagement />
             </div>
+          ) : activeTab === 'historico' ? (
+            <TicketHistory />
           ) : activeTab === 'configuracoes' ? (
-            <SettingsPanel />
+            <SettingsPage />
           ) : null}
         </div>
       </div>

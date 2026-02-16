@@ -6,6 +6,9 @@ import { MessageSquare, LogOut, MoreVertical, Search, AlertCircle, CheckCheck, F
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
+import ProfileDropdown from './ProfileDropdown';
+import TicketHistory from './TicketHistory';
+import SettingsPage from './SettingsPage';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
 
 interface Contact {
@@ -88,6 +91,7 @@ function normalizeDbPhone(input?: string | null): string {
 export default function AttendantDashboard() {
   const { attendant, company, signOut } = useAuth();
   const { settings, loadCompanyTheme } = useTheme();
+  const [currentView, setCurrentView] = useState<'mensagens' | 'historico' | 'configuracoes'>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1358,13 +1362,12 @@ export default function AttendantDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={signOut}
-                className="ml-2 p-2.5 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-all duration-200"
-                title="Sair"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              <ProfileDropdown
+                userName={attendant?.name || 'Atendente'}
+                onHistoryClick={() => setCurrentView('historico')}
+                onSettingsClick={() => setCurrentView('configuracoes')}
+                onLogout={signOut}
+              />
             </div>
           </div>
         </div>
@@ -1372,11 +1375,17 @@ export default function AttendantDashboard() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Contacts List */}
-        <div
-          className={`${sidebarOpen ? 'flex' : 'hidden'
-            } md:flex w-full md:w-[360px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/80 flex-col shadow-xl transition-colors duration-300`}
-        >
+        {currentView === 'historico' ? (
+          <TicketHistory />
+        ) : currentView === 'configuracoes' ? (
+          <SettingsPage />
+        ) : (
+          <>
+            {/* Sidebar - Contacts List */}
+            <div
+              className={`${sidebarOpen ? 'flex' : 'hidden'
+                } md:flex w-full md:w-[360px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-r border-slate-200/80 dark:border-slate-700/80 flex-col shadow-xl transition-colors duration-300`}
+            >
           {error && (
             <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
               <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" />
@@ -1950,6 +1959,8 @@ export default function AttendantDashboard() {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
 
       {/* Image Modal */}
