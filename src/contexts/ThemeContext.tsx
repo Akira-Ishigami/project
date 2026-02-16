@@ -136,8 +136,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
         // Prepare theme_settings update object
         const themeUpdate: any = {};
-        if (newSettings.displayName !== undefined) themeUpdate.display_name = newSettings.displayName;
-        if (newSettings.logoUrl !== undefined) themeUpdate.logo_url = newSettings.logoUrl;
         if (newSettings.incomingMessageColor !== undefined) themeUpdate.incoming_message_color = newSettings.incomingMessageColor;
         if (newSettings.outgoingMessageColor !== undefined) themeUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
         if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
@@ -181,23 +179,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           if (error) {
             console.error('Error inserting theme settings:', error);
             throw error;
-          }
-        }
-
-        // Also update companies table for backward compatibility (logo and display name only)
-        const companyUpdate: any = {};
-        if (newSettings.displayName !== undefined) companyUpdate.display_name = newSettings.displayName;
-        if (newSettings.logoUrl !== undefined) companyUpdate.logo_url = newSettings.logoUrl;
-
-        if (Object.keys(companyUpdate).length > 0) {
-          const { error: companyError } = await supabase
-            .from('companies')
-            .update(companyUpdate)
-            .eq('id', id);
-
-          if (companyError) {
-            console.error('Error updating company:', companyError);
-            // Don't throw - companies table update is secondary
           }
         }
 
