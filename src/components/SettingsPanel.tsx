@@ -71,8 +71,8 @@ export default function SettingsPanel() {
         {/* Message Colors */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 animate-slideUp transition-colors duration-300">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Palette className="text-purple-600" size={24} />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Palette className="text-blue-600" size={24} />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Cores das Mensagens</h2>
