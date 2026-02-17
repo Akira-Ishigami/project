@@ -101,7 +101,6 @@ export default function AttendantDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [contactFilter, setContactFilter] = useState<'todos' | 'departamento' | 'abertos'>('todos');
-  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string | null>(null);
 
   // Cache para evitar múltiplas buscas no fallback de contatos
   const fetchedPhonesRef = useRef<Set<string>>(new Set());
@@ -768,9 +767,9 @@ export default function AttendantDashboard() {
     }
 
     // Aplicar novos filtros
-    if (contactFilter === 'departamento' && selectedDepartmentFilter) {
+    if (contactFilter === 'departamento' && attendant?.department_id) {
       filtered = filtered.filter(contact =>
-        contact.department_id === selectedDepartmentFilter
+        contact.department_id === attendant.department_id
       );
     }
 
@@ -805,7 +804,7 @@ export default function AttendantDashboard() {
     });
 
     return filtered;
-  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB, contactFilter, selectedDepartmentFilter]);
+  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB, contactFilter]);
 
   const selectedContactData = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact)
@@ -1560,17 +1559,14 @@ export default function AttendantDashboard() {
 
             <div className="flex gap-2 flex-wrap">
               <button
-                onClick={() => {
-                  setContactFilter('todos');
-                  setSelectedDepartmentFilter(null);
-                }}
+                onClick={() => setContactFilter('departamento')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  contactFilter === 'todos'
-                    ? 'bg-blue-500 text-white shadow-sm'
+                  contactFilter === 'departamento'
+                    ? 'bg-purple-500 text-white shadow-sm'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                Todos
+                Departamento
               </button>
               <button
                 onClick={() => setContactFilter('abertos')}
@@ -1582,27 +1578,16 @@ export default function AttendantDashboard() {
               >
                 Chamados Abertos
               </button>
-              {contactFilter === 'departamento' ? (
-                <select
-                  value={selectedDepartmentFilter || ''}
-                  onChange={(e) => setSelectedDepartmentFilter(e.target.value || null)}
-                  className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500 text-white shadow-sm border-0 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                >
-                  <option value="">Todos os Departamentos</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <button
-                  onClick={() => setContactFilter('departamento')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all"
-                >
-                  Por Departamento
-                </button>
-              )}
+              <button
+                onClick={() => setContactFilter('todos')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  contactFilter === 'todos'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                Todos
+              </button>
             </div>
           </div>
 
