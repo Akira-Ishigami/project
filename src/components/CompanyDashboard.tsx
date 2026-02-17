@@ -2114,7 +2114,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:bg-black overflow-hidden transition-colors duration-300">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50  overflow-hidden transition-colors duration-300">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -2124,7 +2124,7 @@ export default function CompanyDashboard() {
       )}
 
       {/* Fixed Header with Navigation */}
-      <header className="bg-white/80 dark:bg-[#1e293b]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-600/50 shadow-sm z-50 transition-colors duration-300">
+      <header className="bg-white/80  backdrop-blur-xl border-b border-slate-200/80  shadow-sm z-50 transition-colors duration-300">
         <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -2151,7 +2151,7 @@ export default function CompanyDashboard() {
             </div>
             <div>
               <h1 className="text-slate-900 font-bold text-lg">
-                {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : company?.name}
+                {settings.companyName && settings.companyName.trim() !== '' ? settings.companyName : company?.name}
               </h1>
               <p className="text-xs text-slate-500">Atendimento Multicanal</p>
             </div>
@@ -2177,28 +2177,18 @@ export default function CompanyDashboard() {
               <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
             </button>
             <div className="relative ml-2">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110"
-                title="Notificações"
-              >
+              <div className="relative p-2.5 text-slate-500">
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg shadow-red-500/40 animate-pulse">
                     {unreadNotificationsCount}
                   </span>
                 )}
-              </button>
-              {showNotifications && (
+              </div>
+              {(
                 <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-hidden flex flex-col">
-                  <div className="p-4 border-b-2 border-gray-300 flex items-center justify-between">
+                  <div className="p-4 border-b-2 border-gray-300">
                     <h3 className="font-semibold text-gray-900">Notificações</h3>
-                    <button
-                      onClick={() => setShowNotifications(false)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
                   </div>
                   <div className="overflow-y-auto flex-1">
                     {notifications.length === 0 ? (
@@ -2334,7 +2324,7 @@ export default function CompanyDashboard() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white dark:from-black dark:to-black">
+            <div className="flex-1 overflow-y-auto bg-gradient-to-b from-slate-50/50 to-white  ">
               {filteredContacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-8">
                   <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-200/50">
@@ -2512,13 +2502,26 @@ export default function CompanyDashboard() {
                 </div>
               </header>
 
-              <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-black px-3 py-4" ref={messagesContainerRef} onScroll={handleMessagesScroll}>
+              <div
+                className="flex-1 overflow-y-auto px-3 py-4"
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                style={{
+                  backgroundColor: settings.backgroundType === 'color' ? settings.backgroundColor : undefined,
+                  backgroundImage: settings.backgroundType === 'image' && settings.backgroundImageUrl
+                    ? `url(${settings.backgroundImageUrl})`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundAttachment: 'fixed'
+                }}
+              >
                 <div className="w-full">
                   {Object.entries(messageGroups).map(([date, msgs]) => (
                     <div key={date} className="mb-6">
                       <div className="flex justify-center mb-4">
-                        <div className="bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-gray-200 dark:border-slate-600">
-                          <p className="text-xs text-gray-600 dark:text-slate-300 font-medium">{date}</p>
+                        <div className="bg-white  px-3 py-1 rounded-full border border-gray-200 ">
+                          <p className="text-xs text-gray-600  font-medium">{date}</p>
                         </div>
                       </div>
                       <div className="space-y-3">
@@ -2935,19 +2938,19 @@ export default function CompanyDashboard() {
               </div>
             </div>
           ) : activeTab === 'departamentos' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
               <DepartmentsManagement />
             </div>
           ) : activeTab === 'setores' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
               <SectorsManagement />
             </div>
           ) : activeTab === 'atendentes' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
               <AttendantsManagement />
             </div>
           ) : activeTab === 'tags' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black overflow-y-auto">
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
               <TagsManagement />
             </div>
           ) : activeTab === 'historico' ? (
@@ -3153,13 +3156,13 @@ export default function CompanyDashboard() {
       {/* Menu de contexto (clique direito) */}
       {contextMenu && (
         <div
-          className="fixed bg-white dark:bg-[#1e293b] rounded-lg shadow-2xl border border-slate-200 dark:border-slate-600 py-2 z-50 min-w-[200px] transition-colors duration-300"
+          className="fixed bg-white  rounded-lg shadow-2xl border border-slate-200  py-2 z-50 min-w-[200px] transition-colors duration-300"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => handleTogglePin(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
           >
             <Pin className="w-4 h-4" />
             {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.pinned
@@ -3168,7 +3171,7 @@ export default function CompanyDashboard() {
           </button>
           <button
             onClick={() => handleToggleIA(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
           >
             <Bot className="w-4 h-4" />
             {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
@@ -3177,14 +3180,14 @@ export default function CompanyDashboard() {
           </button>
           <button
             onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
           >
             <Tag className="w-4 h-4" />
             Adicionar tag
           </button>
           <button
             onClick={() => handleContextMenuTransfer(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
+            className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
           >
             <ArrowRightLeft className="w-4 h-4" />
             Transferir departamento

@@ -2,32 +2,37 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 
 interface ThemeSettings {
-  displayName: string;
+  companyName: string;
   logoUrl: string;
-  incomingMessageColor: string;
-  outgoingMessageColor: string;
-  incomingTextColor: string;
-  outgoingTextColor: string;
+  backgroundType: 'color' | 'image';
+  backgroundColor: string;
+  backgroundImageUrl: string;
+  messageBubbleSentColor: string;
+  messageBubbleSentTextColor: string;
+  messageBubbleReceivedColor: string;
+  messageBubbleReceivedTextColor: string;
   primaryColor: string;
-  accentColor: string;
 }
 
 interface ThemeContextType {
   settings: ThemeSettings;
-  updateSettings: (newSettings: Partial<ThemeSettings>, saveToDb?: boolean) => Promise<void>;
+  companyId: string | null;
+  updateSettings: (newSettings: Partial<ThemeSettings>) => Promise<void>;
   resetSettings: () => void;
   loadCompanyTheme: (companyId: string) => Promise<void>;
 }
 
 const defaultSettings: ThemeSettings = {
-  displayName: '',
+  companyName: '',
   logoUrl: '',
-  incomingMessageColor: '#f1f5f9',
-  outgoingMessageColor: '#3b82f6',
-  incomingTextColor: '#1e293b',
-  outgoingTextColor: '#ffffff',
+  backgroundType: 'color',
+  backgroundColor: '#f8fafc',
+  backgroundImageUrl: '',
+  messageBubbleSentColor: '#3b82f6',
+  messageBubbleSentTextColor: '#ffffff',
+  messageBubbleReceivedColor: '#ffffff',
+  messageBubbleReceivedTextColor: '#1e293b',
   primaryColor: '#3b82f6',
-  accentColor: '#06b6d4',
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -38,11 +43,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.style.setProperty('--color-primary', settings.primaryColor);
-    document.documentElement.style.setProperty('--color-accent', settings.accentColor);
-    document.documentElement.style.setProperty('--color-incoming-bg', settings.incomingMessageColor);
-    document.documentElement.style.setProperty('--color-outgoing-bg', settings.outgoingMessageColor);
-    document.documentElement.style.setProperty('--color-incoming-text', settings.incomingTextColor);
-    document.documentElement.style.setProperty('--color-outgoing-text', settings.outgoingTextColor);
+    document.documentElement.style.setProperty('--color-outgoing-bg', settings.messageBubbleSentColor);
+    document.documentElement.style.setProperty('--color-outgoing-text', settings.messageBubbleSentTextColor);
+    document.documentElement.style.setProperty('--color-incoming-bg', settings.messageBubbleReceivedColor);
+    document.documentElement.style.setProperty('--color-incoming-text', settings.messageBubbleReceivedTextColor);
   }, [settings]);
 
   const getCurrentCompanyId = async (): Promise<string | null> => {
@@ -77,7 +81,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       setCompanyId(id);
 
-      // Load from theme_settings table (primary source)
       const { data: themeData, error: themeError } = await supabase
         .from('theme_settings')
         .select('*')
@@ -88,105 +91,96 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         console.error('Error loading theme settings:', themeError);
       }
 
-      // Load from companies table as fallback for display_name and logo_url
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .select('display_name, logo_url')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (companyError) {
-        console.error('Error loading company data:', companyError);
+      if (themeData) {
+        setSettings({
+          companyName: themeData.company_name || defaultSettings.companyName,
+          logoUrl: themeData.logo_primary_url || defaultSettings.logoUrl,
+          backgroundType: themeData.background_type || defaultSettings.backgroundType,
+          backgroundColor: themeData.background_color || defaultSettings.backgroundColor,
+          backgroundImageUrl: themeData.background_image_url || defaultSettings.backgroundImageUrl,
+          messageBubbleSentColor: themeData.message_bubble_sent_color || defaultSettings.messageBubbleSentColor,
+          messageBubbleSentTextColor: themeData.message_bubble_sent_text_color || defaultSettings.messageBubbleSentTextColor,
+          messageBubbleReceivedColor: themeData.message_bubble_received_color || defaultSettings.messageBubbleReceivedColor,
+          messageBubbleReceivedTextColor: themeData.message_bubble_received_text_color || defaultSettings.messageBubbleReceivedTextColor,
+          primaryColor: themeData.primary_color || defaultSettings.primaryColor,
+        });
+      } else {
+        setSettings(defaultSettings);
       }
 
-      // Apply settings with proper priority: theme_settings > companies > defaults
-      setSettings({
-        displayName: themeData?.display_name || companyData?.display_name || defaultSettings.displayName,
-        logoUrl: themeData?.logo_url || companyData?.logo_url || defaultSettings.logoUrl,
-        incomingMessageColor: themeData?.incoming_message_color || defaultSettings.incomingMessageColor,
-        outgoingMessageColor: themeData?.outgoing_message_color || defaultSettings.outgoingMessageColor,
-        incomingTextColor: themeData?.incoming_text_color || defaultSettings.incomingTextColor,
-        outgoingTextColor: themeData?.outgoing_text_color || defaultSettings.outgoingTextColor,
-        primaryColor: themeData?.primary_color || defaultSettings.primaryColor,
-        accentColor: themeData?.accent_color || defaultSettings.accentColor,
-      });
-
-      console.log('Theme loaded successfully from theme_settings');
+      console.log('Theme loaded successfully');
     } catch (error) {
       console.error('Error loading company theme:', error);
     }
   };
 
-  const updateSettings = async (newSettings: Partial<ThemeSettings>, saveToDb = false) => {
+  const updateSettings = async (newSettings: Partial<ThemeSettings>) => {
     const merged = { ...settings, ...newSettings };
     setSettings(merged);
 
-    if (saveToDb) {
-      try {
-        let id = companyId;
+    try {
+      let id = companyId;
 
-        if (!id) {
-          id = await getCurrentCompanyId();
-        }
-
-        if (!id) {
-          console.error('Company ID not found');
-          throw new Error('Company ID not found');
-        }
-
-        // Prepare theme_settings update object
-        const themeUpdate: any = {};
-        if (newSettings.incomingMessageColor !== undefined) themeUpdate.incoming_message_color = newSettings.incomingMessageColor;
-        if (newSettings.outgoingMessageColor !== undefined) themeUpdate.outgoing_message_color = newSettings.outgoingMessageColor;
-        if (newSettings.incomingTextColor !== undefined) themeUpdate.incoming_text_color = newSettings.incomingTextColor;
-        if (newSettings.outgoingTextColor !== undefined) themeUpdate.outgoing_text_color = newSettings.outgoingTextColor;
-        if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
-        if (newSettings.accentColor !== undefined) themeUpdate.accent_color = newSettings.accentColor;
-
-        // Check if theme_settings record exists
-        const { data: existingTheme, error: checkError } = await supabase
-          .from('theme_settings')
-          .select('id')
-          .eq('company_id', id)
-          .maybeSingle();
-
-        if (checkError) {
-          console.error('Error checking theme settings:', checkError);
-          throw checkError;
-        }
-
-        // Save to theme_settings table (primary storage)
-        if (existingTheme) {
-          // Update existing record
-          const { error } = await supabase
-            .from('theme_settings')
-            .update(themeUpdate)
-            .eq('company_id', id);
-
-          if (error) {
-            console.error('Error updating theme settings:', error);
-            throw error;
-          }
-        } else {
-          // Insert new record
-          const { error } = await supabase
-            .from('theme_settings')
-            .insert({
-              company_id: id,
-              ...themeUpdate
-            });
-
-          if (error) {
-            console.error('Error inserting theme settings:', error);
-            throw error;
-          }
-        }
-
-        console.log('Theme settings saved successfully to theme_settings table');
-      } catch (error) {
-        console.error('Error saving theme settings:', error);
-        throw error;
+      if (!id) {
+        id = await getCurrentCompanyId();
       }
+
+      if (!id) {
+        console.error('Company ID not found');
+        throw new Error('Company ID not found');
+      }
+
+      const themeUpdate: any = {};
+      if (newSettings.companyName !== undefined) themeUpdate.company_name = newSettings.companyName;
+      if (newSettings.logoUrl !== undefined) themeUpdate.logo_primary_url = newSettings.logoUrl;
+      if (newSettings.backgroundType !== undefined) themeUpdate.background_type = newSettings.backgroundType;
+      if (newSettings.backgroundColor !== undefined) themeUpdate.background_color = newSettings.backgroundColor;
+      if (newSettings.backgroundImageUrl !== undefined) themeUpdate.background_image_url = newSettings.backgroundImageUrl;
+      if (newSettings.messageBubbleSentColor !== undefined) themeUpdate.message_bubble_sent_color = newSettings.messageBubbleSentColor;
+      if (newSettings.messageBubbleSentTextColor !== undefined) themeUpdate.message_bubble_sent_text_color = newSettings.messageBubbleSentTextColor;
+      if (newSettings.messageBubbleReceivedColor !== undefined) themeUpdate.message_bubble_received_color = newSettings.messageBubbleReceivedColor;
+      if (newSettings.messageBubbleReceivedTextColor !== undefined) themeUpdate.message_bubble_received_text_color = newSettings.messageBubbleReceivedTextColor;
+      if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
+
+      const { data: existingTheme, error: checkError } = await supabase
+        .from('theme_settings')
+        .select('id')
+        .eq('company_id', id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking theme settings:', checkError);
+        throw checkError;
+      }
+
+      if (existingTheme) {
+        const { error } = await supabase
+          .from('theme_settings')
+          .update(themeUpdate)
+          .eq('company_id', id);
+
+        if (error) {
+          console.error('Error updating theme settings:', error);
+          throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from('theme_settings')
+          .insert({
+            company_id: id,
+            ...themeUpdate
+          });
+
+        if (error) {
+          console.error('Error inserting theme settings:', error);
+          throw error;
+        }
+      }
+
+      console.log('Theme settings saved successfully');
+    } catch (error) {
+      console.error('Error saving theme settings:', error);
+      throw error;
     }
   };
 
@@ -195,7 +189,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ settings, updateSettings, resetSettings, loadCompanyTheme }}>
+    <ThemeContext.Provider value={{ settings, companyId, updateSettings, resetSettings, loadCompanyTheme }}>
       {children}
     </ThemeContext.Provider>
   );
