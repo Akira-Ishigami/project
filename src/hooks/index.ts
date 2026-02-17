@@ -4,3 +4,4 @@ export { useRealtimeDepartments } from './useRealtimeDepartments';
 export { useRealtimeSectors } from './useRealtimeSectors';
 export { useRealtimeNotifications } from './useRealtimeNotifications';
 export { useTransferencia } from './useTransferencia';
+export { useThemeSettings } from './useThemeSettings';

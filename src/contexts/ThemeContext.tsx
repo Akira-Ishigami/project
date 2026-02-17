@@ -108,6 +108,38 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setSettings(defaultSettings);
       }
 
+      const channel = supabase
+        .channel(`theme_settings:${id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'theme_settings',
+            filter: `company_id=eq.${id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const themeData = payload.new;
+              setSettings({
+                companyName: themeData.company_name || defaultSettings.companyName,
+                logoUrl: themeData.logo_primary_url || defaultSettings.logoUrl,
+                backgroundType: themeData.background_type || defaultSettings.backgroundType,
+                backgroundColor: themeData.background_color || defaultSettings.backgroundColor,
+                backgroundImageUrl: themeData.background_image_url || defaultSettings.backgroundImageUrl,
+                messageBubbleSentColor: themeData.message_bubble_sent_color || defaultSettings.messageBubbleSentColor,
+                messageBubbleSentTextColor: themeData.message_bubble_sent_text_color || defaultSettings.messageBubbleSentTextColor,
+                messageBubbleReceivedColor: themeData.message_bubble_received_color || defaultSettings.messageBubbleReceivedColor,
+                messageBubbleReceivedTextColor: themeData.message_bubble_received_text_color || defaultSettings.messageBubbleReceivedTextColor,
+                primaryColor: themeData.primary_color || defaultSettings.primaryColor,
+              });
+            } else if (payload.eventType === 'DELETE') {
+              setSettings(defaultSettings);
+            }
+          }
+        )
+        .subscribe();
+
       console.log('Theme loaded successfully');
     } catch (error) {
       console.error('Error loading company theme:', error);
@@ -184,8 +216,27 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const resetSettings = () => {
+  const resetSettings = async () => {
     setSettings(defaultSettings);
+
+    try {
+      let id = companyId;
+
+      if (!id) {
+        id = await getCurrentCompanyId();
+      }
+
+      if (id) {
+        await supabase
+          .from('theme_settings')
+          .delete()
+          .eq('company_id', id);
+
+        console.log('Theme settings reset to default');
+      }
+    } catch (error) {
+      console.error('Error resetting theme settings:', error);
+    }
   };
 
   return (

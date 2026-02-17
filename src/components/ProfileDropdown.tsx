@@ -12,6 +12,7 @@ interface ProfileDropdownProps {
   onAttendantsClick?: () => void;
   onTagsClick?: () => void;
   showNavigationOptions?: boolean;
+  showSettings?: boolean;
   activeTab?: string;
 }
 
@@ -26,6 +27,7 @@ export default function ProfileDropdown({
   onAttendantsClick,
   onTagsClick,
   showNavigationOptions = false,
+  showSettings = true,
   activeTab,
 }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -177,20 +179,22 @@ export default function ProfileDropdown({
             )}
           </button>
 
-          <button
-            onClick={() => handleMenuClick(onSettingsClick)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-              activeTab === 'configuracoes'
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <Settings className={`w-5 h-5 ${activeTab === 'configuracoes' ? 'text-blue-600' : 'text-slate-600'}`} />
-            <span className="font-medium">Configurações</span>
-            {activeTab === 'configuracoes' && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-            )}
-          </button>
+          {showSettings && (
+            <button
+              onClick={() => handleMenuClick(onSettingsClick)}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                activeTab === 'configuracoes'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Settings className={`w-5 h-5 ${activeTab === 'configuracoes' ? 'text-blue-600' : 'text-slate-600'}`} />
+              <span className="font-medium">Configurações</span>
+              {activeTab === 'configuracoes' && (
+                <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+              )}
+            </button>
+          )}
 
           <div className="border-t border-slate-100 mt-2 pt-2">
             <button

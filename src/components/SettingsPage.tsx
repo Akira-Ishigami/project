@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Settings, Palette, Image as ImageIcon, Building2, Upload, X } from 'lucide-react';
+import { Settings, Palette, Image as ImageIcon, Building2, Upload, X, RotateCcw } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 
 export default function SettingsPage() {
-  const { settings, updateSettings, companyId } = useTheme();
+  const { settings, updateSettings, resetSettings, companyId } = useTheme();
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
@@ -125,6 +125,18 @@ export default function SettingsPage() {
       alert('Erro ao salvar configurações');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (confirm('Tem certeza que deseja restaurar as configurações padrão? Esta ação não pode ser desfeita.')) {
+      try {
+        await resetSettings();
+        alert('Configurações restauradas para o padrão!');
+      } catch (error) {
+        console.error('Erro ao resetar configurações:', error);
+        alert('Erro ao resetar configurações');
+      }
     }
   };
 
@@ -478,6 +490,13 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex justify-end gap-4">
+            <button
+              onClick={handleReset}
+              className="px-6 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restaurar Padrão
+            </button>
             <button
               onClick={handleSave}
               disabled={saving}

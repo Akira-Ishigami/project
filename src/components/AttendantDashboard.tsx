@@ -8,7 +8,6 @@ import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
 import ProfileDropdown from './ProfileDropdown';
 import TicketHistory from './TicketHistory';
-import SettingsPage from './SettingsPage';
 import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
 
 interface Contact {
@@ -1480,6 +1479,7 @@ export default function AttendantDashboard() {
                 onHistoryClick={() => setCurrentView('historico')}
                 onSettingsClick={() => setCurrentView('configuracoes')}
                 onLogout={signOut}
+                showSettings={false}
                 activeTab={currentView}
               />
             </div>
@@ -1491,8 +1491,6 @@ export default function AttendantDashboard() {
       <div className="flex-1 flex overflow-hidden">
         {currentView === 'historico' ? (
           <TicketHistory onOpenChat={handleOpenChatFromHistory} />
-        ) : currentView === 'configuracoes' ? (
-          <SettingsPage />
         ) : (
           <>
             {/* Sidebar - Contacts List */}
