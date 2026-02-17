@@ -162,10 +162,6 @@ export default function AttendantDashboard() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
 
-  // Filtro de departamento
-  type FilterMode = 'mine' | 'all';
-  const [filterMode, setFilterMode] = useState<FilterMode>('mine');
-
   // Modais de transferência e tags
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
@@ -759,14 +755,7 @@ export default function AttendantDashboard() {
   const filteredContacts = useMemo(() => {
     let filtered = contacts;
 
-    // Aplicar filtro de departamento (filtro antigo do atendente)
-    if (filterMode === 'mine' && attendant?.department_id) {
-      filtered = filtered.filter(contact =>
-        contact.department_id === attendant.department_id
-      );
-    }
-
-    // Aplicar novos filtros
+    // Aplicar filtros
     if (contactFilter === 'departamento' && attendant?.department_id) {
       filtered = filtered.filter(contact =>
         contact.department_id === attendant.department_id
@@ -804,7 +793,7 @@ export default function AttendantDashboard() {
     });
 
     return filtered;
-  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB, contactFilter]);
+  }, [contacts, attendant?.department_id, searchTerm, contactsDB, contactFilter]);
 
   const selectedContactData = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact)
@@ -1235,7 +1224,7 @@ export default function AttendantDashboard() {
         }
       }
     }
-  }, [filterMode, filteredContacts, selectedContact]);
+  }, [contactFilter, filteredContacts, selectedContact]);
 
   // Fechar menu de contexto ao clicar fora
   useEffect(() => {
@@ -1518,33 +1507,7 @@ export default function AttendantDashboard() {
             </div>
           )}
 
-          {/* Filtros de Departamento */}
-          <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-black dark:to-black transition-colors duration-300">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilterMode('mine')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  filterMode === 'mine'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
-                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 hover:scale-[1.02] border border-slate-200 dark:border-slate-600'
-                }`}
-              >
-                Meu Departamento
-              </button>
-              <button
-                onClick={() => setFilterMode('all')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  filterMode === 'all'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 transform scale-[1.02]'
-                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 hover:scale-[1.02] border border-slate-200 dark:border-slate-600'
-                }`}
-              >
-                Todos
-              </button>
-            </div>
-          </div>
-
-          {/* Barra de Pesquisa */}
+          {/* Barra de Pesquisa e Filtros */}
           <div className="px-4 py-3 border-b border-slate-200/80">
             <div className="relative group mb-3">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
@@ -1598,8 +1561,10 @@ export default function AttendantDashboard() {
                 <User className="w-16 h-16 mb-4 text-slate-300" />
                 <p className="font-medium text-slate-600">Nenhum contato encontrado</p>
                 <p className="text-sm text-slate-400 mt-2">
-                  {filterMode === 'mine'
+                  {contactFilter === 'departamento'
                     ? 'Não há contatos no seu departamento'
+                    : contactFilter === 'abertos'
+                    ? 'Não há chamados abertos'
                     : 'Nenhuma conversa disponível'}
                 </p>
               </div>
@@ -2043,7 +2008,7 @@ export default function AttendantDashboard() {
 
               {/* Message Input ou Botão Assumir Conversa */}
               <div className="bg-white/95 backdrop-blur-sm border-t border-slate-200/80 p-4 shadow-lg">
-                {filterMode === 'all' && !isContactFromMyDepartment ? (
+                {contactFilter === 'todos' && !isContactFromMyDepartment ? (
                   // Mostrar botão para assumir conversa
                   <div className="flex flex-col items-center gap-3 py-4">
                     <div className="text-center">
