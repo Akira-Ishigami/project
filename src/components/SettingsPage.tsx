@@ -329,8 +329,8 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              <div className="lg:col-span-3 space-y-8">
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-slate-900">Mensagens Recebidas</h3>
@@ -488,68 +488,75 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-2">
                 <div className="sticky top-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Visualização</h3>
-                  <div className="space-y-4 p-6 rounded-xl border-2 border-slate-200" style={{ backgroundColor: formData.backgroundColor }}>
+                  <div className="flex items-center justify-center mb-4">
+                    <h3 className="text-2xl font-bold text-slate-900 text-center">Visualização</h3>
+                  </div>
+                  <div className="space-y-5 p-8 rounded-2xl border-4 border-blue-200 shadow-2xl min-h-[600px] flex flex-col justify-center" style={{ backgroundColor: formData.backgroundColor }}>
                     <div className="flex justify-start">
                       <div
-                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm"
+                        className="max-w-[75%] px-6 py-4 rounded-2xl rounded-tl-sm shadow-lg"
                         style={{
                           backgroundColor: formData.messageBubbleReceivedColor,
                           color: formData.messageBubbleReceivedTextColor
                         }}
                       >
-                        <p className="text-sm font-medium">
+                        <p className="text-base font-medium leading-relaxed">
                           Exemplo de mensagem recebida
                         </p>
-                        <p className="text-xs opacity-70 mt-1">10:30</p>
+                        <p className="text-xs opacity-70 mt-2">10:30</p>
                       </div>
                     </div>
 
                     <div className="flex justify-end">
                       <div
-                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm"
+                        className="max-w-[75%] px-6 py-4 rounded-2xl rounded-tr-sm shadow-lg"
                         style={{
                           backgroundColor: formData.messageBubbleSentColor,
                           color: formData.messageBubbleSentTextColor
                         }}
                       >
-                        <p className="text-sm font-medium">
+                        <p className="text-base font-medium leading-relaxed">
                           Exemplo de mensagem enviada
                         </p>
-                        <p className="text-xs opacity-70 mt-1">10:32</p>
+                        <p className="text-xs opacity-70 mt-2">10:32</p>
                       </div>
                     </div>
 
                     <div className="flex justify-start">
                       <div
-                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm"
+                        className="max-w-[75%] px-6 py-4 rounded-2xl rounded-tl-sm shadow-lg"
                         style={{
                           backgroundColor: formData.messageBubbleReceivedColor,
                           color: formData.messageBubbleReceivedTextColor
                         }}
                       >
-                        <p className="text-sm font-medium">
+                        <p className="text-base font-medium leading-relaxed">
                           Olá! Como posso ajudar?
                         </p>
-                        <p className="text-xs opacity-70 mt-1">10:33</p>
+                        <p className="text-xs opacity-70 mt-2">10:33</p>
                       </div>
                     </div>
 
                     <div className="flex justify-end">
                       <div
-                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm"
+                        className="max-w-[75%] px-6 py-4 rounded-2xl rounded-tr-sm shadow-lg"
                         style={{
                           backgroundColor: formData.messageBubbleSentColor,
                           color: formData.messageBubbleSentTextColor
                         }}
                       >
-                        <p className="text-sm font-medium">
+                        <p className="text-base font-medium leading-relaxed">
                           Gostaria de mais informações sobre o produto
                         </p>
-                        <p className="text-xs opacity-70 mt-1">10:35</p>
+                        <p className="text-xs opacity-70 mt-2">10:35</p>
                       </div>
+                    </div>
+
+                    <div className="text-center mt-6 pt-6 border-t-2 border-slate-300">
+                      <p className="text-sm font-semibold text-slate-600">Preview em Tempo Real</p>
+                      <p className="text-xs text-slate-500 mt-1">As alterações aparecem instantaneamente</p>
                     </div>
                   </div>
                 </div>
