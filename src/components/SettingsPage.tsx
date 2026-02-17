@@ -147,7 +147,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-blue-50 p-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {savedMessage && (
           <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slideUp">
             <Check className="w-5 h-5" />
@@ -308,147 +308,225 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-8">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Mensagens Enviadas</h3>
-                  <button
-                    onClick={handleResetSentBubble}
-                    className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Resetar
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-3">
-                      Cor do Balão
-                    </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
-                      {messageColorPresets.map((preset) => (
-                        <button
-                          key={preset.value}
-                          onClick={() => updateFormData({ messageBubbleSentColor: preset.value })}
-                          className="relative group"
-                        >
-                          <div
-                            className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
-                              formData.messageBubbleSentColor === preset.value
-                                ? 'border-blue-500 scale-95'
-                                : 'border-slate-300 hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: preset.value }}
-                          />
-                          <p className="text-xs font-medium text-slate-700 mt-1 text-center">
-                            {preset.name}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={formData.messageBubbleSentColor}
-                        onChange={(e) => updateFormData({ messageBubbleSentColor: e.target.value })}
-                        className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                      />
-                      <input
-                        type="text"
-                        value={formData.messageBubbleSentColor}
-                        onChange={(e) => updateFormData({ messageBubbleSentColor: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Mensagens Recebidas</h3>
+                    <button
+                      onClick={handleResetReceivedBubble}
+                      className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Resetar
+                    </button>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Cor do Texto
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={formData.messageBubbleSentTextColor}
-                        onChange={(e) => updateFormData({ messageBubbleSentTextColor: e.target.value })}
-                        className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                      />
-                      <input
-                        type="text"
-                        value={formData.messageBubbleSentTextColor}
-                        onChange={(e) => updateFormData({ messageBubbleSentTextColor: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Cor do Balão
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
+                        {messageColorPresets.map((preset) => (
+                          <button
+                            key={preset.value}
+                            onClick={() => updateFormData({ messageBubbleReceivedColor: preset.value })}
+                            className="relative group"
+                          >
+                            <div
+                              className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
+                                formData.messageBubbleReceivedColor === preset.value
+                                  ? 'border-blue-500 scale-95'
+                                  : 'border-slate-300 hover:scale-105'
+                              }`}
+                              style={{ backgroundColor: preset.value }}
+                            />
+                            <p className="text-xs font-medium text-slate-700 mt-1 text-center">
+                              {preset.name}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={formData.messageBubbleReceivedColor}
+                          onChange={(e) => updateFormData({ messageBubbleReceivedColor: e.target.value })}
+                          className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
+                        />
+                        <input
+                          type="text"
+                          value={formData.messageBubbleReceivedColor}
+                          onChange={(e) => updateFormData({ messageBubbleReceivedColor: e.target.value })}
+                          className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Cor do Texto
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={formData.messageBubbleReceivedTextColor}
+                          onChange={(e) => updateFormData({ messageBubbleReceivedTextColor: e.target.value })}
+                          className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
+                        />
+                        <input
+                          type="text"
+                          value={formData.messageBubbleReceivedTextColor}
+                          onChange={(e) => updateFormData({ messageBubbleReceivedTextColor: e.target.value })}
+                          className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: formData.messageBubbleSentColor }}>
-                  <p style={{ color: formData.messageBubbleSentTextColor }} className="text-sm font-medium">
-                    Exemplo de mensagem enviada
-                  </p>
+                <div className="border-t pt-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Mensagens Enviadas</h3>
+                    <button
+                      onClick={handleResetSentBubble}
+                      className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Resetar
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">
+                        Cor do Balão
+                      </label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
+                        {messageColorPresets.map((preset) => (
+                          <button
+                            key={preset.value}
+                            onClick={() => updateFormData({ messageBubbleSentColor: preset.value })}
+                            className="relative group"
+                          >
+                            <div
+                              className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
+                                formData.messageBubbleSentColor === preset.value
+                                  ? 'border-blue-500 scale-95'
+                                  : 'border-slate-300 hover:scale-105'
+                              }`}
+                              style={{ backgroundColor: preset.value }}
+                            />
+                            <p className="text-xs font-medium text-slate-700 mt-1 text-center">
+                              {preset.name}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={formData.messageBubbleSentColor}
+                          onChange={(e) => updateFormData({ messageBubbleSentColor: e.target.value })}
+                          className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
+                        />
+                        <input
+                          type="text"
+                          value={formData.messageBubbleSentColor}
+                          onChange={(e) => updateFormData({ messageBubbleSentColor: e.target.value })}
+                          className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Cor do Texto
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={formData.messageBubbleSentTextColor}
+                          onChange={(e) => updateFormData({ messageBubbleSentTextColor: e.target.value })}
+                          className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
+                        />
+                        <input
+                          type="text"
+                          value={formData.messageBubbleSentTextColor}
+                          onChange={(e) => updateFormData({ messageBubbleSentTextColor: e.target.value })}
+                          className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Mensagens Recebidas</h3>
-                  <button
-                    onClick={handleResetReceivedBubble}
-                    className="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Resetar
-                  </button>
-                </div>
+              <div className="lg:col-span-1">
+                <div className="sticky top-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Visualização</h3>
+                  <div className="space-y-4 p-6 rounded-xl border-2 border-slate-200" style={{ backgroundColor: formData.backgroundColor }}>
+                    <div className="flex justify-start">
+                      <div
+                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm"
+                        style={{
+                          backgroundColor: formData.messageBubbleReceivedColor,
+                          color: formData.messageBubbleReceivedTextColor
+                        }}
+                      >
+                        <p className="text-sm font-medium">
+                          Exemplo de mensagem recebida
+                        </p>
+                        <p className="text-xs opacity-70 mt-1">10:30</p>
+                      </div>
+                    </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Cor do Balão
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={formData.messageBubbleReceivedColor}
-                        onChange={(e) => updateFormData({ messageBubbleReceivedColor: e.target.value })}
-                        className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                      />
-                      <input
-                        type="text"
-                        value={formData.messageBubbleReceivedColor}
-                        onChange={(e) => updateFormData({ messageBubbleReceivedColor: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm"
+                        style={{
+                          backgroundColor: formData.messageBubbleSentColor,
+                          color: formData.messageBubbleSentTextColor
+                        }}
+                      >
+                        <p className="text-sm font-medium">
+                          Exemplo de mensagem enviada
+                        </p>
+                        <p className="text-xs opacity-70 mt-1">10:32</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-start">
+                      <div
+                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm"
+                        style={{
+                          backgroundColor: formData.messageBubbleReceivedColor,
+                          color: formData.messageBubbleReceivedTextColor
+                        }}
+                      >
+                        <p className="text-sm font-medium">
+                          Olá! Como posso ajudar?
+                        </p>
+                        <p className="text-xs opacity-70 mt-1">10:33</p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm"
+                        style={{
+                          backgroundColor: formData.messageBubbleSentColor,
+                          color: formData.messageBubbleSentTextColor
+                        }}
+                      >
+                        <p className="text-sm font-medium">
+                          Gostaria de mais informações sobre o produto
+                        </p>
+                        <p className="text-xs opacity-70 mt-1">10:35</p>
+                      </div>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Cor do Texto
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={formData.messageBubbleReceivedTextColor}
-                        onChange={(e) => updateFormData({ messageBubbleReceivedTextColor: e.target.value })}
-                        className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                      />
-                      <input
-                        type="text"
-                        value={formData.messageBubbleReceivedTextColor}
-                        onChange={(e) => updateFormData({ messageBubbleReceivedTextColor: e.target.value })}
-                        className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-4 rounded-lg" style={{ backgroundColor: formData.messageBubbleReceivedColor }}>
-                  <p style={{ color: formData.messageBubbleReceivedTextColor }} className="text-sm font-medium">
-                    Exemplo de mensagem recebida
-                  </p>
                 </div>
               </div>
             </div>
