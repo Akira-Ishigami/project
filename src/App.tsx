@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import Login from './components/Login';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import CompanyDashboard from './components/CompanyDashboard';
@@ -6,7 +8,15 @@ import AttendantDashboard from './components/AttendantDashboard';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
-  const { user, company, isSuperAdmin, isAttendant, loading, showWelcome, showGoodbye } = useAuth();
+  const { user, company, attendant, isSuperAdmin, isAttendant, loading, showWelcome, showGoodbye } = useAuth();
+  const { loadCompanyTheme } = useTheme();
+
+  useEffect(() => {
+    const companyId = company?.id || attendant?.company_id;
+    if (companyId) {
+      loadCompanyTheme(companyId);
+    }
+  }, [company?.id, attendant?.company_id, loadCompanyTheme]);
 
   if (loading) {
     return (
@@ -61,7 +71,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </AuthProvider>
   );
 }
