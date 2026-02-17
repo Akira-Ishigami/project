@@ -2177,18 +2177,28 @@ export default function CompanyDashboard() {
               <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
             </button>
             <div className="relative ml-2">
-              <div className="relative p-2.5 text-slate-500">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                title="Notificações"
+              >
                 <Bell className="w-5 h-5" />
                 {unreadNotificationsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg shadow-red-500/40 animate-pulse">
                     {unreadNotificationsCount}
                   </span>
                 )}
-              </div>
-              {(
+              </button>
+              {showNotifications && (
                 <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-hidden flex flex-col">
-                  <div className="p-4 border-b-2 border-gray-300">
+                  <div className="p-4 border-b-2 border-gray-300 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Notificações</h3>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                   <div className="overflow-y-auto flex-1">
                     {notifications.length === 0 ? (
