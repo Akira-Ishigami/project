@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Palette, Building2, Upload, X, RotateCcw, Check, Save } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -8,6 +8,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const isInitialized = useRef(false);
 
   const [formData, setFormData] = useState({
     companyName: settings.companyName || '',
@@ -20,16 +21,18 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    setFormData({
-      companyName: settings.companyName || '',
-      logoUrl: settings.logoUrl || '',
-      backgroundColor: settings.backgroundColor || '#f8fafc',
-      messageBubbleSentColor: settings.messageBubbleSentColor || '#3b82f6',
-      messageBubbleSentTextColor: settings.messageBubbleSentTextColor || '#ffffff',
-      messageBubbleReceivedColor: settings.messageBubbleReceivedColor || '#ffffff',
-      messageBubbleReceivedTextColor: settings.messageBubbleReceivedTextColor || '#1e293b',
-    });
-    setHasChanges(false);
+    if (!isInitialized.current && settings.companyName) {
+      setFormData({
+        companyName: settings.companyName || '',
+        logoUrl: settings.logoUrl || '',
+        backgroundColor: settings.backgroundColor || '#f8fafc',
+        messageBubbleSentColor: settings.messageBubbleSentColor || '#3b82f6',
+        messageBubbleSentTextColor: settings.messageBubbleSentTextColor || '#ffffff',
+        messageBubbleReceivedColor: settings.messageBubbleReceivedColor || '#ffffff',
+        messageBubbleReceivedTextColor: settings.messageBubbleReceivedTextColor || '#1e293b',
+      });
+      isInitialized.current = true;
+    }
   }, [settings]);
 
   const showSavedMessage = (message: string) => {
@@ -139,6 +142,15 @@ export default function SettingsPage() {
     if (confirm('Tem certeza que deseja restaurar TODAS as configurações para o padrão? Esta ação não pode ser desfeita.')) {
       try {
         await resetSettings();
+        setFormData({
+          companyName: '',
+          logoUrl: '',
+          backgroundColor: '#f8fafc',
+          messageBubbleSentColor: '#3b82f6',
+          messageBubbleSentTextColor: '#ffffff',
+          messageBubbleReceivedColor: '#ffffff',
+          messageBubbleReceivedTextColor: '#1e293b',
+        });
         setHasChanges(false);
         showSavedMessage('Todas as configurações foram resetadas!');
       } catch (error) {

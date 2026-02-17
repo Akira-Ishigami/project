@@ -207,8 +207,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const resetSettings = async () => {
-    setSettings(defaultSettings);
-
     try {
       let id = companyId;
 
@@ -226,6 +224,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Error resetting theme settings:', error);
+      throw error;
     }
   };
 
