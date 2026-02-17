@@ -210,7 +210,6 @@ export default function CompanyDashboard() {
   const [selectedSector, setSelectedSector] = useState<string>('');
   const [departamentoTransferencia, setDepartamentoTransferencia] = useState<string>('');
   const [setorTransferencia, setSetorTransferencia] = useState<string>('');
-  const [filterDepartmentId, setFilterDepartmentId] = useState<string>('');
 
   // Mostra apenas setores do departamento selecionado
   const sectorsFiltered = useMemo(() => {
@@ -241,14 +240,6 @@ export default function CompanyDashboard() {
     if (!receptionDeptId) return;
     setSelectedDepartment(receptionDeptId);
   }, [showTransferModal, selectedDepartment, receptionDeptId]);
-
-  // Define o departamento de Recepção como padrão quando o filtro de departamento é ativado
-  useEffect(() => {
-    if (contactFilter === 'departamento' && !filterDepartmentId && receptionDeptId) {
-      setFilterDepartmentId(receptionDeptId);
-    }
-  }, [contactFilter, filterDepartmentId, receptionDeptId]);
-
   const [, setTransferindo] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -1698,8 +1689,8 @@ export default function CompanyDashboard() {
     const contactDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber));
 
     if (contactFilter === 'departamento') {
-      if (!filterDepartmentId) return true;
-      return contactDB?.department_id === filterDepartmentId;
+      if (!receptionDeptId) return true;
+      return contactDB?.department_id === receptionDeptId;
     }
 
     if (contactFilter === 'abertos') {
@@ -2309,54 +2300,37 @@ export default function CompanyDashboard() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => setContactFilter('departamento')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      contactFilter === 'departamento'
-                        ? 'bg-purple-500 text-white shadow-sm'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Departamento
-                  </button>
-                  <button
-                    onClick={() => setContactFilter('abertos')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      contactFilter === 'abertos'
-                        ? 'bg-green-500 text-white shadow-sm'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Chamados Abertos
-                  </button>
-                  <button
-                    onClick={() => setContactFilter('todos')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      contactFilter === 'todos'
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Todos
-                  </button>
-                </div>
-
-                {contactFilter === 'departamento' && (
-                  <select
-                    value={filterDepartmentId}
-                    onChange={(e) => setFilterDepartmentId(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                  >
-                    <option value="">Todos os departamentos</option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setContactFilter('departamento')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    contactFilter === 'departamento'
+                      ? 'bg-purple-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Departamento
+                </button>
+                <button
+                  onClick={() => setContactFilter('abertos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    contactFilter === 'abertos'
+                      ? 'bg-green-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Chamados Abertos
+                </button>
+                <button
+                  onClick={() => setContactFilter('todos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    contactFilter === 'todos'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Todos
+                </button>
               </div>
             </div>
 
