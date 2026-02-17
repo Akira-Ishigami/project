@@ -38,8 +38,29 @@ export default function SettingsPage() {
   };
 
   const updateFormData = (updates: Partial<typeof formData>) => {
-    setFormData({ ...formData, ...updates });
+    setFormData(prev => ({ ...prev, ...updates }));
     setHasChanges(true);
+  };
+
+  const isValidHexColor = (color: string): boolean => {
+    return /^#[0-9A-F]{6}$/i.test(color);
+  };
+
+  const normalizeHexColor = (color: string): string => {
+    color = color.trim();
+    if (!color.startsWith('#')) {
+      color = '#' + color;
+    }
+    color = color.toUpperCase();
+    if (isValidHexColor(color)) {
+      return color;
+    }
+    return color;
+  };
+
+  const handleColorTextChange = (field: keyof typeof formData, value: string) => {
+    const normalized = normalizeHexColor(value);
+    updateFormData({ [field]: normalized } as any);
   };
 
   const convertToBase64 = (file: File): Promise<string> => {
@@ -288,7 +309,7 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     value={formData.backgroundColor}
-                    onChange={(e) => updateFormData({ backgroundColor: e.target.value })}
+                    onChange={(e) => handleColorTextChange('backgroundColor', e.target.value)}
                     className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="#f8fafc"
                   />
@@ -358,8 +379,9 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={formData.messageBubbleReceivedColor}
-                          onChange={(e) => updateFormData({ messageBubbleReceivedColor: e.target.value })}
+                          onChange={(e) => handleColorTextChange('messageBubbleReceivedColor', e.target.value)}
                           className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="#ffffff"
                         />
                       </div>
                     </div>
@@ -378,8 +400,9 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={formData.messageBubbleReceivedTextColor}
-                          onChange={(e) => updateFormData({ messageBubbleReceivedTextColor: e.target.value })}
+                          onChange={(e) => handleColorTextChange('messageBubbleReceivedTextColor', e.target.value)}
                           className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="#1e293b"
                         />
                       </div>
                     </div>
@@ -434,8 +457,9 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={formData.messageBubbleSentColor}
-                          onChange={(e) => updateFormData({ messageBubbleSentColor: e.target.value })}
+                          onChange={(e) => handleColorTextChange('messageBubbleSentColor', e.target.value)}
                           className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="#3b82f6"
                         />
                       </div>
                     </div>
@@ -454,8 +478,9 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={formData.messageBubbleSentTextColor}
-                          onChange={(e) => updateFormData({ messageBubbleSentTextColor: e.target.value })}
+                          onChange={(e) => handleColorTextChange('messageBubbleSentTextColor', e.target.value)}
                           className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder="#ffffff"
                         />
                       </div>
                     </div>
