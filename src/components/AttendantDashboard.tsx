@@ -1720,13 +1720,7 @@ export default function AttendantDashboard() {
                 onScroll={handleMessagesScroll}
                 className="flex-1 overflow-y-auto p-6 space-y-3"
                 style={{
-                  backgroundColor: settings.backgroundType === 'color' ? settings.backgroundColor : undefined,
-                  backgroundImage: settings.backgroundType === 'image' && settings.backgroundImageUrl
-                    ? `url(${settings.backgroundImageUrl})`
-                    : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundAttachment: 'fixed'
+                  backgroundColor: settings.backgroundColor
                 }}
               >
                 {selectedContactData.messages.map((msg, index) => {

@@ -6,14 +6,11 @@ export default function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useTheme();
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingBackground, setUploadingBackground] = useState(false);
 
   const [formData, setFormData] = useState({
     companyName: settings.companyName || '',
     logoUrl: settings.logoUrl || '',
-    backgroundType: settings.backgroundType || 'color',
     backgroundColor: settings.backgroundColor || '#f8fafc',
-    backgroundImageUrl: settings.backgroundImageUrl || '',
     messageBubbleSentColor: settings.messageBubbleSentColor || '#3b82f6',
     messageBubbleSentTextColor: settings.messageBubbleSentTextColor || '#ffffff',
     messageBubbleReceivedColor: settings.messageBubbleReceivedColor || '#ffffff',
@@ -24,9 +21,7 @@ export default function SettingsPage() {
     setFormData({
       companyName: settings.companyName || '',
       logoUrl: settings.logoUrl || '',
-      backgroundType: settings.backgroundType || 'color',
       backgroundColor: settings.backgroundColor || '#f8fafc',
-      backgroundImageUrl: settings.backgroundImageUrl || '',
       messageBubbleSentColor: settings.messageBubbleSentColor || '#3b82f6',
       messageBubbleSentTextColor: settings.messageBubbleSentTextColor || '#ffffff',
       messageBubbleReceivedColor: settings.messageBubbleReceivedColor || '#ffffff',
@@ -71,33 +66,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione um arquivo de imagem válido');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert('O arquivo deve ter no máximo 5MB');
-      return;
-    }
-
-    setUploadingBackground(true);
-
-    try {
-      const base64Image = await convertToBase64(file);
-      setFormData({ ...formData, backgroundImageUrl: base64Image, backgroundType: 'image' });
-      await updateSettings({ backgroundImageUrl: base64Image, backgroundType: 'image' });
-    } catch (error) {
-      console.error('Erro ao processar a imagem de fundo:', error);
-      alert('Erro ao processar a imagem de fundo');
-    } finally {
-      setUploadingBackground(false);
-    }
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -218,119 +186,57 @@ export default function SettingsPage() {
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 animate-slideUp">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-purple-600" />
+                <Palette className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Fundo do Chat</h2>
-                <p className="text-sm text-slate-600">Escolha uma cor ou imagem de fundo</p>
+                <h2 className="text-xl font-bold text-slate-900">Cor de Fundo do Chat</h2>
+                <p className="text-sm text-slate-600">Escolha a cor de fundo da área de mensagens</p>
               </div>
             </div>
 
             <div className="space-y-6">
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setFormData({ ...formData, backgroundType: 'color' })}
-                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-                    formData.backgroundType === 'color'
-                      ? 'bg-blue-500 text-white shadow-lg'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Cor Sólida
-                </button>
-                <button
-                  onClick={() => setFormData({ ...formData, backgroundType: 'image' })}
-                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-                    formData.backgroundType === 'image'
-                      ? 'bg-blue-500 text-white shadow-lg'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Imagem
-                </button>
-              </div>
-
-              {formData.backgroundType === 'color' ? (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Cores Predefinidas
-                  </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
-                    {backgroundPresets.map((preset) => (
-                      <button
-                        key={preset.value}
-                        onClick={() => setFormData({ ...formData, backgroundColor: preset.value })}
-                        className="relative group"
-                      >
-                        <div
-                          className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
-                            formData.backgroundColor === preset.value
-                              ? 'border-blue-500 scale-95'
-                              : 'border-slate-300 hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: preset.value }}
-                        />
-                        <p className="text-xs font-medium text-slate-700 mt-1 text-center">
-                          {preset.name}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                      className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                    />
-                    <input
-                      type="text"
-                      value={formData.backgroundColor}
-                      onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                      className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="#f8fafc"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Imagem de Fundo <span className="text-slate-500">(Recomendado: 1920x1080px - Full HD)</span>
-                  </label>
-
-                  {formData.backgroundImageUrl && (
-                    <div className="mb-4 relative inline-block">
-                      <img
-                        src={formData.backgroundImageUrl}
-                        alt="Fundo"
-                        className="h-32 object-cover border border-slate-200 rounded-lg"
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-3">
+                  Cores Predefinidas
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+                  {backgroundPresets.map((preset) => (
+                    <button
+                      key={preset.value}
+                      onClick={() => setFormData({ ...formData, backgroundColor: preset.value })}
+                      className="relative group"
+                    >
+                      <div
+                        className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
+                          formData.backgroundColor === preset.value
+                            ? 'border-blue-500 scale-95'
+                            : 'border-slate-300 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: preset.value }}
                       />
-                      <button
-                        onClick={() => {
-                          setFormData({ ...formData, backgroundImageUrl: '' });
-                          updateSettings({ backgroundImageUrl: '' });
-                        }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer transition-all">
-                    <Upload className="w-4 h-4" />
-                    {uploadingBackground ? 'Enviando...' : 'Enviar Imagem'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleBackgroundUpload}
-                      disabled={uploadingBackground}
-                      className="hidden"
-                    />
-                  </label>
+                      <p className="text-xs font-medium text-slate-700 mt-1 text-center">
+                        {preset.name}
+                      </p>
+                    </button>
+                  ))}
                 </div>
-              )}
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={formData.backgroundColor}
+                    onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
+                    className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
+                  />
+                  <input
+                    type="text"
+                    value={formData.backgroundColor}
+                    onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="#f8fafc"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

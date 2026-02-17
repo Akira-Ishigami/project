@@ -4,9 +4,7 @@ import { supabase } from '../lib/supabase';
 interface ThemeSettings {
   companyName: string;
   logoUrl: string;
-  backgroundType: 'color' | 'image';
   backgroundColor: string;
-  backgroundImageUrl: string;
   messageBubbleSentColor: string;
   messageBubbleSentTextColor: string;
   messageBubbleReceivedColor: string;
@@ -25,9 +23,7 @@ interface ThemeContextType {
 const defaultSettings: ThemeSettings = {
   companyName: '',
   logoUrl: '',
-  backgroundType: 'color',
   backgroundColor: '#f8fafc',
-  backgroundImageUrl: '',
   messageBubbleSentColor: '#3b82f6',
   messageBubbleSentTextColor: '#ffffff',
   messageBubbleReceivedColor: '#ffffff',
@@ -95,9 +91,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setSettings({
           companyName: themeData.company_name || defaultSettings.companyName,
           logoUrl: themeData.logo_primary_url || defaultSettings.logoUrl,
-          backgroundType: themeData.background_type || defaultSettings.backgroundType,
           backgroundColor: themeData.background_color || defaultSettings.backgroundColor,
-          backgroundImageUrl: themeData.background_image_url || defaultSettings.backgroundImageUrl,
           messageBubbleSentColor: themeData.message_bubble_sent_color || defaultSettings.messageBubbleSentColor,
           messageBubbleSentTextColor: themeData.message_bubble_sent_text_color || defaultSettings.messageBubbleSentTextColor,
           messageBubbleReceivedColor: themeData.message_bubble_received_color || defaultSettings.messageBubbleReceivedColor,
@@ -124,9 +118,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
               setSettings({
                 companyName: themeData.company_name || defaultSettings.companyName,
                 logoUrl: themeData.logo_primary_url || defaultSettings.logoUrl,
-                backgroundType: themeData.background_type || defaultSettings.backgroundType,
                 backgroundColor: themeData.background_color || defaultSettings.backgroundColor,
-                backgroundImageUrl: themeData.background_image_url || defaultSettings.backgroundImageUrl,
                 messageBubbleSentColor: themeData.message_bubble_sent_color || defaultSettings.messageBubbleSentColor,
                 messageBubbleSentTextColor: themeData.message_bubble_sent_text_color || defaultSettings.messageBubbleSentTextColor,
                 messageBubbleReceivedColor: themeData.message_bubble_received_color || defaultSettings.messageBubbleReceivedColor,
@@ -165,9 +157,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const themeUpdate: any = {};
       if (newSettings.companyName !== undefined) themeUpdate.company_name = newSettings.companyName;
       if (newSettings.logoUrl !== undefined) themeUpdate.logo_primary_url = newSettings.logoUrl;
-      if (newSettings.backgroundType !== undefined) themeUpdate.background_type = newSettings.backgroundType;
       if (newSettings.backgroundColor !== undefined) themeUpdate.background_color = newSettings.backgroundColor;
-      if (newSettings.backgroundImageUrl !== undefined) themeUpdate.background_image_url = newSettings.backgroundImageUrl;
       if (newSettings.messageBubbleSentColor !== undefined) themeUpdate.message_bubble_sent_color = newSettings.messageBubbleSentColor;
       if (newSettings.messageBubbleSentTextColor !== undefined) themeUpdate.message_bubble_sent_text_color = newSettings.messageBubbleSentTextColor;
       if (newSettings.messageBubbleReceivedColor !== undefined) themeUpdate.message_bubble_received_color = newSettings.messageBubbleReceivedColor;

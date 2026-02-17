@@ -2517,13 +2517,7 @@ export default function CompanyDashboard() {
                 ref={messagesContainerRef}
                 onScroll={handleMessagesScroll}
                 style={{
-                  backgroundColor: settings.backgroundType === 'color' ? settings.backgroundColor : undefined,
-                  backgroundImage: settings.backgroundType === 'image' && settings.backgroundImageUrl
-                    ? `url(${settings.backgroundImageUrl})`
-                    : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundAttachment: 'fixed'
+                  backgroundColor: settings.backgroundColor
                 }}
               >
                 <div className="w-full">
