@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Settings, Palette, Image as ImageIcon, Building2, Upload, X, RotateCcw } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { supabase } from '../lib/supabase';
 
 export default function SettingsPage() {
-  const { settings, updateSettings, resetSettings, companyId } = useTheme();
+  const { settings, updateSettings, resetSettings } = useTheme();
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
@@ -35,6 +34,15 @@ export default function SettingsPage() {
     });
   }, [settings]);
 
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -52,24 +60,12 @@ export default function SettingsPage() {
     setUploadingLogo(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${companyId}/logo-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('company-branding')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('company-branding')
-        .getPublicUrl(fileName);
-
-      setFormData({ ...formData, logoUrl: publicUrl });
-      await updateSettings({ logoUrl: publicUrl });
+      const base64Image = await convertToBase64(file);
+      setFormData({ ...formData, logoUrl: base64Image });
+      await updateSettings({ logoUrl: base64Image });
     } catch (error) {
-      console.error('Erro ao fazer upload do logo:', error);
-      alert('Erro ao fazer upload do logo');
+      console.error('Erro ao processar o logo:', error);
+      alert('Erro ao processar o logo');
     } finally {
       setUploadingLogo(false);
     }
@@ -92,24 +88,12 @@ export default function SettingsPage() {
     setUploadingBackground(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${companyId}/background-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('company-branding')
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('company-branding')
-        .getPublicUrl(fileName);
-
-      setFormData({ ...formData, backgroundImageUrl: publicUrl, backgroundType: 'image' });
-      await updateSettings({ backgroundImageUrl: publicUrl, backgroundType: 'image' });
+      const base64Image = await convertToBase64(file);
+      setFormData({ ...formData, backgroundImageUrl: base64Image, backgroundType: 'image' });
+      await updateSettings({ backgroundImageUrl: base64Image, backgroundType: 'image' });
     } catch (error) {
-      console.error('Erro ao fazer upload da imagem de fundo:', error);
-      alert('Erro ao fazer upload da imagem de fundo');
+      console.error('Erro ao processar a imagem de fundo:', error);
+      alert('Erro ao processar a imagem de fundo');
     } finally {
       setUploadingBackground(false);
     }
