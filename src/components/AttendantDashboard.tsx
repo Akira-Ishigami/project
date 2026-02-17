@@ -100,6 +100,8 @@ export default function AttendantDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [contactFilter, setContactFilter] = useState<'todos' | 'departamento' | 'abertos'>('todos');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string | null>(null);
 
   // Cache para evitar múltiplas buscas no fallback de contatos
   const fetchedPhonesRef = useRef<Set<string>>(new Set());
@@ -758,11 +760,25 @@ export default function AttendantDashboard() {
   const filteredContacts = useMemo(() => {
     let filtered = contacts;
 
-    // Aplicar filtro de departamento
+    // Aplicar filtro de departamento (filtro antigo do atendente)
     if (filterMode === 'mine' && attendant?.department_id) {
       filtered = filtered.filter(contact =>
         contact.department_id === attendant.department_id
       );
+    }
+
+    // Aplicar novos filtros
+    if (contactFilter === 'departamento' && selectedDepartmentFilter) {
+      filtered = filtered.filter(contact =>
+        contact.department_id === selectedDepartmentFilter
+      );
+    }
+
+    if (contactFilter === 'abertos') {
+      filtered = filtered.filter(contact => {
+        const contactDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber));
+        return contactDB?.ticket_status === 'aberto' || contactDB?.ticket_status === 'em_processo' || !contactDB?.ticket_status;
+      });
     }
 
     // Aplicar filtro de pesquisa
@@ -789,7 +805,7 @@ export default function AttendantDashboard() {
     });
 
     return filtered;
-  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB]);
+  }, [contacts, filterMode, attendant?.department_id, searchTerm, contactsDB, contactFilter, selectedDepartmentFilter]);
 
   const selectedContactData = selectedContact
     ? contacts.find((c) => c.phoneNumber === selectedContact)
@@ -1531,7 +1547,7 @@ export default function AttendantDashboard() {
 
           {/* Barra de Pesquisa */}
           <div className="px-4 py-3 border-b border-slate-200/80">
-            <div className="relative group">
+            <div className="relative group mb-3">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
               <input
                 type="text"
@@ -1540,6 +1556,53 @@ export default function AttendantDashboard() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-slate-50 text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-md transition-all duration-200 placeholder-slate-400"
               />
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  setContactFilter('todos');
+                  setSelectedDepartmentFilter(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  contactFilter === 'todos'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setContactFilter('abertos')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  contactFilter === 'abertos'
+                    ? 'bg-green-500 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                Chamados Abertos
+              </button>
+              {contactFilter === 'departamento' ? (
+                <select
+                  value={selectedDepartmentFilter || ''}
+                  onChange={(e) => setSelectedDepartmentFilter(e.target.value || null)}
+                  className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500 text-white shadow-sm border-0 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                >
+                  <option value="">Todos os Departamentos</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  onClick={() => setContactFilter('departamento')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all"
+                >
+                  Por Departamento
+                </button>
+              )}
             </div>
           </div>
 

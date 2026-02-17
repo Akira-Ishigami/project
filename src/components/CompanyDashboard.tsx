@@ -117,6 +117,8 @@ export default function CompanyDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [contactFilter, setContactFilter] = useState<'todos' | 'departamento' | 'abertos'>('todos');
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string | null>(null);
 
   // Cache para evitar múltiplas buscas no fallback de contatos
   const fetchedPhonesRef = useRef<Set<string>>(new Set());
@@ -1677,11 +1679,26 @@ export default function CompanyDashboard() {
   const filteredContacts = contacts.filter((contact) => {
     const searchLower = searchTerm.toLowerCase();
     const displayPhone = getPhoneNumber(contact.phoneNumber);
-    return (
+
+    const matchesSearch =
       contact.name.toLowerCase().includes(searchLower) ||
       displayPhone.toLowerCase().includes(searchLower) ||
-      contact.phoneNumber.toLowerCase().includes(searchLower)
-    );
+      contact.phoneNumber.toLowerCase().includes(searchLower);
+
+    if (!matchesSearch) return false;
+
+    const contactDB = contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contact.phoneNumber));
+
+    if (contactFilter === 'departamento') {
+      if (!selectedDepartmentFilter) return true;
+      return contactDB?.department_id === selectedDepartmentFilter;
+    }
+
+    if (contactFilter === 'abertos') {
+      return contactDB?.ticket_status === 'aberto' || contactDB?.ticket_status === 'em_processo' || !contactDB?.ticket_status;
+    }
+
+    return true;
   });
 
   const selectedContactData = selectedContact
@@ -2273,7 +2290,7 @@ export default function CompanyDashboard() {
             )}
 
             <div className="px-5 py-4 border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
-              <div className="relative">
+              <div className="relative mb-3">
                 <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
@@ -2282,6 +2299,53 @@ export default function CompanyDashboard() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-white text-slate-900 text-sm pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder-slate-400 shadow-sm"
                 />
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    setContactFilter('todos');
+                    setSelectedDepartmentFilter(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    contactFilter === 'todos'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setContactFilter('abertos')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    contactFilter === 'abertos'
+                      ? 'bg-green-500 text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Chamados Abertos
+                </button>
+                {contactFilter === 'departamento' ? (
+                  <select
+                    value={selectedDepartmentFilter || ''}
+                    onChange={(e) => setSelectedDepartmentFilter(e.target.value || null)}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-500 text-white shadow-sm border-0 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  >
+                    <option value="">Todos os Departamentos</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button
+                    onClick={() => setContactFilter('departamento')}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all"
+                  >
+                    Por Departamento
+                  </button>
+                )}
               </div>
             </div>
 
