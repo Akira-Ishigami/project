@@ -1084,6 +1084,11 @@ export default function AttendantDashboard() {
     }
   };
 
+  const handleOpenChatFromHistory = (phoneNumber: string) => {
+    setCurrentView('mensagens');
+    setSelectedContact(phoneNumber);
+  };
+
   // Funções do menu de contexto
   const handleContextMenu = (e: React.MouseEvent, phoneNumber: string) => {
     e.preventDefault();
@@ -1481,7 +1486,7 @@ export default function AttendantDashboard() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {currentView === 'historico' ? (
-          <TicketHistory />
+          <TicketHistory onOpenChat={handleOpenChatFromHistory} />
         ) : currentView === 'configuracoes' ? (
           <SettingsPage />
         ) : (

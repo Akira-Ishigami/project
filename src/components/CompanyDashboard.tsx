@@ -1299,6 +1299,11 @@ export default function CompanyDashboard() {
     }
   };
 
+  const handleOpenChatFromHistory = (phoneNumber: string) => {
+    setActiveTab('mensagens');
+    setSelectedContact(phoneNumber);
+  };
+
   useEffect(() => {
     fetchMessages();
     fetchContacts();
@@ -2897,7 +2902,7 @@ export default function CompanyDashboard() {
               <TagsManagement />
             </div>
           ) : activeTab === 'historico' ? (
-            <TicketHistory />
+            <TicketHistory onOpenChat={handleOpenChatFromHistory} />
           ) : activeTab === 'configuracoes' ? (
             <SettingsPage />
           ) : null}
