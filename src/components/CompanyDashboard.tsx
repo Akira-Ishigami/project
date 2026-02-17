@@ -43,6 +43,9 @@ interface ContactDB {
   tag_ids?: string[];
   pinned?: boolean;
   ia_ativada?: boolean;
+  ticket_status?: string;
+  ticket_closed_at?: string | null;
+  ticket_closed_by?: string | null;
 }
 
 interface Department {
@@ -551,7 +554,7 @@ export default function CompanyDashboard() {
     try {
       const { data: contactsData, error: contactsError } = await supabase
         .from('contacts')
-        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, last_message, last_message_time, created_at, updated_at, pinned, ia_ativada')
+        .select('id, company_id, phone_number, name, department_id, sector_id, tag_id, last_message, last_message_time, created_at, updated_at, pinned, ia_ativada, ticket_status, ticket_closed_at, ticket_closed_by')
         .eq('company_id', company.id)
         .order('last_message_time', { ascending: false });
 

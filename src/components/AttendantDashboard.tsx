@@ -39,6 +39,9 @@ interface ContactDB {
   tag_ids?: string[];
   pinned?: boolean;
   ia_ativada?: boolean;
+  ticket_status?: string;
+  ticket_closed_at?: string | null;
+  ticket_closed_by?: string | null;
 }
 
 interface Department {
@@ -453,6 +456,9 @@ export default function AttendantDashboard() {
           updated_at,
           pinned,
           ia_ativada,
+          ticket_status,
+          ticket_closed_at,
+          ticket_closed_by,
           contact_tags(tag_id)
         `)
         .eq('company_id', attendant.company_id)
