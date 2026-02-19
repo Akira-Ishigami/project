@@ -16,6 +16,7 @@ interface Plan {
   max_contacts: number | null;
   features: string[];
   is_active: boolean;
+  ai_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ interface PlanFormData {
   max_attendants: string;
   max_contacts: string;
   is_active: boolean;
+  ai_enabled: boolean;
 }
 
 export default function PlansManagement() {
@@ -50,7 +52,8 @@ export default function PlansManagement() {
     billing_period: 'monthly',
     max_attendants: '',
     max_contacts: '',
-    is_active: true
+    is_active: true,
+    ai_enabled: true
   });
 
   useEffect(() => {
@@ -85,7 +88,8 @@ export default function PlansManagement() {
         billing_period: plan.billing_period,
         max_attendants: plan.max_attendants?.toString() || '',
         max_contacts: plan.max_contacts?.toString() || '',
-        is_active: plan.is_active
+        is_active: plan.is_active,
+        ai_enabled: plan.ai_enabled
       });
     } else {
       setEditingPlan(null);
@@ -96,7 +100,8 @@ export default function PlansManagement() {
         billing_period: 'monthly',
         max_attendants: '',
         max_contacts: '',
-        is_active: true
+        is_active: true,
+        ai_enabled: true
       });
     }
     setModalOpen(true);
@@ -125,7 +130,8 @@ export default function PlansManagement() {
         billing_period: formData.billing_period,
         max_attendants: formData.max_attendants ? parseInt(formData.max_attendants) : null,
         max_contacts: formData.max_contacts ? parseInt(formData.max_contacts) : null,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        ai_enabled: formData.ai_enabled
       };
 
       if (editingPlan) {
@@ -447,17 +453,32 @@ export default function PlansManagement() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <label htmlFor="is_active" className="text-sm font-medium text-slate-700">
-                  Plano ativo e disponível para contratação
-                </label>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <label htmlFor="is_active" className="text-sm font-medium text-slate-700">
+                    Plano ativo e disponível para contratação
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="ai_enabled"
+                    checked={formData.ai_enabled}
+                    onChange={(e) => setFormData({ ...formData, ai_enabled: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <label htmlFor="ai_enabled" className="text-sm font-medium text-slate-700">
+                    IA ativada (recursos de inteligência artificial disponíveis)
+                  </label>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-200">

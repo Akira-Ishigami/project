@@ -12,7 +12,7 @@ import SettingsPage from './SettingsPage';
 import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
-import { useRealtimeMessages, useRealtimeContacts } from '../hooks';
+import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
 import SystemMessage from './SystemMessage';
 
 interface Contact {
@@ -111,6 +111,7 @@ type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags'
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
   const { settings, loadCompanyTheme } = useTheme();
+  const aiEnabled = useAiEnabled(company?.id || null);
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
@@ -3173,15 +3174,17 @@ export default function CompanyDashboard() {
               ? 'Desafixar contato'
               : 'Fixar contato'}
           </button>
-          <button
-            onClick={() => handleToggleIA(contextMenu.phoneNumber)}
-            className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
-          >
-            <Bot className="w-4 h-4" />
-            {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
-              ? 'Desativar IA'
-              : 'Ativar IA'}
-          </button>
+          {aiEnabled && (
+            <button
+              onClick={() => handleToggleIA(contextMenu.phoneNumber)}
+              className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
+            >
+              <Bot className="w-4 h-4" />
+              {contactsDB.find(c => normalizeDbPhone(c.phone_number) === normalizeDbPhone(contextMenu.phoneNumber))?.ia_ativada
+                ? 'Desativar IA'
+                : 'Ativar IA'}
+            </button>
+          )}
           <button
             onClick={() => handleContextMenuTag(contextMenu.phoneNumber)}
             className="w-full px-4 py-2.5 text-left hover:bg-slate-50  transition-colors flex items-center gap-3 text-slate-700 "
