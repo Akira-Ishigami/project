@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell } from "lucide-react";
+import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell, Package } from "lucide-react";
 import Modal from "./Modal";
 import Notification from "./Notification";
+import PlansManagement from "./PlansManagement";
 
 type Company = {
   id: string;
@@ -36,7 +37,7 @@ type Message = {
   'minha?'?: string | null;
 };
 
-type TabType = "empresas" | "mensagens";
+type TabType = "empresas" | "mensagens" | "planos";
 
 export default function SuperAdminDashboard() {
   const { signOut } = useAuth();
@@ -808,6 +809,40 @@ export default function SuperAdminDashboard() {
               </div>
             )}
           </button>
+
+          <button
+            onClick={() => setActiveTab("planos")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              activeTab === "planos"
+                ? "bg-gradient-to-r from-purple-50 to-purple-100/50 text-purple-600 border border-purple-200 shadow-sm"
+                : "text-gray-600 hover:text-purple-600 hover:bg-gray-50"
+            }`}
+          >
+            <Package size={20} />
+            {sidebarOpen && (
+              <div className="flex-1 text-left">
+                <div className="font-medium">Planos</div>
+                <div className="text-xs opacity-70">Gerenciar assinaturas</div>
+              </div>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("mensagens")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              activeTab === "mensagens"
+                ? "bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-600 border border-blue-200 shadow-sm"
+                : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+            }`}
+          >
+            <MessageSquare size={20} />
+            {sidebarOpen && (
+              <div className="flex-1 text-left">
+                <div className="font-medium">Mensagens</div>
+                <div className="text-xs opacity-70">Visualizar todas</div>
+              </div>
+            )}
+          </button>
         </nav>
 
         <div className="p-4 border-t border-gray-200/50">
@@ -1106,6 +1141,10 @@ export default function SuperAdminDashboard() {
                 ))}
               </div>
             </>
+          )}
+
+          {activeTab === "planos" && (
+            <PlansManagement />
           )}
 
           {activeTab === "mensagens" && (
