@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { supabase, Message } from '../lib/supabase';
-import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, CheckCircle2, FolderOpen } from 'lucide-react';
+import { MessageSquare, LogOut, Search, AlertCircle, CheckCheck, FileText, Download, User, Menu, X, Send, Paperclip, Image as ImageIcon, Mic, Play, Pause, Loader2, Briefcase, FolderTree, UserCircle2, Tag, Bell, XCircle, Info, ArrowRightLeft, Settings, Pin, Bot, CheckCircle2, FolderOpen, CreditCard } from 'lucide-react';
 import DepartmentsManagement from './DepartmentsManagement';
 import SectorsManagement from './SectorsManagement';
 import AttendantsManagement from './AttendantsManagement';
 import TagsManagement from './TagsManagement';
 import TicketHistory from './TicketHistory';
 import SettingsPage from './SettingsPage';
+import MyPlan from './MyPlan';
 import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
@@ -106,7 +107,7 @@ function normalizeDbPhone(input?: string | null): string {
 }
 
 
-type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags' | 'historico' | 'configuracoes';
+type TabType = 'mensagens' | 'departamentos' | 'setores' | 'atendentes' | 'tags' | 'historico' | 'meu-plano' | 'configuracoes';
 
 export default function CompanyDashboard() {
   const { company, signOut } = useAuth();
@@ -2159,24 +2160,26 @@ export default function CompanyDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleIaGlobal}
-              disabled={togglingIaGlobal}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
-                ? 'bg-gradient-to-r from-emerald-50 to-blue-50 ring-1 ring-blue-200 shadow-md text-blue-700 hover:shadow-lg'
-                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm'
-                } disabled:opacity-50`}
-              title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
-            >
-              {togglingIaGlobal ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold transition-all duration-200 ${iaGlobalAtivada ? 'bg-gradient-to-r from-blue-500 to-emerald-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white border border-slate-200 text-slate-700'}`}>
-                  IA
-                </span>
-              )}
-              <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
-            </button>
+            {aiEnabled && (
+              <button
+                onClick={handleToggleIaGlobal}
+                disabled={togglingIaGlobal}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
+                  ? 'bg-gradient-to-r from-emerald-50 to-blue-50 ring-1 ring-blue-200 shadow-md text-blue-700 hover:shadow-lg'
+                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm'
+                  } disabled:opacity-50`}
+                title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
+              >
+                {togglingIaGlobal ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold transition-all duration-200 ${iaGlobalAtivada ? 'bg-gradient-to-r from-blue-500 to-emerald-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white border border-slate-200 text-slate-700'}`}>
+                    IA
+                  </span>
+                )}
+                <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
+              </button>
+            )}
             <div className="relative ml-2">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -2267,6 +2270,7 @@ export default function CompanyDashboard() {
               onSectorsClick={() => setActiveTab('setores')}
               onAttendantsClick={() => setActiveTab('atendentes')}
               onTagsClick={() => setActiveTab('tags')}
+              onMyPlanClick={() => setActiveTab('meu-plano')}
               activeTab={activeTab}
             />
           </div>
@@ -2960,6 +2964,10 @@ export default function CompanyDashboard() {
             </div>
           ) : activeTab === 'historico' ? (
             <TicketHistory onOpenChat={handleOpenChatFromHistory} />
+          ) : activeTab === 'meu-plano' ? (
+            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+              <MyPlan companyId={company?.id || ''} />
+            </div>
           ) : activeTab === 'configuracoes' ? (
             <SettingsPage />
           ) : null}

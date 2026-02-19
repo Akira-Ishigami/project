@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, History, Settings, LogOut, ChevronDown, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag } from 'lucide-react';
+import { User, History, Settings, LogOut, ChevronDown, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag, CreditCard } from 'lucide-react';
 
 interface ProfileDropdownProps {
   userName: string;
@@ -11,6 +11,7 @@ interface ProfileDropdownProps {
   onSectorsClick?: () => void;
   onAttendantsClick?: () => void;
   onTagsClick?: () => void;
+  onMyPlanClick?: () => void;
   showNavigationOptions?: boolean;
   showSettings?: boolean;
   activeTab?: string;
@@ -26,6 +27,7 @@ export default function ProfileDropdown({
   onSectorsClick,
   onAttendantsClick,
   onTagsClick,
+  onMyPlanClick,
   showNavigationOptions = false,
   showSettings = true,
   activeTab,
@@ -155,6 +157,23 @@ export default function ProfileDropdown({
                   <Tag className={`w-5 h-5 ${activeTab === 'tags' ? 'text-blue-600' : 'text-slate-600'}`} />
                   <span className="font-medium">Tags</span>
                   {activeTab === 'tags' && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
+                  )}
+                </button>
+              )}
+
+              {onMyPlanClick && (
+                <button
+                  onClick={() => handleMenuClick(onMyPlanClick)}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                    activeTab === 'meu-plano'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <CreditCard className={`w-5 h-5 ${activeTab === 'meu-plano' ? 'text-blue-600' : 'text-slate-600'}`} />
+                  <span className="font-medium">Meu Plano</span>
+                  {activeTab === 'meu-plano' && (
                     <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
                   )}
                 </button>
