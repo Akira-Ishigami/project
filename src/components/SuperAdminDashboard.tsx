@@ -17,6 +17,19 @@ type Company = {
   created_at?: string;
   max_attendants?: number;
   payment_notification_day?: number;
+  plan_id?: string | null;
+  additional_attendants?: number;
+};
+
+type Plan = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  billing_period: 'monthly' | 'annual';
+  max_attendants: number | null;
+  max_contacts: number | null;
+  is_active: boolean;
 };
 
 type Message = {
@@ -47,6 +60,7 @@ export default function SuperAdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -72,7 +86,8 @@ export default function SuperAdminDashboard() {
   const [api_key, setApiKey] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [maxAttendants, setMaxAttendants] = useState("5");
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [additionalAttendants, setAdditionalAttendants] = useState("0");
   const [paymentNotificationDay, setPaymentNotificationDay] = useState("5");
 
   // Modal and notifications
@@ -149,7 +164,7 @@ export default function SuperAdminDashboard() {
       setUserEmail(session.user.email ?? "");
       setUserId(session.user.id);
 
-      await Promise.all([loadCompanies(), loadMessages()]);
+      await Promise.all([loadCompanies(), loadMessages(), loadPlans()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,7 +250,7 @@ export default function SuperAdminDashboard() {
 
     const { data, error } = await supabase
       .from("companies")
-      .select("id,api_key,name,phone_number,email,user_id,is_super_admin,created_at,max_attendants,payment_notification_day")
+      .select("id,api_key,name,phone_number,email,user_id,is_super_admin,created_at,max_attendants,payment_notification_day,plan_id,additional_attendants")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -245,6 +260,22 @@ export default function SuperAdminDashboard() {
     }
 
     setCompanies((data as Company[]) || []);
+  };
+
+  const loadPlans = async () => {
+    const { data, error } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("is_active", true)
+      .order("price", { ascending: true });
+
+    if (error) {
+      console.error("Error loading plans:", error);
+      setPlans([]);
+      return;
+    }
+
+    setPlans((data as Plan[]) || []);
   };
 
   const loadMessages = async () => {
@@ -331,7 +362,8 @@ export default function SuperAdminDashboard() {
           name: name.trim(),
           phone_number: phone_number.trim(),
           api_key: api_key.trim(),
-          max_attendants: parseInt(maxAttendants) || 5,
+          plan_id: selectedPlanId || null,
+          additional_attendants: parseInt(additionalAttendants) || 0,
           payment_notification_day: parseInt(paymentNotificationDay) || 5,
         },
         headers: {
@@ -356,7 +388,8 @@ export default function SuperAdminDashboard() {
       setApiKey("");
       setEmail("");
       setPassword("");
-      setMaxAttendants("5");
+      setSelectedPlanId("");
+      setAdditionalAttendants("0");
       setPaymentNotificationDay("5");
 
       // recarrega lista
@@ -430,7 +463,8 @@ export default function SuperAdminDashboard() {
     setPhoneNumber(company.phone_number);
     setApiKey(company.api_key);
     setEmail(company.email);
-    setMaxAttendants(String(company.max_attendants || 5));
+    setSelectedPlanId(company.plan_id || "");
+    setAdditionalAttendants(String(company.additional_attendants || 0));
     setPaymentNotificationDay(String(company.payment_notification_day || 5));
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -497,7 +531,8 @@ export default function SuperAdminDashboard() {
           name: name.trim(),
           phone_number: phone_number.trim(),
           api_key: api_key.trim(),
-          max_attendants: parseInt(maxAttendants) || 5,
+          plan_id: selectedPlanId || null,
+          additional_attendants: parseInt(additionalAttendants) || 0,
           payment_notification_day: parseInt(paymentNotificationDay) || 5,
         })
         .eq('id', editingCompany);
@@ -511,7 +546,8 @@ export default function SuperAdminDashboard() {
       setApiKey("");
       setEmail("");
       setPassword("");
-      setMaxAttendants("5");
+      setSelectedPlanId("");
+      setAdditionalAttendants("0");
       setPaymentNotificationDay("5");
 
       setNotification({
@@ -972,37 +1008,62 @@ export default function SuperAdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm text-gray-700 mb-2">
-                          Quantos atendentes pode ter?
+                          Plano da Empresa
                         </label>
-                        <input
-                          required
-                          type="number"
-                          min="1"
-                          max="100"
-                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                          value={maxAttendants}
-                          onChange={(e) => setMaxAttendants(e.target.value)}
-                          placeholder="5"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Limite máximo de atendentes</p>
+                        <select
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                          value={selectedPlanId}
+                          onChange={(e) => setSelectedPlanId(e.target.value)}
+                        >
+                          <option value="">Sem plano (personalizado)</option>
+                          {plans.map((plan) => (
+                            <option key={plan.id} value={plan.id}>
+                              {plan.name} - R$ {plan.price.toFixed(2)}/{plan.billing_period === 'monthly' ? 'mês' : 'ano'}
+                              {plan.max_attendants ? ` (${plan.max_attendants} atendentes)` : ' (ilimitado)'}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Selecione o plano de assinatura</p>
                       </div>
 
                       <div>
                         <label className="block text-sm text-gray-700 mb-2">
-                          Dia da notificação de pagamento
+                          Atendentes Adicionais
                         </label>
                         <input
-                          required
                           type="number"
-                          min="1"
-                          max="31"
+                          min="0"
+                          max="100"
                           className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                          value={paymentNotificationDay}
-                          onChange={(e) => setPaymentNotificationDay(e.target.value)}
-                          placeholder="5"
+                          value={additionalAttendants}
+                          onChange={(e) => setAdditionalAttendants(e.target.value)}
+                          placeholder="0"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Dia do mês (1-31) para notificação</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {selectedPlanId && plans.find(p => p.id === selectedPlanId) ? (
+                            <>Total: {(plans.find(p => p.id === selectedPlanId)?.max_attendants || 0) + (parseInt(additionalAttendants) || 0)} atendentes</>
+                          ) : (
+                            'Atendentes além do plano base'
+                          )}
+                        </p>
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        Dia da notificação de pagamento
+                      </label>
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        max="31"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                        value={paymentNotificationDay}
+                        onChange={(e) => setPaymentNotificationDay(e.target.value)}
+                        placeholder="5"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Dia do mês (1-31) para notificação</p>
                     </div>
 
                     <div className="flex items-center gap-3 mt-4">
@@ -1100,12 +1161,39 @@ export default function SuperAdminDashboard() {
                           {c.api_key}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
-                        <span className="text-teal-600">👥</span>
-                        <span className="text-gray-700">
-                          Máximo de atendentes: <span className="font-semibold">{c.max_attendants || 5}</span>
-                        </span>
-                      </div>
+                      {c.plan_id && (() => {
+                        const plan = plans.find(p => p.id === c.plan_id);
+                        return plan ? (
+                          <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+                            <span className="text-teal-600">📦</span>
+                            <span className="text-gray-700">
+                              Plano: <span className="font-semibold">{plan.name}</span>
+                              {plan.max_attendants && (
+                                <span className="text-xs ml-2">
+                                  ({plan.max_attendants}
+                                  {c.additional_attendants ? ` + ${c.additional_attendants}` : ''} atendentes)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
+                      {!c.plan_id && (
+                        <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+                          <span className="text-teal-600">📦</span>
+                          <span className="text-gray-700">
+                            Plano: <span className="font-semibold">Personalizado</span>
+                          </span>
+                        </div>
+                      )}
+                      {c.additional_attendants > 0 && (
+                        <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
+                          <span className="text-teal-600">👥</span>
+                          <span className="text-gray-700">
+                            Atendentes adicionais: <span className="font-semibold">{c.additional_attendants}</span>
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 pt-2 border-t border-gray-200">
                         <span className="text-teal-600">💰</span>
                         <span className="text-gray-700">

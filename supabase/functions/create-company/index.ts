@@ -13,7 +13,8 @@ type Payload = {
   name: string;
   phone_number: string;
   api_key: string;
-  max_attendants?: number;
+  plan_id?: string | null;
+  additional_attendants?: number;
   payment_notification_day?: number;
 };
 
@@ -123,7 +124,8 @@ Deno.serve(async (req: Request) => {
     const name = String(body.name ?? "").trim();
     const phone_number = String(body.phone_number ?? "").trim();
     const api_key = String(body.api_key ?? "").trim();
-    const max_attendants = Number(body.max_attendants ?? 5);
+    const plan_id = body.plan_id || null;
+    const additional_attendants = Number(body.additional_attendants ?? 0);
     const payment_notification_day = Number(body.payment_notification_day ?? 5);
 
     console.log("Parsed fields:", {
@@ -131,7 +133,8 @@ Deno.serve(async (req: Request) => {
       name,
       phone_number,
       api_key,
-      max_attendants,
+      plan_id,
+      additional_attendants,
       payment_notification_day,
       passwordLength: password.length,
     });
@@ -184,7 +187,8 @@ Deno.serve(async (req: Request) => {
       email,
       user_id: newUserId,
       is_super_admin: false,
-      max_attendants,
+      plan_id,
+      additional_attendants,
       payment_notification_day,
     };
 
