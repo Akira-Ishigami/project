@@ -359,21 +359,38 @@ export default function MyPlan({ companyId }: MyPlanProps) {
         </div>
 
 
-        {showAllPlans && allPlans.length > 0 && (
-          <div className="relative backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl shadow-2xl overflow-hidden mt-8">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
+        <div
+          className={`transition-all duration-700 ease-in-out overflow-hidden ${
+            showAllPlans ? 'max-h-[5000px] opacity-100 mt-8' : 'max-h-0 opacity-0 mt-0'
+          }`}
+        >
+          {allPlans.length > 0 && (
+            <div className="relative backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
 
-            <div className="p-8 md:p-12">
-              <div className="flex items-center justify-between mb-12">
-                <div className="flex-1 text-center">
+              <div className="absolute inset-0 opacity-20 pointer-events-none">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+              </div>
+
+              <div className="relative p-8 md:p-12">
+                <div className="text-center mb-12 space-y-4">
+                  <div className="inline-block">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-px w-12 bg-gradient-to-r from-transparent to-blue-500"></div>
+                      <Sparkles className="w-6 h-6 text-blue-500 animate-pulse" />
+                      <div className="h-px w-12 bg-gradient-to-l from-transparent to-blue-500"></div>
+                    </div>
+                  </div>
                   <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900 mb-3">
                     Compare Todos os Planos
                   </h2>
-                  <p className="text-slate-600 text-lg">Escolha o plano ideal para o seu negócio</p>
+                  <p className="text-slate-600 text-lg max-w-2xl mx-auto">
+                    Escolha o plano ideal para o seu negócio e aproveite recursos exclusivos
+                  </p>
                 </div>
-              </div>
 
-              <div className="relative">
+                <div className="relative">
                 {canGoPrev() && (
                   <button
                     onClick={prevSlide}
@@ -392,132 +409,173 @@ export default function MyPlan({ companyId }: MyPlanProps) {
                   </button>
                 )}
 
-                <div className="overflow-hidden" ref={carouselRef}>
-                  <div
-                    className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-transform duration-500 ease-out"
-                    style={{
-                      transform: `translateX(-${currentSlide * (100 / getVisibleCards())}%)`
-                    }}
-                  >
-              {allPlans.map((p) => {
-                const isCurrentPlan = p.id === plan.id;
-                const planFeatures = [
-                  {
-                    icon: Users,
-                    label: 'Atendentes',
-                    value: p.max_attendants ? `Até ${p.max_attendants}` : 'Ilimitado',
-                  },
-                  {
-                    icon: MessageSquare,
-                    label: 'Contatos',
-                    value: p.max_contacts ? `Até ${p.max_contacts}` : 'Ilimitado',
-                  },
-                  {
-                    icon: Bot,
-                    label: 'IA',
-                    value: p.ai_enabled ? 'Disponível' : 'Não disponível',
-                    enabled: p.ai_enabled,
-                  },
-                ];
+                  <div className="overflow-hidden" ref={carouselRef}>
+                    <div
+                      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-transform duration-500 ease-out"
+                      style={{
+                        transform: `translateX(-${currentSlide * (100 / getVisibleCards())}%)`
+                      }}
+                    >
+                      {allPlans.map((p) => {
+                        const isCurrentPlan = p.id === plan.id;
+                        const planFeatures = [
+                          {
+                            icon: Users,
+                            label: 'Atendentes',
+                            value: p.max_attendants ? `Até ${p.max_attendants}` : 'Ilimitado',
+                          },
+                          {
+                            icon: MessageSquare,
+                            label: 'Contatos',
+                            value: p.max_contacts ? `Até ${p.max_contacts}` : 'Ilimitado',
+                          },
+                          {
+                            icon: Bot,
+                            label: 'IA',
+                            value: p.ai_enabled ? 'Disponível' : 'Não disponível',
+                            enabled: p.ai_enabled,
+                          },
+                        ];
 
-                return (
-                  <div
-                    key={p.id}
-                    className={`group relative rounded-2xl overflow-hidden transition-all duration-300 ${
-                      isCurrentPlan
-                        ? 'ring-2 ring-blue-500 shadow-2xl shadow-blue-500/30'
-                        : 'hover:shadow-xl hover:-translate-y-1'
-                    }`}
-                  >
-                    <div className={`absolute inset-0 ${
-                      isCurrentPlan
-                        ? 'bg-gradient-to-br from-blue-500/10 to-cyan-500/10'
-                        : 'bg-gradient-to-br from-slate-50 to-white'
-                    }`}></div>
+                        return (
+                          <div
+                            key={p.id}
+                            className={`group relative rounded-3xl overflow-hidden transition-all duration-500 ${
+                              isCurrentPlan
+                                ? 'ring-2 ring-blue-500 shadow-2xl shadow-blue-500/40 scale-105'
+                                : 'hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02]'
+                            }`}
+                          >
+                            <div className={`absolute inset-0 transition-all duration-500 ${
+                              isCurrentPlan
+                                ? 'bg-gradient-to-br from-blue-500/15 via-cyan-500/10 to-blue-500/15'
+                                : 'bg-gradient-to-br from-slate-50 via-white to-slate-50 group-hover:from-blue-50 group-hover:to-cyan-50'
+                            }`}></div>
 
-                    {isCurrentPlan && (
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
-                    )}
+                            {isCurrentPlan && (
+                              <>
+                                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-cyan-400/5 animate-pulse"></div>
+                              </>
+                            )}
 
-                    <div className="relative backdrop-blur-sm bg-white/90 border border-slate-200/50 rounded-2xl p-8">
-                      {isCurrentPlan && (
-                        <div className="absolute top-6 right-6 px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold rounded-full shadow-lg">
-                          Seu Plano
-                        </div>
-                      )}
+                            <div className="relative backdrop-blur-sm bg-white/95 border-2 border-slate-200/50 rounded-3xl p-8 group-hover:border-blue-300/50 transition-all duration-500">
+                              {isCurrentPlan ? (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-6 py-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 text-white text-sm font-black rounded-full shadow-2xl shadow-blue-500/50 flex items-center gap-2 animate-pulse">
+                                  <Sparkles className="w-4 h-4" />
+                                  Seu Plano Atual
+                                  <Sparkles className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-slate-700 to-slate-800 text-white text-xs font-bold rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                  Ver Detalhes
+                                </div>
+                              )}
 
-                      <h3 className="text-2xl font-black text-slate-900 mb-3">{p.name}</h3>
-                      {p.description && (
-                        <p className="text-sm text-slate-600 mb-6 line-clamp-3 leading-relaxed">
-                          {p.description}
-                        </p>
-                      )}
+                              <h3 className="text-2xl font-black text-slate-900 mb-3">{p.name}</h3>
+                              {p.description && (
+                                <p className="text-sm text-slate-600 mb-6 line-clamp-3 leading-relaxed">
+                                  {p.description}
+                                </p>
+                              )}
 
-                      <div className="mb-6 pb-6 border-b border-slate-200">
-                        <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-blue-900">
-                          R$ {p.price.toFixed(2)}
-                        </div>
-                        <div className="text-sm text-slate-500 font-medium mt-1">
-                          {p.billing_period === 'monthly' ? 'por mês' : 'por ano'}
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 mb-8">
-                        {planFeatures.map((feature, idx) => {
-                          const Icon = feature.icon;
-                          const isEnabled = feature.enabled !== undefined ? feature.enabled : true;
-
-                          return (
-                            <div key={idx} className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                isEnabled
-                                  ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg'
-                                  : 'bg-slate-200 text-slate-400'
-                              }`}>
-                                <Icon className="w-4 h-4" />
+                              <div className="mb-6 pb-6 border-b-2 border-gradient-to-r from-transparent via-slate-300 to-transparent relative">
+                                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div className="flex items-baseline gap-2 mb-2">
+                                  <span className="text-xl font-bold text-slate-500">R$</span>
+                                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900">
+                                    {p.price.toFixed(2).split('.')[0]}
+                                  </span>
+                                  <span className="text-2xl font-bold text-slate-500">
+                                    ,{p.price.toFixed(2).split('.')[1]}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-slate-400" />
+                                  <span className="text-sm text-slate-500 font-semibold">
+                                    {p.billing_period === 'monthly' ? 'Pagamento Mensal' : 'Pagamento Anual'}
+                                  </span>
+                                </div>
                               </div>
-                              <span className={`text-sm font-medium ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>
-                                {feature.value}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
 
-                      {!isCurrentPlan && (
-                        <button
-                          onClick={handleUpgrade}
-                          className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl transition-all font-bold shadow-lg hover:shadow-2xl hover:shadow-blue-500/50"
-                        >
-                          Escolher Plano
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                              <div className="space-y-4 mb-8">
+                                {planFeatures.map((feature, idx) => {
+                                  const Icon = feature.icon;
+                                  const isEnabled = feature.enabled !== undefined ? feature.enabled : true;
+
+                                  return (
+                                    <div key={idx} className="flex items-center gap-3">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                        isEnabled
+                                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg'
+                                          : 'bg-slate-200 text-slate-400'
+                                      }`}>
+                                        <Icon className="w-4 h-4" />
+                                      </div>
+                                      <span className={`text-sm font-medium ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>
+                                        {feature.value}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {!isCurrentPlan ? (
+                                <button
+                                  onClick={handleUpgrade}
+                                  className="group/btn relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 p-[2px] hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-500"
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-0 group-hover/btn:opacity-100 blur transition-opacity duration-500"></div>
+                                  <div className="relative bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 px-8 py-4 rounded-2xl flex items-center justify-center gap-3 group-hover/btn:gap-4 transition-all duration-300">
+                                    <Zap className="w-5 h-5 text-white animate-pulse" />
+                                    <span className="font-black text-white text-lg">Escolher Este Plano</span>
+                                    <Zap className="w-5 h-5 text-white animate-pulse" />
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-2xl font-black text-center shadow-lg flex items-center justify-center gap-2">
+                                  <Check className="w-5 h-5" strokeWidth={3} />
+                                  Plano Ativo
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
 
-                {allPlans.length > getVisibleCards() && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
-                    {Array.from({ length: Math.ceil(allPlans.length - getVisibleCards() + 1) }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          currentSlide === index
-                            ? 'w-8 bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg'
-                            : 'w-2 bg-slate-300 hover:bg-slate-400'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
+                  {allPlans.length > getVisibleCards() && (
+                    <div className="flex items-center justify-center gap-3 mt-10">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-100/80 backdrop-blur-sm rounded-full border border-slate-200/50">
+                        {Array.from({ length: Math.ceil(allPlans.length - getVisibleCards() + 1) }).map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentSlide(index)}
+                            className={`relative rounded-full transition-all duration-500 ${
+                              currentSlide === index
+                                ? 'w-10 h-3'
+                                : 'w-3 h-3 hover:w-4'
+                            }`}
+                          >
+                            <div className={`absolute inset-0 rounded-full transition-all duration-500 ${
+                              currentSlide === index
+                                ? 'bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 shadow-lg shadow-blue-500/50'
+                                : 'bg-slate-300 hover:bg-slate-400'
+                            }`}></div>
+                            {currentSlide === index && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full blur animate-pulse"></div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
