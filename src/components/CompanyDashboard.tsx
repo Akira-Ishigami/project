@@ -2118,7 +2118,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden transition-all duration-300 ml-16">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden pt-14">
       {showToast && (
         <Toast
           message={toastMessage}
@@ -2127,159 +2127,22 @@ export default function CompanyDashboard() {
         />
       )}
 
-      {/* Fixed Header with Navigation */}
-      <header className="bg-white/80  backdrop-blur-xl border-b border-slate-200/80  shadow-sm z-50 transition-colors duration-300">
-        <div className="px-6 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
-              title={sidebarOpen ? "Fechar menu" : "Abrir menu"}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
-              settings.logoUrl && settings.logoUrl.trim() !== ''
-                ? 'bg-white border border-slate-200'
-                : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
-            }`}>
-              {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
-                <img
-                  src={settings.logoUrl}
-                  alt="Logo"
-                  className="w-full h-full object-cover rounded-xl"
-                />
-              ) : (
-                <MessageSquare className="w-6 h-6 text-white" />
-              )}
-            </div>
-            <div>
-              <h1 className="text-slate-900 font-bold text-lg">
-                {settings.companyName && settings.companyName.trim() !== '' ? settings.companyName : company?.name}
-              </h1>
-              <p className="text-xs text-slate-500">Atendimento Multicanal</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {aiEnabled && (
-              <button
-                onClick={handleToggleIaGlobal}
-                disabled={togglingIaGlobal}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${iaGlobalAtivada
-                  ? 'bg-gradient-to-r from-emerald-50 to-blue-50 ring-1 ring-blue-200 shadow-md text-blue-700 hover:shadow-lg'
-                  : 'bg-slate-50 text-slate-700 hover:bg-slate-100 hover:shadow-sm'
-                  } disabled:opacity-50`}
-                title={iaGlobalAtivada ? 'Desativar IA' : 'Ativar IA'}
-              >
-                {togglingIaGlobal ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-semibold transition-all duration-200 ${iaGlobalAtivada ? 'bg-gradient-to-r from-blue-500 to-emerald-400 text-white shadow-lg shadow-blue-500/40' : 'bg-white border border-slate-200 text-slate-700'}`}>
-                    IA
-                  </span>
-                )}
-                <span className="text-sm">{iaGlobalAtivada ? 'Ativada' : 'Desativada'}</span>
-              </button>
-            )}
-            <div className="relative ml-2">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                title="Notificações"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg shadow-red-500/40 animate-pulse">
-                    {unreadNotificationsCount}
-                  </span>
-                )}
-              </button>
-              {showNotifications && (
-                <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-[500px] overflow-hidden flex flex-col">
-                  <div className="p-4 border-b-2 border-gray-300 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Notificações</h3>
-                    <button
-                      onClick={() => setShowNotifications(false)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="overflow-y-auto flex-1">
-                    {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-gray-500">
-                        <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                        <p>Nenhuma notificação</p>
-                      </div>
-                    ) : (
-                      notifications.map((notif) => {
-                        const typeConfig = {
-                          payment: { icon: Info, bgColor: 'bg-blue-50', iconColor: 'text-blue-500', borderColor: 'border-blue-200' },
-                          info: { icon: Info, bgColor: 'bg-gray-50', iconColor: 'text-gray-500', borderColor: 'border-gray-200' },
-                          warning: { icon: AlertCircle, bgColor: 'bg-yellow-50', iconColor: 'text-yellow-500', borderColor: 'border-yellow-200' },
-                          error: { icon: XCircle, bgColor: 'bg-red-50', iconColor: 'text-red-500', borderColor: 'border-red-200' },
-                        };
-                        const config = typeConfig[notif.type];
-                        const Icon = config.icon;
-
-                        return (
-                          <div
-                            key={notif.id}
-                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all cursor-pointer ${!notif.is_read ? 'bg-blue-50/30' : ''
-                              }`}
-                            onClick={() => !notif.is_read && markNotificationAsRead(notif.id)}
-                          >
-                            <div className="flex gap-3">
-                              <div className={`${config.bgColor} ${config.borderColor} border rounded-lg p-2 h-fit`}>
-                                <Icon className={`w-5 h-5 ${config.iconColor}`} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <h4 className="font-semibold text-gray-900 text-sm">{notif.title}</h4>
-                                  {!notif.is_read && (
-                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600 mb-2">{notif.message}</p>
-                                <p className="text-xs text-gray-400">
-                                  {new Date(notif.created_at).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            <ProfileDropdown
-              userName={company?.name || 'Empresa'}
-              onHistoryClick={() => setActiveTab('historico')}
-              onSettingsClick={() => setActiveTab('configuracoes')}
-              onLogout={signOut}
-              showNavigationOptions={true}
-              onMessagesClick={() => setActiveTab('mensagens')}
-              onDepartmentsClick={() => setActiveTab('departamentos')}
-              onSectorsClick={() => setActiveTab('setores')}
-              onAttendantsClick={() => setActiveTab('atendentes')}
-              onTagsClick={() => setActiveTab('tags')}
-              onMyPlanClick={() => setActiveTab('meu-plano')}
-              activeTab={activeTab}
-              isOpen={menuOpen}
-              onToggle={() => setMenuOpen(!menuOpen)}
-            />
-          </div>
-        </div>
-      </header>
+      <ProfileDropdown
+        userName={company?.name || 'Empresa'}
+        onHistoryClick={() => setActiveTab('historico')}
+        onSettingsClick={() => setActiveTab('configuracoes')}
+        onLogout={signOut}
+        showNavigationOptions={true}
+        onMessagesClick={() => setActiveTab('mensagens')}
+        onDepartmentsClick={() => setActiveTab('departamentos')}
+        onSectorsClick={() => setActiveTab('setores')}
+        onAttendantsClick={() => setActiveTab('atendentes')}
+        onTagsClick={() => setActiveTab('tags')}
+        onMyPlanClick={() => setActiveTab('meu-plano')}
+        activeTab={activeTab}
+        isOpen={menuOpen}
+        onToggle={() => setMenuOpen(!menuOpen)}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">

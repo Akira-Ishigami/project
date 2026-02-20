@@ -1431,7 +1431,7 @@ export default function AttendantDashboard() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black transition-colors duration-300">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-black dark:via-black dark:to-black transition-colors duration-300 pt-14">
       {/* Toast */}
       {showToast && (
         <Toast
@@ -1440,54 +1440,16 @@ export default function AttendantDashboard() {
         />
       )}
 
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80 dark:border-slate-700/80 transition-colors duration-300">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-all duration-200"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200 overflow-hidden ${
-                settings.logoUrl && settings.logoUrl.trim() !== ''
-                  ? 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600'
-                  : 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30'
-              }`}>
-                {settings.logoUrl && settings.logoUrl.trim() !== '' ? (
-                  <img
-                    src={settings.logoUrl}
-                    alt="Logo"
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                ) : (
-                  <MessageSquare className="w-6 h-6 text-white" />
-                )}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white transition-colors duration-200">
-                  {settings.displayName && settings.displayName.trim() !== '' ? settings.displayName : 'ChatFlow'}
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5 transition-colors duration-200">
-                  {attendant?.name || 'Atendente'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ProfileDropdown
-                userName={attendant?.name || 'Atendente'}
-                onHistoryClick={() => setCurrentView('historico')}
-                onSettingsClick={() => setCurrentView('configuracoes')}
-                onLogout={signOut}
-                showSettings={false}
-                activeTab={currentView}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
+      <ProfileDropdown
+        userName={attendant?.name || 'Atendente'}
+        onHistoryClick={() => setCurrentView('historico')}
+        onSettingsClick={() => setCurrentView('configuracoes')}
+        onLogout={signOut}
+        showSettings={false}
+        activeTab={currentView}
+        isOpen={false}
+        onToggle={() => {}}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
