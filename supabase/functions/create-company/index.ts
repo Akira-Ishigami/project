@@ -183,6 +183,21 @@ Deno.serve(async (req: Request) => {
     console.log("User created successfully with ID:", newUserId);
 
     console.log("Inserting company into database...");
+
+    // Calcula max_attendants baseado no plano
+    let max_attendants = 1;
+    if (plan_id) {
+      const { data: planData } = await supabaseAdmin
+        .from("plans")
+        .select("max_attendants")
+        .eq("id", plan_id)
+        .maybeSingle();
+
+      if (planData?.max_attendants) {
+        max_attendants = planData.max_attendants + additional_attendants;
+      }
+    }
+
     const companyData = {
       name,
       phone_number,
@@ -194,6 +209,7 @@ Deno.serve(async (req: Request) => {
       additional_attendants,
       payment_notification_day,
       payment_day,
+      max_attendants,
     };
 
     console.log("Company data to insert:", JSON.stringify(companyData));

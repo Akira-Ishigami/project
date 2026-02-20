@@ -386,6 +386,7 @@ export default function SuperAdminDashboard() {
           plan_id: selectedPlanId || null,
           additional_attendants: parseInt(additionalAttendants) || 0,
           payment_notification_day: parseInt(paymentNotificationDay) || 5,
+          payment_day: 10,
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
