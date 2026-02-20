@@ -1179,7 +1179,7 @@ export default function SuperAdminDashboard() {
                           setApiKey("");
                           setEmail("");
                           setPassword("");
-                          setMaxAttendants("5");
+                          setAdditionalAttendants("0");
                           setPaymentNotificationDay("5");
                         }}
                         className="rounded-lg border border-gray-300 px-6 py-2.5 text-gray-700 hover:bg-gray-100 transition-colors"

@@ -963,7 +963,6 @@ export default function CompanyDashboard() {
       setContactsDB((prev) =>
         prev.map((c: any) => (c.id === contactId ? { ...c, tag_ids: selectedTags, tag_id: primaryTag } : c))
       );
-      setSelectedContactData((prev: any) => (prev ? { ...prev, tag_ids: selectedTags, tag_id: primaryTag } : prev));
 
       // Se quiser garantir consistência total, pode manter o refetch:
       fetchContacts();
@@ -997,10 +996,9 @@ export default function CompanyDashboard() {
     // =========================
     // 8) Finalização UI
     // =========================
-    setToastMessage("Informações atualizadas com sucesso!");
+    setToastMessage("Informacoes atualizadas com sucesso!");
     setShowToast(true);
 
-    setShowOptionsMenu(false);
     setSelectedDepartment("");
     setSelectedSector("");
     setSelectedTags([]);
