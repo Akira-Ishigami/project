@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell, Package } from "lucide-react";
+import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell, Package, Settings, Copy, Check } from "lucide-react";
 import Modal from "./Modal";
 import Notification from "./Notification";
 import PlansManagement from "./PlansManagement";
@@ -50,7 +50,7 @@ type Message = {
   'minha?'?: string | null;
 };
 
-type TabType = "empresas" | "planos";
+type TabType = "empresas" | "planos" | "configuracoes";
 
 export default function SuperAdminDashboard() {
   const { signOut } = useAuth();
@@ -98,6 +98,8 @@ export default function SuperAdminDashboard() {
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info'; message: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [pixKey, setPixKey] = useState("seu-email@exemplo.com");
+  const [copied, setCopied] = useState(false);
 
   // Edit company
   const [editingCompany, setEditingCompany] = useState<string | null>(null);
@@ -863,6 +865,23 @@ export default function SuperAdminDashboard() {
             )}
           </button>
 
+          <button
+            onClick={() => setActiveTab("configuracoes")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              activeTab === "configuracoes"
+                ? "bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-600 border border-blue-200 shadow-sm"
+                : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+            }`}
+          >
+            <Settings size={20} />
+            {sidebarOpen && (
+              <div className="flex-1 text-left">
+                <div className="font-medium">Configuracoes</div>
+                <div className="text-xs opacity-70">Chave PIX e mais</div>
+              </div>
+            )}
+          </button>
+
         </nav>
 
         <div className="p-4 border-t border-gray-200/50">
@@ -1217,6 +1236,78 @@ export default function SuperAdminDashboard() {
 
           {activeTab === "planos" && (
             <PlansManagement />
+          )}
+
+          {activeTab === "configuracoes" && (
+            <div className="max-w-4xl">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-8">
+                  <h2 className="text-3xl font-bold text-white mb-2">Configuracoes do Sistema</h2>
+                  <p className="text-blue-100">Gerencie as configuracoes globais da plataforma</p>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <Settings className="w-6 h-6 text-blue-600" />
+                      Chave PIX para Pagamentos
+                    </h3>
+
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Chave PIX
+                      </label>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={pixKey}
+                          onChange={(e) => setPixKey(e.target.value)}
+                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="Digite a chave PIX"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(pixKey);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                            copied
+                              ? 'bg-green-500 text-white'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                        >
+                          {copied ? (
+                            <>
+                              <Check className="w-5 h-5" />
+                              Copiado!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-5 h-5" />
+                              Copiar
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-3">
+                        Esta chave sera exibida para as empresas realizarem pagamentos
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
+                    >
+                      Salvar Configuracoes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>

@@ -1442,9 +1442,11 @@ export default function AttendantDashboard() {
 
       <ProfileDropdown
         userName={attendant?.name || 'Atendente'}
+        onMessagesClick={() => setCurrentView('mensagens')}
         onHistoryClick={() => setCurrentView('historico')}
         onSettingsClick={() => setCurrentView('configuracoes')}
         onLogout={signOut}
+        showNavigationOptions={true}
         showSettings={false}
         activeTab={currentView}
         isOpen={false}
@@ -1455,7 +1457,7 @@ export default function AttendantDashboard() {
       <div className="flex-1 flex overflow-hidden">
         {currentView === 'historico' ? (
           <TicketHistory onOpenChat={handleOpenChatFromHistory} />
-        ) : (
+        ) : currentView === 'mensagens' ? (
           <>
             {/* Sidebar - Contacts List */}
             <div
@@ -2072,6 +2074,13 @@ export default function AttendantDashboard() {
           )}
         </div>
           </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-slate-50">
+            <div className="text-center">
+              <Settings className="w-24 h-24 mx-auto mb-4 text-slate-300" />
+              <p className="text-lg font-medium text-slate-600">Configurações em desenvolvimento</p>
+            </div>
+          </div>
         )}
       </div>
 
