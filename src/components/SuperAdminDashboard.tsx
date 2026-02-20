@@ -5,6 +5,8 @@ import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Pa
 import Modal from "./Modal";
 import Notification from "./Notification";
 import PlansManagement from "./PlansManagement";
+import TabContent from "./TabContent";
+import { useTabTransition } from "../hooks/useTabTransition";
 
 type Company = {
   id: string;
@@ -57,6 +59,7 @@ export default function SuperAdminDashboard() {
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [activeTab, setActiveTab] = useState<TabType>("empresas");
+  const { displayTab, isTransitioning } = useTabTransition(activeTab);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -894,7 +897,7 @@ export default function SuperAdminDashboard() {
             </div>
           )}
 
-          {activeTab === "empresas" && (
+          <TabContent isActive={displayTab === "empresas"} isTransitioning={isTransitioning}>
             <>
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -1213,11 +1216,11 @@ export default function SuperAdminDashboard() {
                 ))}
               </div>
             </>
-          )}
+          </TabContent>
 
-          {activeTab === "planos" && (
+          <TabContent isActive={displayTab === "planos"} isTransitioning={isTransitioning}>
             <PlansManagement />
-          )}
+          </TabContent>
         </div>
       </main>
 
