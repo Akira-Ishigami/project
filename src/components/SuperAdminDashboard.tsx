@@ -98,8 +98,10 @@ export default function SuperAdminDashboard() {
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'warning' | 'info'; message: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [pixKey, setPixKey] = useState("seu-email@exemplo.com");
+  const [pixKey, setPixKey] = useState("");
   const [copied, setCopied] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
   // Edit company
   const [editingCompany, setEditingCompany] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export default function SuperAdminDashboard() {
       setUserEmail(session.user.email ?? "");
       setUserId(session.user.id);
 
-      await Promise.all([loadCompanies(), loadMessages(), loadPlans()]);
+      await Promise.all([loadCompanies(), loadMessages(), loadPlans(), loadSystemSettings()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,6 +280,23 @@ export default function SuperAdminDashboard() {
     }
 
     setPlans((data as Plan[]) || []);
+  };
+
+  const loadSystemSettings = async () => {
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("*")
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error loading system settings:", error);
+      return;
+    }
+
+    if (data) {
+      setPixKey(data.pix_key || "");
+      setSettingsId(data.id);
+    }
   };
 
   const loadMessages = async () => {
@@ -456,6 +475,53 @@ export default function SuperAdminDashboard() {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      let error;
+
+      if (settingsId) {
+        const result = await supabase
+          .from("system_settings")
+          .update({ pix_key: pixKey })
+          .eq("id", settingsId);
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from("system_settings")
+          .insert({ pix_key: pixKey })
+          .select()
+          .single();
+        error = result.error;
+        if (result.data) {
+          setSettingsId(result.data.id);
+        }
+      }
+
+      if (error) {
+        console.error("Error saving settings:", error);
+        setNotification({
+          type: 'error',
+          message: `Erro ao salvar configuracoes: ${error.message}`
+        });
+        return;
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'Configuracoes salvas com sucesso!'
+      });
+    } catch (err: any) {
+      console.error("Error saving settings:", err);
+      setNotification({
+        type: 'error',
+        message: 'Erro inesperado ao salvar configuracoes'
+      });
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -1300,9 +1366,18 @@ export default function SuperAdminDashboard() {
                   <div className="pt-6 border-t border-gray-200">
                     <button
                       type="button"
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl"
+                      onClick={handleSaveSettings}
+                      disabled={savingSettings}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      Salvar Configuracoes
+                      {savingSettings ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        'Salvar Configuracoes'
+                      )}
                     </button>
                   </div>
                 </div>

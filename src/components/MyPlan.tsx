@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { CreditCard, Calendar, Users, MessageSquare, Bot, Check, Loader2, Sparkles, ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CreditCard, Calendar, Users, MessageSquare, Bot, Check, Loader2, Sparkles, ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -35,6 +35,8 @@ export default function MyPlan({ companyId }: MyPlanProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isButtonClicked, setIsButtonClicked] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [pixKey, setPixKey] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -85,6 +87,15 @@ export default function MyPlan({ companyId }: MyPlanProps) {
 
       if (allPlansError) throw allPlansError;
       setAllPlans(allPlansData || []);
+
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('system_settings')
+        .select('pix_key')
+        .maybeSingle();
+
+      if (!settingsError && settingsData) {
+        setPixKey(settingsData.pix_key || "");
+      }
     } catch (err) {
       console.error('Error loading plan:', err);
       setError('Erro ao carregar informações do plano');
@@ -310,6 +321,39 @@ export default function MyPlan({ companyId }: MyPlanProps) {
                   })}
                 </div>
               </div>
+
+              {pixKey && (
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">Chave PIX para Pagamento</h3>
+                      <p className="text-sm text-gray-600 mb-3">Use esta chave para realizar pagamentos do seu plano</p>
+                      <div className="flex items-center gap-3 bg-white rounded-lg px-4 py-3 border border-blue-200">
+                        <code className="flex-1 text-sm font-mono text-gray-700 break-all">{pixKey}</code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(pixKey);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          className={`flex-shrink-0 p-2 rounded-lg transition-all ${
+                            copied
+                              ? 'bg-green-500 text-white'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                          title="Copiar chave PIX"
+                        >
+                          {copied ? (
+                            <Check className="w-5 h-5" />
+                          ) : (
+                            <Copy className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
