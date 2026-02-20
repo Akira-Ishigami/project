@@ -394,11 +394,19 @@ export default function SuperAdminDashboard() {
       });
 
       console.log("Response completo:", response);
+      console.log("Response.data:", response.data);
+      console.log("Response.error:", response.error);
 
       if (response.error) {
         console.error("Erro create-company:", response.error);
+        console.error("Error details from data:", response.data);
         const errorDetails = response.data?.error || response.data?.details || response.error.message;
         throw new Error(errorDetails || "Erro ao criar empresa.");
+      }
+
+      if (response.data?.error) {
+        console.error("Error in response data:", response.data);
+        throw new Error(response.data.error);
       }
 
       console.log("Empresa criada:", response.data);

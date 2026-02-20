@@ -187,15 +187,29 @@ Deno.serve(async (req: Request) => {
     // Calcula max_attendants baseado no plano
     let max_attendants = 1;
     if (plan_id) {
-      const { data: planData } = await supabaseAdmin
+      console.log("Looking up plan with ID:", plan_id);
+      const { data: planData, error: planError } = await supabaseAdmin
         .from("plans")
         .select("max_attendants")
         .eq("id", plan_id)
         .maybeSingle();
 
+      console.log("Plan lookup result:", { planData, planError });
+
+      if (planError) {
+        console.error("Error fetching plan:", planError);
+      }
+
       if (planData?.max_attendants) {
         max_attendants = planData.max_attendants + additional_attendants;
+        console.log("Calculated max_attendants:", max_attendants);
+      } else {
+        console.warn("Plan not found or has no max_attendants, using default value");
+        max_attendants = 1 + additional_attendants;
       }
+    } else {
+      console.log("No plan_id provided, using default max_attendants");
+      max_attendants = 1 + additional_attendants;
     }
 
     const companyData = {
