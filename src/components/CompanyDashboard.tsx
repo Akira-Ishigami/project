@@ -13,6 +13,7 @@ import MyPlan from './MyPlan';
 import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
+import { linkifyText } from '../lib/linkifyText';
 import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
 import SystemMessage from './SystemMessage';
 
@@ -2546,7 +2547,7 @@ export default function CompanyDashboard() {
                             return (
                               <div key={msg.id} className="flex justify-center my-4">
                                 <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-lg text-center">
-                                  <p className="text-sm text-blue-700 font-medium">{msg.message}</p>
+                                  <p className="text-sm text-blue-700 font-medium">{linkifyText(msg.message)}</p>
                                 </div>
                               </div>
                             );
@@ -2616,7 +2617,7 @@ export default function CompanyDashboard() {
                                     />
                                     {msg.caption && (
                                       <div className="mt-2 px-2 text-sm">
-                                        {msg.caption}
+                                        {linkifyText(msg.caption)}
                                       </div>
                                     )}
                                   </div>
@@ -2737,7 +2738,7 @@ export default function CompanyDashboard() {
                                 {msg.message && !msg.urlpdf && !hasBase64Content && (
                                   <div className="px-3.5 py-2">
                                     <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
-                                      {msg.message}
+                                      {linkifyText(msg.message)}
                                     </p>
                                   </div>
                                 )}

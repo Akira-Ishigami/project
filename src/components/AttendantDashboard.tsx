@@ -9,6 +9,7 @@ import SystemMessage from './SystemMessage';
 import ProfileDropdown from './ProfileDropdown';
 import TicketHistory from './TicketHistory';
 import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
+import { linkifyText } from '../lib/linkifyText';
 
 interface Contact {
   phoneNumber: string;
@@ -1799,7 +1800,7 @@ export default function AttendantDashboard() {
                               />
                               {msg.caption && (
                                 <div className="mt-2 px-2 text-sm">
-                                  {msg.caption}
+                                  {linkifyText(msg.caption)}
                                 </div>
                               )}
                             </div>
@@ -1923,7 +1924,7 @@ export default function AttendantDashboard() {
                           {msg.message && !msg.urlpdf && !hasBase64Content && (
                             <div className="px-3.5 py-2">
                               <p className="text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
-                                {msg.message}
+                                {linkifyText(msg.message)}
                               </p>
                             </div>
                           )}
