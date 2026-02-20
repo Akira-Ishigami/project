@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { CreditCard, Calendar, Users, MessageSquare, Bot, Check, Loader2, Sparkles, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { CreditCard, Calendar, Users, MessageSquare, Bot, Check, Loader2, Sparkles, ChevronDown, ChevronUp, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -31,6 +31,9 @@ export default function MyPlan({ companyId }: MyPlanProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllPlans, setShowAllPlans] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isButtonClicked, setIsButtonClicked] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadData();
@@ -94,6 +97,38 @@ export default function MyPlan({ companyId }: MyPlanProps) {
       `Olá! Gostaria de fazer upgrade do meu plano. Atualmente estou no plano "${plan?.name}" e tenho interesse em conhecer outras opções.`
     );
     window.open(`https://wa.me/5511999999999?text=${message}`, '_blank');
+  };
+
+  const handleTogglePlans = () => {
+    setIsButtonClicked(true);
+    setTimeout(() => setIsButtonClicked(false), 300);
+    setShowAllPlans(!showAllPlans);
+    setCurrentSlide(0);
+  };
+
+  const getVisibleCards = () => {
+    if (window.innerWidth >= 1024) return 3;
+    if (window.innerWidth >= 768) return 2;
+    return 1;
+  };
+
+  const nextSlide = () => {
+    const visibleCards = getVisibleCards();
+    const maxSlide = Math.max(0, allPlans.length - visibleCards);
+    setCurrentSlide((prev) => Math.min(prev + 1, maxSlide));
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => Math.max(prev - 1, 0));
+  };
+
+  const canGoNext = () => {
+    const visibleCards = getVisibleCards();
+    return currentSlide < allPlans.length - visibleCards;
+  };
+
+  const canGoPrev = () => {
+    return currentSlide > 0;
   };
 
   if (loading) {
@@ -288,20 +323,32 @@ export default function MyPlan({ companyId }: MyPlanProps) {
                 </button>
 
                 <button
-                  onClick={() => setShowAllPlans(!showAllPlans)}
-                  className="group relative flex-1 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 p-[2px] hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300"
+                  onClick={handleTogglePlans}
+                  className={`group relative flex-1 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 p-[2px] hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 ${
+                    isButtonClicked ? 'scale-95' : 'scale-100'
+                  }`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-0 group-hover:opacity-100 blur transition-opacity duration-300"></div>
-                  <div className="relative bg-white/95 backdrop-blur px-8 py-4 rounded-2xl flex items-center justify-center gap-3">
+                  <div className={`relative bg-white/95 backdrop-blur px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 ${
+                    isButtonClicked ? 'bg-gradient-to-r from-blue-500 to-cyan-500' : ''
+                  }`}>
                     {showAllPlans ? (
                       <>
-                        <ChevronUp className="w-5 h-5 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600" />
-                        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 text-lg">Ocultar Planos</span>
+                        <ChevronUp className={`w-5 h-5 transition-all duration-200 ${
+                          isButtonClicked ? 'text-white rotate-180' : 'text-blue-600'
+                        }`} />
+                        <span className={`font-bold text-lg transition-all duration-200 ${
+                          isButtonClicked ? 'text-white' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600'
+                        }`}>Ocultar Planos</span>
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="w-5 h-5 text-blue-600" />
-                        <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 text-lg">Comparar Planos</span>
+                        <ChevronDown className={`w-5 h-5 transition-all duration-200 ${
+                          isButtonClicked ? 'text-white -rotate-180' : 'text-blue-600'
+                        }`} />
+                        <span className={`font-bold text-lg transition-all duration-200 ${
+                          isButtonClicked ? 'text-white' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600'
+                        }`}>Comparar Planos</span>
                       </>
                     )}
                   </div>
@@ -317,14 +364,41 @@ export default function MyPlan({ companyId }: MyPlanProps) {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
 
             <div className="p-8 md:p-12">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900 mb-3">
-                  Compare Todos os Planos
-                </h2>
-                <p className="text-slate-600 text-lg">Escolha o plano ideal para o seu negócio</p>
+              <div className="flex items-center justify-between mb-12">
+                <div className="flex-1 text-center">
+                  <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900 mb-3">
+                    Compare Todos os Planos
+                  </h2>
+                  <p className="text-slate-600 text-lg">Escolha o plano ideal para o seu negócio</p>
+                </div>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="relative">
+                {canGoPrev() && (
+                  <button
+                    onClick={prevSlide}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-full flex items-center justify-center shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-110"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-white" />
+                  </button>
+                )}
+
+                {canGoNext() && (
+                  <button
+                    onClick={nextSlide}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-full flex items-center justify-center shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-110"
+                  >
+                    <ChevronRight className="w-6 h-6 text-white" />
+                  </button>
+                )}
+
+                <div className="overflow-hidden" ref={carouselRef}>
+                  <div
+                    className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 transition-transform duration-500 ease-out"
+                    style={{
+                      transform: `translateX(-${currentSlide * (100 / getVisibleCards())}%)`
+                    }}
+                  >
               {allPlans.map((p) => {
                 const isCurrentPlan = p.id === plan.id;
                 const planFeatures = [
@@ -422,6 +496,24 @@ export default function MyPlan({ companyId }: MyPlanProps) {
                   </div>
                 );
               })}
+                  </div>
+                </div>
+
+                {allPlans.length > getVisibleCards() && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    {Array.from({ length: Math.ceil(allPlans.length - getVisibleCards() + 1) }).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentSlide(index)}
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          currentSlide === index
+                            ? 'w-8 bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg'
+                            : 'w-2 bg-slate-300 hover:bg-slate-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
