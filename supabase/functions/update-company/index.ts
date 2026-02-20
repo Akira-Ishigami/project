@@ -1,6 +1,8 @@
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
@@ -29,9 +31,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
+        JSON.stringify({ error: "Missing or invalid Authorization header" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -39,14 +41,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    // Cliente com o token do usuário
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
+    if (userError || !userData?.user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Unauthorized", details: userError?.message || "Invalid token" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -54,14 +58,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: companyData, error: companyError } = await supabaseClient
-      .from("companies")
-      .select("id, is_super_admin")
-      .eq("user_id", user.id)
-      .eq("is_super_admin", true)
+    const callerId = userData.user.id;
+
+    // Cliente admin para verificações
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Verificar se é super admin (usando tabela super_admins)
+    const { data: adminData, error: adminError } = await supabaseAdmin
+      .from("super_admins")
+      .select("user_id")
+      .eq("user_id", callerId)
       .maybeSingle();
 
-    if (companyError || !companyData || !companyData.is_super_admin) {
+    if (adminError || !adminData) {
       return new Response(
         JSON.stringify({ error: "Access denied. Only super admins can update companies." }),
         {
@@ -91,7 +100,7 @@ Deno.serve(async (req: Request) => {
     if (payload.payment_notification_day !== undefined) updateData.payment_notification_day = payload.payment_notification_day;
     if (payload.payment_day !== undefined) updateData.payment_day = payload.payment_day;
 
-    const { data: updatedCompany, error: updateError } = await supabaseClient
+    const { data: updatedCompany, error: updateError } = await supabaseAdmin
       .from("companies")
       .update(updateData)
       .eq("id", payload.id)

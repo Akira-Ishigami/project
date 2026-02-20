@@ -373,9 +373,6 @@ export default function SuperAdminDashboard() {
         throw new Error("Sem token. Faça login novamente.");
       }
 
-      console.log("SESSION:", session);
-      console.log("ACCESS_TOKEN:", session?.access_token?.slice(0, 30));
-
       const response = await supabase.functions.invoke("create-company", {
         body: {
           email: email.trim().toLowerCase(),

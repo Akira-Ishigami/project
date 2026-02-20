@@ -123,12 +123,26 @@ Deno.serve(async (req: Request) => {
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "").trim();
     const name = String(body.name ?? "").trim();
-    const phone_number = String(body.phone_number ?? "").trim();
+    const phone_number_raw = String(body.phone_number ?? "").trim();
+    const phone_number = phone_number_raw.replace(/\D/g, ""); // Apenas dígitos
     const api_key = String(body.api_key ?? "").trim();
     const plan_id = body.plan_id || null;
-    const additional_attendants = Number(body.additional_attendants ?? 0);
-    const payment_notification_day = Number(body.payment_notification_day ?? 5);
-    const payment_day = Number(body.payment_day ?? 10);
+
+    // Blindar números com validação
+    const additional_attendants_raw = Number(body.additional_attendants ?? 0);
+    const additional_attendants = Number.isFinite(additional_attendants_raw) && additional_attendants_raw >= 0
+      ? Math.floor(additional_attendants_raw)
+      : 0;
+
+    const payment_notification_day_raw = Number(body.payment_notification_day ?? 5);
+    const payment_notification_day = (payment_notification_day_raw >= 1 && payment_notification_day_raw <= 31)
+      ? Math.floor(payment_notification_day_raw)
+      : 5;
+
+    const payment_day_raw = Number(body.payment_day ?? 10);
+    const payment_day = (payment_day_raw >= 1 && payment_day_raw <= 31)
+      ? Math.floor(payment_day_raw)
+      : 10;
 
     console.log("Parsed fields:", {
       email,
@@ -147,6 +161,40 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "Campos obrigatórios: email, password, name, phone_number, api_key",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validar telefone (mínimo 10 dígitos)
+    if (phone_number.length < 10) {
+      return new Response(
+        JSON.stringify({
+          error: "Telefone inválido. Deve ter pelo menos 10 dígitos.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validar se api_key já existe
+    console.log("Checking if api_key already exists:", api_key);
+    const { data: existingApiKey } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("api_key", api_key)
+      .maybeSingle();
+
+    if (existingApiKey) {
+      console.error("API key already in use");
+      return new Response(
+        JSON.stringify({
+          error: "API Key já está em uso por outra empresa",
         }),
         {
           status: 400,
@@ -200,8 +248,11 @@ Deno.serve(async (req: Request) => {
         console.error("Error fetching plan:", planError);
       }
 
-      if (planData?.max_attendants) {
-        max_attendants = planData.max_attendants + additional_attendants;
+      // Considera 0 como ilimitado
+      if (planData && planData.max_attendants !== null && planData.max_attendants !== undefined) {
+        max_attendants = planData.max_attendants === 0
+          ? 0 // 0 = ilimitado
+          : planData.max_attendants + additional_attendants;
         console.log("Calculated max_attendants:", max_attendants);
       } else {
         console.warn("Plan not found or has no max_attendants, using default value");
@@ -255,29 +306,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("Company inserted successfully with ID:", insertedCompany.id);
-
-    // ✅ NOVO: Criar departamento "Recepção (Global)" automaticamente
-    console.log("Creating default Reception department for company:", insertedCompany.id);
-    const { error: receptionError, data: receptionData } = await supabaseAdmin
-      .from("departments")
-      .insert({
-        company_id: insertedCompany.id,
-        name: "Recepção (Global)",
-      })
-      .select()
-      .single();
-
-    if (receptionError) {
-      console.error("Warning: Failed to create Reception department:", receptionError);
-      // Não faz rollback, pois a empresa foi criada com sucesso
-      // O usuário pode criar manualmente se necessário
-    } else {
-      console.log("✅ Reception department created successfully:", {
-        department_id: receptionData?.id,
-        company_id: receptionData?.company_id,
-        name: receptionData?.name,
-      });
-    }
+    console.log("Note: Reception department will be created automatically by database trigger");
 
     return new Response(
       JSON.stringify({
