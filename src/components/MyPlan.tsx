@@ -441,104 +441,116 @@ export default function MyPlan({ companyId }: MyPlanProps) {
                         return (
                           <div
                             key={p.id}
-                            className={`group relative rounded-3xl overflow-hidden transition-all duration-500 ${
+                            className={`group relative transition-all duration-300 ${
                               isCurrentPlan
-                                ? 'ring-2 ring-blue-500 shadow-2xl shadow-blue-500/40 scale-105'
-                                : 'hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02]'
+                                ? 'scale-[1.02]'
+                                : 'hover:scale-[1.01]'
                             }`}
                           >
-                            <div className={`absolute inset-0 transition-all duration-500 ${
+                            <div className={`relative bg-white border overflow-hidden transition-all duration-300 ${
                               isCurrentPlan
-                                ? 'bg-gradient-to-br from-blue-500/15 via-cyan-500/10 to-blue-500/15'
-                                : 'bg-gradient-to-br from-slate-50 via-white to-slate-50 group-hover:from-blue-50 group-hover:to-cyan-50'
-                            }`}></div>
-
-                            {isCurrentPlan && (
-                              <>
-                                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500"></div>
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/5 via-transparent to-cyan-400/5 animate-pulse"></div>
-                              </>
-                            )}
-
-                            <div className="relative backdrop-blur-sm bg-white/95 border-2 border-slate-200/50 rounded-3xl p-8 group-hover:border-blue-300/50 transition-all duration-500">
-                              {isCurrentPlan ? (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-6 py-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 text-white text-sm font-black rounded-full shadow-2xl shadow-blue-500/50 flex items-center gap-2 animate-pulse">
-                                  <Sparkles className="w-4 h-4" />
-                                  Seu Plano Atual
-                                  <Sparkles className="w-4 h-4" />
-                                </div>
-                              ) : (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-slate-700 to-slate-800 text-white text-xs font-bold rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                  Ver Detalhes
-                                </div>
+                                ? 'border-blue-500 shadow-xl shadow-blue-500/10'
+                                : 'border-slate-200 hover:border-blue-300 hover:shadow-lg'
+                            }`}
+                            style={{
+                              borderRadius: '2px'
+                            }}>
+                              {isCurrentPlan && (
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
                               )}
 
-                              <h3 className="text-2xl font-black text-slate-900 mb-3">{p.name}</h3>
-                              {p.description && (
-                                <p className="text-sm text-slate-600 mb-6 line-clamp-3 leading-relaxed">
-                                  {p.description}
-                                </p>
-                              )}
-
-                              <div className="mb-6 pb-6 border-b-2 border-gradient-to-r from-transparent via-slate-300 to-transparent relative">
-                                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                <div className="flex items-baseline gap-2 mb-2">
-                                  <span className="text-xl font-bold text-slate-500">R$</span>
-                                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900">
-                                    {p.price.toFixed(2).split('.')[0]}
-                                  </span>
-                                  <span className="text-2xl font-bold text-slate-500">
-                                    ,{p.price.toFixed(2).split('.')[1]}
-                                  </span>
+                              <div className="p-8 space-y-6">
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="space-y-1">
+                                    <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{p.name}</h3>
+                                    <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                                      isCurrentPlan
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                      {isCurrentPlan ? (
+                                        <>
+                                          <Check className="w-3 h-3" />
+                                          Ativo
+                                        </>
+                                      ) : (
+                                        <>Disponível</>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                                      {p.billing_period === 'monthly' ? 'Mensal' : 'Anual'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="w-4 h-4 text-slate-400" />
-                                  <span className="text-sm text-slate-500 font-semibold">
-                                    {p.billing_period === 'monthly' ? 'Pagamento Mensal' : 'Pagamento Anual'}
-                                  </span>
-                                </div>
-                              </div>
 
-                              <div className="space-y-4 mb-8">
-                                {planFeatures.map((feature, idx) => {
-                                  const Icon = feature.icon;
-                                  const isEnabled = feature.enabled !== undefined ? feature.enabled : true;
+                                {p.description && (
+                                  <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">
+                                    {p.description}
+                                  </p>
+                                )}
 
-                                  return (
-                                    <div key={idx} className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                        isEnabled
-                                          ? 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg'
-                                          : 'bg-slate-200 text-slate-400'
-                                      }`}>
-                                        <Icon className="w-4 h-4" />
-                                      </div>
-                                      <span className={`text-sm font-medium ${isEnabled ? 'text-slate-900' : 'text-slate-500'}`}>
-                                        {feature.value}
+                                <div className="relative">
+                                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                                  <div className="pt-6 pb-6">
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="text-sm font-medium text-slate-400">R$</span>
+                                      <span className="text-5xl font-bold text-slate-900 tracking-tighter">
+                                        {p.price.toFixed(2).split('.')[0]}
+                                      </span>
+                                      <span className="text-2xl font-medium text-slate-400">
+                                        ,{p.price.toFixed(2).split('.')[1]}
                                       </span>
                                     </div>
-                                  );
-                                })}
-                              </div>
-
-                              {!isCurrentPlan ? (
-                                <button
-                                  onClick={handleUpgrade}
-                                  className="group/btn relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 p-[2px] hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-500"
-                                >
-                                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-400 opacity-0 group-hover/btn:opacity-100 blur transition-opacity duration-500"></div>
-                                  <div className="relative bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 px-8 py-4 rounded-2xl flex items-center justify-center gap-3 group-hover/btn:gap-4 transition-all duration-300">
-                                    <Zap className="w-5 h-5 text-white animate-pulse" />
-                                    <span className="font-black text-white text-lg">Escolher Este Plano</span>
-                                    <Zap className="w-5 h-5 text-white animate-pulse" />
                                   </div>
-                                </button>
-                              ) : (
-                                <div className="w-full py-4 px-6 bg-gradient-to-r from-emerald-500 to-green-500 text-white rounded-2xl font-black text-center shadow-lg flex items-center justify-center gap-2">
-                                  <Check className="w-5 h-5" strokeWidth={3} />
-                                  Plano Ativo
+                                  <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
                                 </div>
-                              )}
+
+                                <div className="space-y-3 py-2">
+                                  {planFeatures.map((feature, idx) => {
+                                    const Icon = feature.icon;
+                                    const isEnabled = feature.enabled !== undefined ? feature.enabled : true;
+
+                                    return (
+                                      <div key={idx} className="flex items-center gap-3 group/item">
+                                        <div className={`w-1 h-1 rounded-full flex-shrink-0 transition-all duration-200 ${
+                                          isEnabled
+                                            ? 'bg-blue-500 group-hover/item:w-8 group-hover/item:h-1'
+                                            : 'bg-slate-300'
+                                        }`}></div>
+                                        <Icon className={`w-4 h-4 flex-shrink-0 ${
+                                          isEnabled ? 'text-slate-700' : 'text-slate-300'
+                                        }`} />
+                                        <span className={`text-xs font-medium uppercase tracking-wide ${
+                                          isEnabled ? 'text-slate-700' : 'text-slate-400'
+                                        }`}>
+                                          {feature.value}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+
+                                {!isCurrentPlan ? (
+                                  <button
+                                    onClick={handleUpgrade}
+                                    className="group/btn relative w-full overflow-hidden bg-slate-900 hover:bg-blue-600 transition-all duration-300 py-4 mt-2"
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
+                                    <div className="relative flex items-center justify-center gap-2">
+                                      <span className="text-sm font-bold text-white uppercase tracking-wider">Escolher Plano</span>
+                                      <Zap className="w-4 h-4 text-white" />
+                                    </div>
+                                  </button>
+                                ) : (
+                                  <div className="w-full bg-blue-500 py-4 mt-2 flex items-center justify-center gap-2">
+                                    <Check className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                    <span className="text-sm font-bold text-white uppercase tracking-wider">Plano Ativo</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
