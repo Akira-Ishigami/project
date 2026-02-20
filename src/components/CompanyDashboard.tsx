@@ -183,6 +183,7 @@ export default function CompanyDashboard() {
     setMessages((prev) => [...prev, uiMsg].sort((a, b) => toTs(a) - toTs(b)));
   }, [selectedContact, company?.api_key, company?.id]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
   const [imageCaption, setImageCaption] = useState('');
@@ -2260,6 +2261,14 @@ export default function CompanyDashboard() {
                 </div>
               )}
             </div>
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+              title="Abrir menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
             <ProfileDropdown
               userName={company?.name || 'Empresa'}
               onHistoryClick={() => setActiveTab('historico')}
@@ -2273,6 +2282,8 @@ export default function CompanyDashboard() {
               onTagsClick={() => setActiveTab('tags')}
               onMyPlanClick={() => setActiveTab('meu-plano')}
               activeTab={activeTab}
+              isOpen={menuOpen}
+              onClose={() => setMenuOpen(false)}
             />
           </div>
         </div>

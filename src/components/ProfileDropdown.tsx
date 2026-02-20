@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { User, History, Settings, LogOut, ChevronDown, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag, CreditCard } from 'lucide-react';
+import { useEffect } from 'react';
+import { History, Settings, LogOut, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag, CreditCard, X } from 'lucide-react';
 
 interface ProfileDropdownProps {
   userName: string;
@@ -15,6 +15,8 @@ interface ProfileDropdownProps {
   showNavigationOptions?: boolean;
   showSettings?: boolean;
   activeTab?: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export default function ProfileDropdown({
@@ -31,201 +33,193 @@ export default function ProfileDropdown({
   showNavigationOptions = false,
   showSettings = true,
   activeTab,
+  isOpen,
+  onClose,
 }: ProfileDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const handleMenuClick = (action: () => void) => {
     action();
-    setIsOpen(false);
+    onClose();
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all"
+    <>
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 h-full w-64 bg-slate-900 z-50 shadow-2xl transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
-          {userName ? userName[0].toUpperCase() : <User className="w-5 h-5" />}
-        </div>
-        <span className="font-medium text-slate-700 hidden md:block">{userName}</span>
-        <ChevronDown
-          className={`w-4 h-4 text-slate-500 transition-transform hidden md:block ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-slideUp">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-sm font-semibold text-slate-900">{userName}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Conta ativa</p>
+        {/* Header */}
+        <div className="p-6 border-b border-slate-800">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-white truncate">{userName}</h3>
+                <p className="text-xs text-slate-400 truncate">Conta ativa</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
+        </div>
 
+        {/* Navigation Items */}
+        <nav className="p-4 space-y-1">
           {showNavigationOptions && (
             <>
               {onMessagesClick && (
                 <button
                   onClick={() => handleMenuClick(onMessagesClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'mensagens'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <MessageSquare className={`w-5 h-5 ${activeTab === 'mensagens' ? 'text-blue-600' : 'text-blue-600'}`} />
-                  <span className="font-medium">Mensagens</span>
-                  {activeTab === 'mensagens' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <MessageSquare className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Mensagens</span>
                 </button>
               )}
 
               {onDepartmentsClick && (
                 <button
                   onClick={() => handleMenuClick(onDepartmentsClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'departamentos'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <Briefcase className={`w-5 h-5 ${activeTab === 'departamentos' ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <span className="font-medium">Departamentos</span>
-                  {activeTab === 'departamentos' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <Briefcase className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Departamentos</span>
                 </button>
               )}
 
               {onSectorsClick && (
                 <button
                   onClick={() => handleMenuClick(onSectorsClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'setores'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <FolderTree className={`w-5 h-5 ${activeTab === 'setores' ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <span className="font-medium">Setores</span>
-                  {activeTab === 'setores' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <FolderTree className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Setores</span>
                 </button>
               )}
 
               {onAttendantsClick && (
                 <button
                   onClick={() => handleMenuClick(onAttendantsClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'atendentes'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <UserCircle2 className={`w-5 h-5 ${activeTab === 'atendentes' ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <span className="font-medium">Atendentes</span>
-                  {activeTab === 'atendentes' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <UserCircle2 className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Atendentes</span>
                 </button>
               )}
 
               {onTagsClick && (
                 <button
                   onClick={() => handleMenuClick(onTagsClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'tags'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <Tag className={`w-5 h-5 ${activeTab === 'tags' ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <span className="font-medium">Tags</span>
-                  {activeTab === 'tags' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <Tag className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Tags</span>
                 </button>
               )}
 
               {onMyPlanClick && (
                 <button
                   onClick={() => handleMenuClick(onMyPlanClick)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                     activeTab === 'meu-plano'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <CreditCard className={`w-5 h-5 ${activeTab === 'meu-plano' ? 'text-blue-600' : 'text-slate-600'}`} />
-                  <span className="font-medium">Meu Plano</span>
-                  {activeTab === 'meu-plano' && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-                  )}
+                  <CreditCard className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Meu Plano</span>
                 </button>
               )}
 
-              <div className="border-t border-slate-100 my-2"></div>
+              <div className="border-t border-slate-700 my-3"></div>
             </>
           )}
 
           <button
             onClick={() => handleMenuClick(onHistoryClick)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
               activeTab === 'historico'
-                ? 'bg-blue-50 text-blue-600'
-                : 'text-slate-700 hover:bg-slate-50'
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
-            <History className={`w-5 h-5 ${activeTab === 'historico' ? 'text-blue-600' : 'text-blue-600'}`} />
-            <span className="font-medium">Histórico</span>
-            {activeTab === 'historico' && (
-              <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-            )}
+            <History className="w-5 h-5 flex-shrink-0" />
+            <span className="text-sm font-medium">Histórico</span>
           </button>
 
           {showSettings && (
             <button
               onClick={() => handleMenuClick(onSettingsClick)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 ${
                 activeTab === 'configuracoes'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-slate-700 hover:bg-slate-50'
+                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              <Settings className={`w-5 h-5 ${activeTab === 'configuracoes' ? 'text-blue-600' : 'text-slate-600'}`} />
-              <span className="font-medium">Configurações</span>
-              {activeTab === 'configuracoes' && (
-                <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
-              )}
+              <Settings className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Configurações</span>
             </button>
           )}
 
-          <div className="border-t border-slate-100 mt-2 pt-2">
+          <div className="border-t border-slate-700 my-3 pt-3">
             <button
               onClick={() => handleMenuClick(onLogout)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-red-400 hover:bg-red-950/50 hover:text-red-300 transition-all duration-200"
             >
-              <LogOut className="w-5 h-5" />
-              <span className="font-medium">Sair</span>
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Sair</span>
             </button>
           </div>
-        </div>
-      )}
-    </div>
+        </nav>
+      </aside>
+    </>
   );
 }

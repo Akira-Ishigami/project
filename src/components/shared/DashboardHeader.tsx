@@ -34,7 +34,7 @@ export default function DashboardHeader({
           <div className="flex items-center gap-4">
             <button
               onClick={onToggleSidebar}
-              className="md:hidden p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
+              className="p-2 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all duration-200"
               title={sidebarOpen ? "Fechar menu" : "Abrir menu"}
             >
               <Menu className="w-6 h-6" />
