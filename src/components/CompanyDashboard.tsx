@@ -183,7 +183,7 @@ export default function CompanyDashboard() {
     setMessages((prev) => [...prev, uiMsg].sort((a, b) => toTs(a) - toTs(b)));
   }, [selectedContact, company?.api_key, company?.id]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageText, setMessageText] = useState('');
   const [imageCaption, setImageCaption] = useState('');
@@ -2118,7 +2118,7 @@ export default function CompanyDashboard() {
   const messageGroups = groupMessagesByDate(currentMessages);
 
   return (
-    <div className={`h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden transition-all duration-300 ${menuOpen ? 'ml-64' : 'ml-16'}`}>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-hidden transition-all duration-300 ml-16">
       {showToast && (
         <Toast
           message={toastMessage}
