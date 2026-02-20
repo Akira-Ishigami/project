@@ -17,6 +17,7 @@ interface Plan {
 
 interface Company {
   payment_day: number | null;
+  payment_notification_day: number | null;
   plan_id: string | null;
 }
 
@@ -46,7 +47,7 @@ export default function MyPlan({ companyId }: MyPlanProps) {
 
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .select('plan_id, payment_day')
+        .select('plan_id, payment_day, payment_notification_day')
         .eq('id', companyId)
         .maybeSingle();
 

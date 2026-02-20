@@ -16,6 +16,7 @@ type Payload = {
   plan_id?: string | null;
   additional_attendants?: number;
   payment_notification_day?: number;
+  payment_day?: number;
 };
 
 Deno.serve(async (req: Request) => {
@@ -127,6 +128,7 @@ Deno.serve(async (req: Request) => {
     const plan_id = body.plan_id || null;
     const additional_attendants = Number(body.additional_attendants ?? 0);
     const payment_notification_day = Number(body.payment_notification_day ?? 5);
+    const payment_day = Number(body.payment_day ?? 10);
 
     console.log("Parsed fields:", {
       email,
@@ -136,6 +138,7 @@ Deno.serve(async (req: Request) => {
       plan_id,
       additional_attendants,
       payment_notification_day,
+      payment_day,
       passwordLength: password.length,
     });
 
@@ -190,6 +193,7 @@ Deno.serve(async (req: Request) => {
       plan_id,
       additional_attendants,
       payment_notification_day,
+      payment_day,
     };
 
     console.log("Company data to insert:", JSON.stringify(companyData));

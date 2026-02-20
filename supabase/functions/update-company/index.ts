@@ -16,6 +16,7 @@ interface UpdateCompanyPayload {
   api_key?: string;
   max_attendants?: number;
   payment_notification_day?: number;
+  payment_day?: number;
 }
 
 Deno.serve(async (req: Request) => {
@@ -88,6 +89,7 @@ Deno.serve(async (req: Request) => {
     if (payload.api_key !== undefined) updateData.api_key = payload.api_key;
     if (payload.max_attendants !== undefined) updateData.max_attendants = payload.max_attendants;
     if (payload.payment_notification_day !== undefined) updateData.payment_notification_day = payload.payment_notification_day;
+    if (payload.payment_day !== undefined) updateData.payment_day = payload.payment_day;
 
     const { data: updatedCompany, error: updateError } = await supabaseClient
       .from("companies")
