@@ -12,8 +12,10 @@ import SettingsPage from './SettingsPage';
 import MyPlan from './MyPlan';
 import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
+import TabContent from './TabContent';
 import { EmojiPicker } from './EmojiPicker';
 import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
+import { useTabTransition } from '../hooks/useTabTransition';
 import SystemMessage from './SystemMessage';
 
 interface Contact {
@@ -114,6 +116,7 @@ export default function CompanyDashboard() {
   const { settings, loadCompanyTheme } = useTheme();
   const aiEnabled = useAiEnabled(company?.id || null);
   const [activeTab, setActiveTab] = useState<TabType>('mensagens');
+  const { displayTab, isTransitioning } = useTabTransition(activeTab);
   const [messages, setMessages] = useState<Message[]>([]);
   const [contactsDB, setContactsDB] = useState<ContactDB[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2946,31 +2949,47 @@ export default function CompanyDashboard() {
                 <p className="text-gray-500 text-sm">Escolha um contato na lista à esquerda</p>
               </div>
             </div>
-          ) : activeTab === 'departamentos' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
-              <DepartmentsManagement />
-            </div>
-          ) : activeTab === 'setores' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
-              <SectorsManagement />
-            </div>
-          ) : activeTab === 'atendentes' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
-              <AttendantsManagement />
-            </div>
-          ) : activeTab === 'tags' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50    overflow-y-auto">
-              <TagsManagement />
-            </div>
-          ) : activeTab === 'historico' ? (
-            <TicketHistory onOpenChat={handleOpenChatFromHistory} />
-          ) : activeTab === 'meu-plano' ? (
-            <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
-              <MyPlan companyId={company?.id || ''} />
-            </div>
-          ) : activeTab === 'configuracoes' ? (
-            <SettingsPage />
-          ) : null}
+          ) : (
+            <>
+              <TabContent isActive={displayTab === 'departamentos'} isTransitioning={isTransitioning}>
+                <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+                  <DepartmentsManagement />
+                </div>
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'setores'} isTransitioning={isTransitioning}>
+                <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+                  <SectorsManagement />
+                </div>
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'atendentes'} isTransitioning={isTransitioning}>
+                <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+                  <AttendantsManagement />
+                </div>
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'tags'} isTransitioning={isTransitioning}>
+                <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+                  <TagsManagement />
+                </div>
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'historico'} isTransitioning={isTransitioning}>
+                <TicketHistory onOpenChat={handleOpenChatFromHistory} />
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'meu-plano'} isTransitioning={isTransitioning}>
+                <div className="flex-1 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 overflow-y-auto">
+                  <MyPlan companyId={company?.id || ''} />
+                </div>
+              </TabContent>
+
+              <TabContent isActive={displayTab === 'configuracoes'} isTransitioning={isTransitioning}>
+                <SettingsPage />
+              </TabContent>
+            </>
+          )}
         </div>
       </div>
 

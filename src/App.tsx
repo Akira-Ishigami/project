@@ -5,6 +5,7 @@ import Login from './components/Login';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import CompanyDashboard from './components/CompanyDashboard';
 import AttendantDashboard from './components/AttendantDashboard';
+import PageTransition from './components/PageTransition';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
@@ -54,18 +55,34 @@ function AppContent() {
   }
 
   if (!user) {
-    return <Login />;
+    return (
+      <PageTransition transitionKey="login">
+        <Login />
+      </PageTransition>
+    );
   }
 
   if (isAttendant) {
-    return <AttendantDashboard />;
+    return (
+      <PageTransition transitionKey={`attendant-${attendant?.id}`}>
+        <AttendantDashboard />
+      </PageTransition>
+    );
   }
 
   if (company?.is_super_admin || isSuperAdmin) {
-    return <SuperAdminDashboard />;
+    return (
+      <PageTransition transitionKey="super-admin">
+        <SuperAdminDashboard />
+      </PageTransition>
+    );
   }
 
-  return <CompanyDashboard />;
+  return (
+    <PageTransition transitionKey={`company-${company?.id}`}>
+      <CompanyDashboard />
+    </PageTransition>
+  );
 }
 
 function App() {
