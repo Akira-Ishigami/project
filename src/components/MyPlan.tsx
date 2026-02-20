@@ -187,16 +187,16 @@ export default function MyPlan({ companyId }: MyPlanProps) {
   ];
 
   const getNextPaymentDate = () => {
-    if (!company?.payment_day) return null;
+    if (!company?.payment_notification_day) return null;
 
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
 
-    let nextPayment = new Date(currentYear, currentMonth, company.payment_day);
+    let nextPayment = new Date(currentYear, currentMonth, company.payment_notification_day);
 
     if (nextPayment < today) {
-      nextPayment = new Date(currentYear, currentMonth + 1, company.payment_day);
+      nextPayment = new Date(currentYear, currentMonth + 1, company.payment_notification_day);
     }
 
     return nextPayment.toLocaleDateString('pt-BR', {
