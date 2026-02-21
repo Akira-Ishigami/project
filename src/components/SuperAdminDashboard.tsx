@@ -446,8 +446,20 @@ export default function SuperAdminDashboard() {
           if (!directResponse.ok) {
             try {
               const errorData = JSON.parse(responseText);
-              throw new Error(errorData.error || errorData.details || "Erro ao criar empresa");
-            } catch {
+              let errorMessage = errorData.error || errorData.details || "Erro ao criar empresa";
+
+              // Melhorar mensagem de erro de email duplicado
+              if (errorMessage.includes("Email já está em uso")) {
+                errorMessage = `O email "${email.trim().toLowerCase()}" já está cadastrado no sistema. Use um email diferente que nunca foi utilizado antes.`;
+              } else if (errorMessage.includes("API Key já está em uso") || errorMessage.includes("api_key")) {
+                errorMessage = `A API Key "${api_key.trim()}" já está em uso. Gere uma nova API Key única.`;
+              }
+
+              throw new Error(errorMessage);
+            } catch (parseError: any) {
+              if (parseError.message && !parseError.message.includes("Unexpected token")) {
+                throw parseError;
+              }
               throw new Error(`Erro HTTP ${directResponse.status}: ${responseText}`);
             }
           }
