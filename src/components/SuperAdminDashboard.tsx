@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell, Package, Settings, Copy, Check } from "lucide-react";
+import { Menu, X, Building2, MessageSquare, Plus, LogOut, Search, User, Send, Paperclip, Image as ImageIcon, RefreshCw, Loader2, Edit2, Bell, Package, Settings, Copy, Check, Eye, Users, FolderTree, Tag as TagIcon, Contact, MessageCircle } from "lucide-react";
 import Modal from "./Modal";
 import Notification from "./Notification";
 import PlansManagement from "./PlansManagement";
@@ -113,6 +113,19 @@ export default function SuperAdminDashboard() {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState<'payment' | 'info' | 'warning' | 'error'>('info');
   const [sendingNotification, setSendingNotification] = useState(false);
+
+  // Company details modal
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedCompanyDetails, setSelectedCompanyDetails] = useState<Company | null>(null);
+  const [companyStats, setCompanyStats] = useState<{
+    attendantsCount: number;
+    departmentsCount: number;
+    sectorsCount: number;
+    tagsCount: number;
+    contactsCount: number;
+    messagesCount: number;
+  } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   // =========================
   // Formatação de Telefone
@@ -676,6 +689,51 @@ export default function SuperAdminDashboard() {
       });
     } finally {
       setSendingNotification(false);
+    }
+  };
+
+  const openCompanyDetails = async (company: Company) => {
+    setSelectedCompanyDetails(company);
+    setShowDetailsModal(true);
+    setLoadingStats(true);
+
+    try {
+      const [
+        { count: attendantsCount },
+        { count: departmentsCount },
+        { count: sectorsCount },
+        { count: tagsCount },
+        { count: contactsCount },
+        { count: messagesCount }
+      ] = await Promise.all([
+        supabase.from('attendants').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        supabase.from('departments').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        supabase.from('sectors').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        supabase.from('tags').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('company_id', company.id)
+      ]);
+
+      setCompanyStats({
+        attendantsCount: attendantsCount || 0,
+        departmentsCount: departmentsCount || 0,
+        sectorsCount: sectorsCount || 0,
+        tagsCount: tagsCount || 0,
+        contactsCount: contactsCount || 0,
+        messagesCount: messagesCount || 0
+      });
+    } catch (err) {
+      console.error('Erro ao carregar estatísticas:', err);
+      setCompanyStats({
+        attendantsCount: 0,
+        departmentsCount: 0,
+        sectorsCount: 0,
+        tagsCount: 0,
+        contactsCount: 0,
+        messagesCount: 0
+      });
+    } finally {
+      setLoadingStats(false);
     }
   };
 
@@ -1299,6 +1357,13 @@ export default function SuperAdminDashboard() {
                         {!c.is_super_admin && (
                           <div className="flex gap-2">
                             <button
+                              onClick={() => openCompanyDetails(c)}
+                              className="p-2 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Ver detalhes"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button
                               onClick={() => openNotificationForm(c)}
                               className="p-2 text-purple-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                               title="Enviar notificação"
@@ -1569,6 +1634,138 @@ export default function SuperAdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDetailsModal && selectedCompanyDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-br from-teal-500 to-teal-600 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">Detalhes da Empresa</h2>
+                <p className="text-teal-50 text-sm mt-1">{selectedCompanyDetails.name}</p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={24} className="text-white" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-1">Email</div>
+                  <div className="text-sm text-gray-900 font-medium">{selectedCompanyDetails.email}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-1">Telefone</div>
+                  <div className="text-sm text-gray-900 font-medium">{selectedCompanyDetails.phone_number}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-1">API Key</div>
+                  <div className="text-sm text-gray-900 font-mono break-all">{selectedCompanyDetails.api_key}</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <div className="text-xs text-gray-500 font-medium mb-1">Max Atendentes</div>
+                  <div className="text-sm text-gray-900 font-medium">{selectedCompanyDetails.max_attendants || 'Ilimitado'}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Estatísticas</h3>
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin text-teal-500" size={32} />
+                  </div>
+                ) : companyStats ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <Users size={24} className="text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-blue-900">{companyStats.attendantsCount}</div>
+                          <div className="text-xs text-blue-700 font-medium">Atendentes</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <Building2 size={24} className="text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-purple-900">{companyStats.departmentsCount}</div>
+                          <div className="text-xs text-purple-700 font-medium">Departamentos</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <FolderTree size={24} className="text-green-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-900">{companyStats.sectorsCount}</div>
+                          <div className="text-xs text-green-700 font-medium">Setores</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <TagIcon size={24} className="text-orange-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-orange-900">{companyStats.tagsCount}</div>
+                          <div className="text-xs text-orange-700 font-medium">Tags</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-xl border border-teal-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <Contact size={24} className="text-teal-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-teal-900">{companyStats.contactsCount}</div>
+                          <div className="text-xs text-teal-700 font-medium">Contatos</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-xl border border-pink-200">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg">
+                          <MessageCircle size={24} className="text-pink-600" />
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-pink-900">{companyStats.messagesCount}</div>
+                          <div className="text-xs text-pink-700 font-medium">Mensagens</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="px-6 py-2.5 bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-xl transition-all font-medium shadow-lg"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

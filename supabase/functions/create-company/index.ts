@@ -182,15 +182,33 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Validar se email já existe na tabela companies ANTES de criar usuário
+    // Validar se email já existe no auth.users ANTES de criar usuário
     console.log("Checking if email already exists:", email);
-    const { data: existingEmail } = await supabaseAdmin
+
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingAuthUser?.users?.some(u => u.email?.toLowerCase() === email);
+
+    if (userExists) {
+      console.error("Email already registered in auth.users");
+      return new Response(
+        JSON.stringify({
+          error: "Email já está em uso por outra empresa",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validar também na tabela companies
+    const { data: existingCompany } = await supabaseAdmin
       .from("companies")
       .select("id")
       .eq("email", email)
       .maybeSingle();
 
-    if (existingEmail) {
+    if (existingCompany) {
       console.error("Email already in use in companies table");
       return new Response(
         JSON.stringify({
