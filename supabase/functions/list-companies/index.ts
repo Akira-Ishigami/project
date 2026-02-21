@@ -44,14 +44,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: companyData, error: companyError } = await supabaseClient
-      .from("companies")
-      .select("id, is_super_admin")
-      .eq("user_id", user.id)
-      .eq("is_super_admin", true)
+    const userId = user.id;
+
+    // Verificar se é super admin usando tabela super_admins
+    const { data: adminData, error: adminError } = await supabaseClient
+      .from("super_admins")
+      .select("user_id")
+      .eq("user_id", userId)
       .maybeSingle();
 
-    if (companyError || !companyData || !companyData.is_super_admin) {
+    if (adminError || !adminData) {
       return new Response(
         JSON.stringify({ error: "Access denied. Only super admins can access this." }),
         {

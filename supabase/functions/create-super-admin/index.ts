@@ -83,22 +83,19 @@ Deno.serve(async (req: Request) => {
       userEmail = data.user.email;
     }
 
-    // Garantir registro na companies como super admin
-    const { data: companyData } = await supabaseAdmin
-      .from("companies")
-      .select("*")
+    // Garantir registro na tabela super_admins
+    const { data: superAdminData } = await supabaseAdmin
+      .from("super_admins")
+      .select("user_id")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!companyData) {
-      const { error: insertErr } = await supabaseAdmin.from("companies").insert({
-        user_id: userId,
-        email: userEmail,
-        name: "Super Admin",
-        phone_number: "",
-        api_key: `super_admin_${Date.now()}`,
-        is_super_admin: true,
-      });
+    if (!superAdminData) {
+      const { error: insertErr } = await supabaseAdmin
+        .from("super_admins")
+        .insert({
+          user_id: userId,
+        });
 
       if (insertErr) {
         return new Response(JSON.stringify({ error: insertErr.message }), {
