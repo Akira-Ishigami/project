@@ -373,6 +373,22 @@ export default function SuperAdminDashboard() {
         throw new Error("Sem token. Faça login novamente.");
       }
 
+      // Verificar se o usuário atual está na tabela super_admins
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log("Current user ID:", user.id);
+        const { data: adminCheck } = await supabase
+          .from("super_admins")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        console.log("Super admin check:", adminCheck);
+
+        if (!adminCheck) {
+          throw new Error("Você não está cadastrado como super admin. Entre em contato com o administrador do sistema.");
+        }
+      }
+
       const response = await supabase.functions.invoke("create-company", {
         body: {
           email: email.trim().toLowerCase(),
