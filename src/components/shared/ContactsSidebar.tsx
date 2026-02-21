@@ -1,4 +1,4 @@
-import { Search, User, Pin, AlertCircle } from 'lucide-react';
+import { Search, User, Pin, AlertCircle, Building2 } from 'lucide-react';
 import { ReactNode } from 'react';
 
 interface Contact {
@@ -24,6 +24,8 @@ interface ContactsSidebarProps {
   filterSlot?: ReactNode;
   emptyMessage?: string;
   onCloseSidebar?: () => void;
+  companyName?: string;
+  companyLogo?: string;
 }
 
 export default function ContactsSidebar({
@@ -39,7 +41,9 @@ export default function ContactsSidebar({
   error,
   filterSlot,
   emptyMessage = "Nenhum contato encontrado",
-  onCloseSidebar
+  onCloseSidebar,
+  companyName,
+  companyLogo
 }: ContactsSidebarProps) {
   return (
     <div
@@ -51,6 +55,34 @@ export default function ContactsSidebar({
         <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-5 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-300">
           <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0" />
           <p className="text-red-700 dark:text-red-300 text-sm flex-1">{error}</p>
+        </div>
+      )}
+
+      {(companyName || companyLogo) && (
+        <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-blue-50 to-slate-50 dark:from-slate-900 dark:to-black transition-colors duration-300">
+          <div className="flex items-center gap-3">
+            {companyLogo ? (
+              <img
+                src={companyLogo}
+                alt={companyName || 'Logo'}
+                className="h-10 w-auto object-contain"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-white" />
+              </div>
+            )}
+            {companyName && (
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {companyName}
+                </h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Identidade da Empresa
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

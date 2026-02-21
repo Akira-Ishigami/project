@@ -2158,6 +2158,34 @@ export default function CompanyDashboard() {
               </div>
             )}
 
+            {(settings.companyName || settings.logoUrl) && (
+              <div className="px-4 py-4 border-b border-slate-200/80 bg-gradient-to-r from-blue-50 to-slate-50">
+                <div className="flex items-center gap-3">
+                  {settings.logoUrl ? (
+                    <img
+                      src={settings.logoUrl}
+                      alt={settings.companyName || 'Logo'}
+                      className="h-10 w-auto object-contain"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <Briefcase className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                  {settings.companyName && (
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-sm font-bold text-slate-900 truncate">
+                        {settings.companyName}
+                      </h2>
+                      <p className="text-xs text-slate-600">
+                        Identidade da Empresa
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="px-5 py-4 border-b border-slate-200/80 bg-white/50 backdrop-blur-sm">
               <div className="relative mb-3">
                 <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />

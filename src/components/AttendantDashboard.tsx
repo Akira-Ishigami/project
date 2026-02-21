@@ -1471,6 +1471,34 @@ export default function AttendantDashboard() {
             </div>
           )}
 
+          {(settings.companyName || settings.logoUrl) && (
+            <div className="px-4 py-4 border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-blue-50 to-slate-50 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
+              <div className="flex items-center gap-3">
+                {settings.logoUrl ? (
+                  <img
+                    src={settings.logoUrl}
+                    alt={settings.companyName || 'Logo'}
+                    className="h-10 w-auto object-contain"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                {settings.companyName && (
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {settings.companyName}
+                    </h2>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      Identidade da Empresa
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Barra de Pesquisa e Filtros */}
           <div className="px-4 py-3 border-b border-slate-200/80">
             <div className="relative group mb-3">
