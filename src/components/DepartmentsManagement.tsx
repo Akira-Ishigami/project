@@ -42,6 +42,7 @@ export default function DepartmentsManagement() {
   const isRecepcao = (dept?: Department | null) => {
     if (!dept) return false;
     return (
+      dept.is_default === true ||
       dept.is_reception === true ||
       String(dept.name).toLowerCase().startsWith('recep')
     );
@@ -153,12 +154,19 @@ export default function DepartmentsManagement() {
         .delete()
         .eq('id', deleteModal.dept.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('departamento padrão') || error.message.includes('Recepção')) {
+          alert('❌ O departamento Recepção não pode ser removido. É o departamento padrão da empresa.');
+        } else {
+          throw error;
+        }
+        return;
+      }
       setDeleteModal({ isOpen: false, dept: null });
       fetchDepartments();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao excluir departamento:', err);
-      alert('Erro ao excluir departamento');
+      alert(`Erro ao excluir departamento: ${err?.message || 'Erro desconhecido'}`);
     } finally {
       setDeleting(false);
     }
