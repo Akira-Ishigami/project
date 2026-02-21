@@ -102,6 +102,8 @@ export default function AttendantDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [contactFilter, setContactFilter] = useState<'todos' | 'departamento' | 'abertos'>('todos');
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
   // Cache para evitar múltiplas buscas no fallback de contatos
   const fetchedPhonesRef = useRef<Set<string>>(new Set());

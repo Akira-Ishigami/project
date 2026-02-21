@@ -121,6 +121,8 @@ export default function CompanyDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [contactFilter, setContactFilter] = useState<'todos' | 'departamento' | 'abertos'>('todos');
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
 
   // Cache para evitar múltiplas buscas no fallback de contatos
   const fetchedPhonesRef = useRef<Set<string>>(new Set());
@@ -461,7 +463,7 @@ export default function CompanyDashboard() {
     }
   };
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (limit?: number) => {
     if (!company) {
       setLoading(false);
       return;
@@ -476,13 +478,18 @@ export default function CompanyDashboard() {
 
     try {
       // Incluir fallback por company_id caso mensagens não possuam apikey_instancia
-      const messagesQuery = company?.id
+      let messagesQuery = company?.id
         ? supabase.from('messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
         : supabase.from('messages').select('*').eq('apikey_instancia', company.api_key);
 
-      const sentMessagesQuery = company?.id
+      let sentMessagesQuery = company?.id
         ? supabase.from('sent_messages').select('*').or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
         : supabase.from('sent_messages').select('*').eq('apikey_instancia', company.api_key);
+
+      if (limit) {
+        messagesQuery = messagesQuery.order('created_at', { ascending: false }).limit(limit);
+        sentMessagesQuery = sentMessagesQuery.order('created_at', { ascending: false }).limit(limit);
+      }
 
       const [receivedResult, sentResult] = await Promise.all([messagesQuery, sentMessagesQuery]);
 
@@ -545,6 +552,10 @@ export default function CompanyDashboard() {
       }
 
       setMessages(messagesWithReactions);
+
+      if (limit && messagesWithReactions.length < limit) {
+        setHasMoreMessages(false);
+      }
     } catch (err: any) {
       clearTimeout(timeout);
       setError(`Erro ao carregar mensagens: ${err.message}`);
@@ -552,6 +563,73 @@ export default function CompanyDashboard() {
       setLoading(false);
     }
   }, [company]);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (!hasMoreMessages || loadingMoreMessages || !selectedContact) return;
+
+    setLoadingMoreMessages(true);
+    try {
+      const currentMessages = filteredMessages;
+      const oldestMessage = currentMessages[0];
+
+      if (!oldestMessage) return;
+
+      const messagesQuery = company?.id
+        ? supabase.from('messages')
+            .select('*')
+            .or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
+            .lt('created_at', oldestMessage.created_at)
+            .order('created_at', { ascending: false })
+            .limit(30)
+        : supabase.from('messages')
+            .select('*')
+            .eq('apikey_instancia', company.api_key)
+            .lt('created_at', oldestMessage.created_at)
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+      const sentMessagesQuery = company?.id
+        ? supabase.from('sent_messages')
+            .select('*')
+            .or(`apikey_instancia.eq.${company.api_key},company_id.eq.${company.id}`)
+            .lt('created_at', oldestMessage.created_at)
+            .order('created_at', { ascending: false })
+            .limit(30)
+        : supabase.from('sent_messages')
+            .select('*')
+            .eq('apikey_instancia', company.api_key)
+            .lt('created_at', oldestMessage.created_at)
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+      const [receivedResult, sentResult] = await Promise.all([messagesQuery, sentMessagesQuery]);
+
+      if (receivedResult.error || sentResult.error) {
+        console.error('Erro ao carregar mais mensagens');
+        return;
+      }
+
+      const newMessages = [
+        ...(receivedResult.data || []),
+        ...(sentResult.data || [])
+      ].sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+
+      const messagesWithReactions = processReactions(newMessages);
+
+      if (messagesWithReactions.length < 30) {
+        setHasMoreMessages(false);
+      }
+
+      setMessages(prev => {
+        const combined = [...messagesWithReactions, ...prev];
+        return combined.sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
+      });
+    } catch (err) {
+      console.error('Erro ao carregar mais mensagens:', err);
+    } finally {
+      setLoadingMoreMessages(false);
+    }
+  }, [hasMoreMessages, loadingMoreMessages, selectedContact, company, filteredMessages]);
 
   const fetchContacts = async () => {
     if (!company?.id) return;
@@ -591,7 +669,7 @@ export default function CompanyDashboard() {
   };
 
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     if (!company?.id) return;
 
     try {
@@ -607,10 +685,10 @@ export default function CompanyDashboard() {
     } catch (error) {
       console.error('Erro ao carregar departamentos:', error);
     }
-  };
+  }, [company?.id]);
 
 
-  const fetchSectors = async () => {
+  const fetchSectors = useCallback(async () => {
     if (!company?.id) return;
     try {
       const { data, error } = await supabase
@@ -624,9 +702,9 @@ export default function CompanyDashboard() {
     } catch (error) {
       console.error('Erro ao carregar setores:', error);
     }
-  };
+  }, [company?.id]);
 
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
     if (!company?.id) return;
     try {
       const { data, error } = await supabase
@@ -640,7 +718,7 @@ export default function CompanyDashboard() {
     } catch (error) {
       console.error('Erro ao carregar tags:', error);
     }
-  };
+  }, [company?.id]);
 
   const fetchNotifications = async () => {
     if (!company?.id) return;
@@ -1308,11 +1386,15 @@ export default function CompanyDashboard() {
   };
 
   useEffect(() => {
-    fetchMessages();
+    fetchMessages(30);
     fetchContacts();
-    fetchDepartments();
-    fetchSectors();
-    fetchTags();
+
+    Promise.all([
+      fetchDepartments(),
+      fetchSectors(),
+      fetchTags()
+    ]);
+
     fetchNotifications();
     checkPaymentNotifications();
 
@@ -2419,6 +2501,24 @@ export default function CompanyDashboard() {
                 }}
               >
                 <div className="w-full">
+                  {hasMoreMessages && filteredMessages.length >= 30 && (
+                    <div className="flex justify-center mb-4">
+                      <button
+                        onClick={loadMoreMessages}
+                        disabled={loadingMoreMessages}
+                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {loadingMoreMessages ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Carregando...
+                          </>
+                        ) : (
+                          'Carregar mensagens antigas'
+                        )}
+                      </button>
+                    </div>
+                  )}
                   {Object.entries(messageGroups).map(([date, msgs]) => (
                     <div key={date} className="mb-6">
                       <div className="flex justify-center mb-4">
