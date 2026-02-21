@@ -413,13 +413,46 @@ export default function SuperAdminDashboard() {
       if (response.error) {
         console.error("Erro create-company:", response.error);
         console.error("Error details from data:", response.data);
-        const errorDetails = response.data?.error || response.data?.details || response.error.message;
-        throw new Error(errorDetails || "Erro ao criar empresa.");
+
+        // Extrair mensagem de erro mais específica
+        let errorMessage = "Erro ao criar empresa.";
+
+        if (response.data?.error) {
+          errorMessage = response.data.error;
+        } else if (response.data?.details) {
+          errorMessage = response.data.details;
+        } else if (response.error.message) {
+          errorMessage = response.error.message;
+        }
+
+        // Melhorar mensagens de erro comuns
+        if (errorMessage.includes("already in use") || errorMessage.includes("já está em uso")) {
+          if (errorMessage.includes("email") || errorMessage.includes("Email")) {
+            errorMessage = "Este email já está cadastrado no sistema.";
+          } else if (errorMessage.includes("API") || errorMessage.includes("api_key")) {
+            errorMessage = "Esta API Key já está em uso por outra empresa.";
+          }
+        } else if (errorMessage.includes("duplicate key")) {
+          errorMessage = "Já existe uma empresa com estes dados cadastrados.";
+        } else if (errorMessage.includes("User already registered")) {
+          errorMessage = "Usuário já está registrado. Use outro email.";
+        }
+
+        throw new Error(errorMessage);
       }
 
       if (response.data?.error) {
         console.error("Error in response data:", response.data);
-        throw new Error(response.data.error);
+        let errorMessage = response.data.error;
+
+        // Melhorar mensagens de erro
+        if (errorMessage.includes("Email já está em uso")) {
+          errorMessage = "Este email já está cadastrado no sistema.";
+        } else if (errorMessage.includes("API Key já está em uso")) {
+          errorMessage = "Esta API Key já está em uso por outra empresa.";
+        }
+
+        throw new Error(errorMessage);
       }
 
       console.log("Empresa criada:", response.data);

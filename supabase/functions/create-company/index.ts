@@ -232,6 +232,28 @@ Deno.serve(async (req: Request) => {
 
     console.log("Inserting company into database...");
 
+    // Verificar se email já existe na tabela companies
+    const { data: existingEmail } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingEmail) {
+      console.error("Email already in use in companies table");
+      // Limpar o usuário criado no auth
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      return new Response(
+        JSON.stringify({
+          error: "Email já está em uso por outra empresa",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Calcula max_attendants baseado no plano
     let max_attendants = 1;
     if (plan_id) {
