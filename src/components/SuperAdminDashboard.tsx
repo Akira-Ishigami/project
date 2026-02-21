@@ -410,49 +410,75 @@ export default function SuperAdminDashboard() {
       console.log("Response.data:", response.data);
       console.log("Response.error:", response.error);
 
+      // Verificar se houve erro na chamada
       if (response.error) {
         console.error("Erro create-company:", response.error);
         console.error("Error details from data:", response.data);
 
-        // Extrair mensagem de erro mais específica
-        let errorMessage = "Erro ao criar empresa.";
+        // Tentar fazer uma chamada direta para capturar a resposta real
+        try {
+          const directResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-company`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: email.trim().toLowerCase(),
+                password,
+                name: name.trim(),
+                phone_number: phone_number.trim(),
+                api_key: api_key.trim(),
+                plan_id: selectedPlanId || null,
+                additional_attendants: parseInt(additionalAttendants) || 0,
+                payment_notification_day: parseInt(paymentNotificationDay) || 5,
+                payment_day: 10,
+              }),
+            }
+          );
 
-        if (response.data?.error) {
-          errorMessage = response.data.error;
-        } else if (response.data?.details) {
-          errorMessage = response.data.details;
-        } else if (response.error.message) {
-          errorMessage = response.error.message;
-        }
+          console.log("Direct response status:", directResponse.status);
+          const responseText = await directResponse.text();
+          console.log("Direct response body:", responseText);
 
-        // Melhorar mensagens de erro comuns
-        if (errorMessage.includes("already in use") || errorMessage.includes("já está em uso")) {
-          if (errorMessage.includes("email") || errorMessage.includes("Email")) {
-            errorMessage = "Este email já está cadastrado no sistema.";
-          } else if (errorMessage.includes("API") || errorMessage.includes("api_key")) {
-            errorMessage = "Esta API Key já está em uso por outra empresa.";
+          if (!directResponse.ok) {
+            try {
+              const errorData = JSON.parse(responseText);
+              throw new Error(errorData.error || errorData.details || "Erro ao criar empresa");
+            } catch {
+              throw new Error(`Erro HTTP ${directResponse.status}: ${responseText}`);
+            }
           }
-        } else if (errorMessage.includes("duplicate key")) {
-          errorMessage = "Já existe uma empresa com estes dados cadastrados.";
-        } else if (errorMessage.includes("User already registered")) {
-          errorMessage = "Usuário já está registrado. Use outro email.";
-        }
 
-        throw new Error(errorMessage);
+          const successData = JSON.parse(responseText);
+          console.log("Empresa criada com sucesso:", successData);
+
+          // limpa e fecha
+          setShowForm(false);
+          setName("");
+          setPhoneNumber("");
+          setApiKey("");
+          setEmail("");
+          setPassword("");
+          setSelectedPlanId("");
+          setAdditionalAttendants("0");
+          setPaymentNotificationDay("5");
+
+          // recarrega lista
+          await loadCompanies();
+          return;
+
+        } catch (directError: any) {
+          console.error("Erro na chamada direta:", directError);
+          throw directError;
+        }
       }
 
       if (response.data?.error) {
         console.error("Error in response data:", response.data);
-        let errorMessage = response.data.error;
-
-        // Melhorar mensagens de erro
-        if (errorMessage.includes("Email já está em uso")) {
-          errorMessage = "Este email já está cadastrado no sistema.";
-        } else if (errorMessage.includes("API Key já está em uso")) {
-          errorMessage = "Esta API Key já está em uso por outra empresa.";
-        }
-
-        throw new Error(errorMessage);
+        throw new Error(response.data.error);
       }
 
       console.log("Empresa criada:", response.data);
