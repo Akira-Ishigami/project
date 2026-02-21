@@ -182,6 +182,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validar se email já existe na tabela companies ANTES de criar usuário
+    console.log("Checking if email already exists:", email);
+    const { data: existingEmail } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingEmail) {
+      console.error("Email already in use in companies table");
+      return new Response(
+        JSON.stringify({
+          error: "Email já está em uso por outra empresa",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Validar se api_key já existe
     console.log("Checking if api_key already exists:", api_key);
     const { data: existingApiKey } = await supabaseAdmin
@@ -231,28 +252,6 @@ Deno.serve(async (req: Request) => {
     console.log("User created successfully with ID:", newUserId);
 
     console.log("Inserting company into database...");
-
-    // Verificar se email já existe na tabela companies
-    const { data: existingEmail } = await supabaseAdmin
-      .from("companies")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (existingEmail) {
-      console.error("Email already in use in companies table");
-      // Limpar o usuário criado no auth
-      await supabaseAdmin.auth.admin.deleteUser(newUserId);
-      return new Response(
-        JSON.stringify({
-          error: "Email já está em uso por outra empresa",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
 
     // Calcula max_attendants baseado no plano
     let max_attendants = 1;

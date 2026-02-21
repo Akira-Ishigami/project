@@ -1,130 +1,302 @@
-# Correções de Autorização e Segurança
+# Correções no Sistema de Cadastro de Empresas
 
-## Problema Identificado
+## PROBLEMA CRÍTICO IDENTIFICADO
 
-O erro "non-2xx status code" (403 Forbidden) acontecia porque:
+A **ordem de validação** na Edge Function estava incorreta, causando:
+- Usuários órfãos no `auth.users` quando havia email duplicado
+- Erro genérico "non-2xx status code"
+- Necessidade de limpeza manual do banco
 
-1. A Edge Function `create-company` verifica se o usuário está cadastrado na tabela `super_admins`
-2. Apenas o usuário `nexla@nexla.com.br` estava cadastrado
-3. Outros usuários não conseguiam criar empresas
+## CORREÇÃO APLICADA
 
-## Solução Aplicada
+### Mudança na Ordem de Validação
 
-### 1. Validação no Frontend
-Adicionado check preventivo no `SuperAdminDashboard.tsx`:
-- Verifica se o usuário está na tabela `super_admins` ANTES de chamar a Edge Function
-- Exibe mensagem clara: "Você não está cadastrado como super admin"
-- Evita chamadas desnecessárias à Edge Function
+**ANTES (INCORRETO):**
+```
+1. Validar API Key duplicada ✅
+2. Criar usuário no auth.users ← CRIA AQUI
+3. Verificar email duplicado ← TARDE DEMAIS!
+4. Se duplicado → Delete user e retorna erro
+```
 
-### 2. Super Admins Cadastrados
-Adicionados 4 usuários como super admins:
-- ✅ `teste@gmail.com` (ID: 3e6b8a6c-6df0-44fd-8bb7-acd6919b4c76)
-- ✅ `robloxcanal40@gmail.com` (ID: 4d107360-124f-4e37-a6a8-72dac0d46192)
-- ✅ `akira.vha@gmail.com` (ID: c4ceb895-a3c5-4a24-bcb2-1c456a236926)
-- ✅ `nexla@nexla.com.br` (ID: 832c651b-bcf1-452d-b3b9-68e50b2af491)
+**DEPOIS (CORRETO):**
+```
+1. Verificar email duplicado ← ANTES DE CRIAR
+2. Verificar API Key duplicada
+3. Criar usuário no auth.users ← SÓ DEPOIS
+4. Inserir empresa na tabela companies
+```
 
-### 3. Script de Gerenciamento
-Criado arquivo `ADD_SUPER_ADMIN.sql` para facilitar:
-- Adicionar novos super admins
-- Remover super admins existentes
-- Listar todos os super admins
+### Arquivo Modificado
 
-## Como Adicionar Novos Super Admins
+`supabase/functions/create-company/index.ts` (linhas 185-254)
 
-### Opção 1: Via SQL (Recomendado)
+**Código Corrigido:**
+```typescript
+// ✅ VALIDAÇÃO 1: Email duplicado (ANTES de criar usuário)
+console.log("Checking if email already exists:", email);
+const { data: existingEmail } = await supabaseAdmin
+  .from("companies")
+  .select("id")
+  .eq("email", email)
+  .maybeSingle();
+
+if (existingEmail) {
+  return new Response(
+    JSON.stringify({
+      error: "Email já está em uso por outra empresa",
+    }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ✅ VALIDAÇÃO 2: API Key duplicada
+const { data: existingApiKey } = await supabaseAdmin
+  .from("companies")
+  .select("id")
+  .eq("api_key", api_key)
+  .maybeSingle();
+
+if (existingApiKey) {
+  return new Response(
+    JSON.stringify({
+      error: "API Key já está em uso por outra empresa",
+    }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ✅ AGORA SIM: Cria usuário (só depois das validações)
+const { data: newUser, error: createUserError } =
+  await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+```
+
+## ESTRUTURA DE AUTORIZAÇÃO
+
+### Quem Pode Criar Empresas?
+
+Apenas usuários na tabela `super_admins`:
 
 ```sql
--- 1. Ver todos os usuários
-SELECT id, email, created_at
-FROM auth.users
-ORDER BY created_at DESC;
+CREATE TABLE super_admins (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id)
+);
+```
 
--- 2. Adicionar como super admin (substitua o ID)
+### RLS Policies da Tabela Companies
+
+```sql
+-- Apenas super admins podem inserir
+CREATE POLICY "super_admins_insert"
+ON companies FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid())
+);
+
+-- Super admins veem todas as empresas
+CREATE POLICY "super_admins_select_all"
+ON companies FOR SELECT
+TO authenticated
+USING (
+  EXISTS (SELECT 1 FROM super_admins WHERE user_id = auth.uid())
+);
+```
+
+## FLUXO COMPLETO DE CRIAÇÃO
+
+```
+1. Frontend: Usuário preenche formulário
+   ↓
+2. Frontend: Valida campos obrigatórios
+   ↓
+3. Frontend: Verifica se está na tabela super_admins
+   ↓
+4. Frontend: Chama Edge Function create-company
+   ↓
+5. Backend: Verifica token JWT
+   ↓
+6. Backend: Verifica se está na tabela super_admins
+   ↓
+7. Backend: Valida campos obrigatórios
+   ↓
+8. Backend: ✅ VERIFICA EMAIL DUPLICADO (NOVO)
+   ↓
+9. Backend: ✅ VERIFICA API KEY DUPLICADA
+   ↓
+10. Backend: Cria usuário no auth.users
+   ↓
+11. Backend: Insere empresa na tabela companies
+   ↓
+12. Backend: Retorna sucesso
+   ↓
+13. Frontend: Exibe mensagem de sucesso
+```
+
+## VALIDAÇÕES IMPLEMENTADAS
+
+### Frontend (SuperAdminDashboard.tsx)
+
+```typescript
+// 1. Campos obrigatórios
+if (!name || !phone_number || !api_key || !email || !password) {
+  setErrorMsg("Preencha todos os campos.");
+  return;
+}
+
+// 2. Telefone válido
+const phoneNumbers = phone_number.replace(/\D/g, "");
+if (phoneNumbers.length < 10) {
+  setErrorMsg("Telefone deve ter pelo menos 10 dígitos.");
+  return;
+}
+
+// 3. Senha segura
+if (password.length < 6) {
+  setErrorMsg("Senha deve ter no mínimo 6 caracteres.");
+  return;
+}
+
+// 4. Usuário é super admin
+const { data: adminCheck } = await supabase
+  .from("super_admins")
+  .select("user_id")
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+if (!adminCheck) {
+  throw new Error("Você não está cadastrado como super admin.");
+}
+```
+
+### Backend (Edge Function)
+
+```typescript
+// 1. Autorização
+const { data: adminData } = await supabaseAdmin
+  .from("super_admins")
+  .select("user_id")
+  .eq("user_id", callerId)
+  .maybeSingle();
+
+if (!adminData) {
+  return error(403, "Access denied");
+}
+
+// 2. Campos obrigatórios
+if (!email || !password || !name || !phone_number || !api_key) {
+  return error(400, "Campos obrigatórios faltando");
+}
+
+// 3. Telefone válido
+if (phone_number.length < 10) {
+  return error(400, "Telefone inválido");
+}
+
+// 4. Email duplicado (NOVO)
+const { data: existingEmail } = await supabaseAdmin
+  .from("companies")
+  .select("id")
+  .eq("email", email)
+  .maybeSingle();
+
+if (existingEmail) {
+  return error(400, "Email já está em uso");
+}
+
+// 5. API Key duplicada
+const { data: existingApiKey } = await supabaseAdmin
+  .from("companies")
+  .select("id")
+  .eq("api_key", api_key)
+  .maybeSingle();
+
+if (existingApiKey) {
+  return error(400, "API Key já está em uso");
+}
+```
+
+## MENSAGENS DE ERRO
+
+| Mensagem | Causa | Solução |
+|----------|-------|---------|
+| "Email já está em uso por outra empresa" | Email duplicado | Use outro email |
+| "API Key já está em uso por outra empresa" | API Key duplicada | Use outra API key |
+| "Você não está cadastrado como super admin" | Não autorizado | Adicione na tabela super_admins |
+| "Preencha todos os campos" | Campos vazios | Complete o formulário |
+| "Telefone deve ter pelo menos 10 dígitos" | Telefone inválido | Digite telefone completo |
+| "Senha deve ter no mínimo 6 caracteres" | Senha curta | Use senha com 6+ caracteres |
+
+## COMO ADICIONAR SUPER ADMIN
+
+```sql
+-- 1. Ver usuários existentes
+SELECT id, email FROM auth.users;
+
+-- 2. Adicionar como super admin
 INSERT INTO super_admins (user_id)
-VALUES ('ID_DO_USUARIO_AQUI')
+VALUES ('ID-DO-USUARIO')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 3. Verificar
 SELECT sa.user_id, au.email
 FROM super_admins sa
-JOIN auth.users au ON sa.user_id = au.id;
+JOIN auth.users au ON au.id = sa.user_id;
 ```
 
-### Opção 2: Via Edge Function
+## TESTES PARA VALIDAR
 
-Use a Edge Function `create-super-admin` (se disponível):
-
-```javascript
-const response = await supabase.functions.invoke("create-super-admin", {
-  body: {
-    email: "novo-admin@example.com",
-    password: "senhaSegura123"
-  }
-});
+### Teste 1: Email Duplicado
+```
+1. Crie empresa: teste@exemplo.com
+2. Tente criar outra: teste@exemplo.com
+3. Resultado: "Email já está em uso"
+4. Verifique: Não deve ter usuário órfão no auth.users
 ```
 
-## Fluxo de Autorização
-
+### Teste 2: API Key Duplicada
 ```
-Usuario faz login
-    ↓
-AuthContext verifica super_admins
-    ↓
-isSuperAdmin = true → Acessa SuperAdminDashboard
-    ↓
-Tenta criar empresa
-    ↓
-Frontend verifica super_admins (validação extra)
-    ↓
-Edge Function verifica super_admins (segurança)
-    ↓
-Empresa criada com sucesso
+1. Crie empresa: api-key-001
+2. Tente criar outra: api-key-001
+3. Resultado: "API Key já está em uso"
 ```
 
-## Segurança
+### Teste 3: Criação com Sucesso
+```
+1. Email único: nova-empresa@exemplo.com
+2. API Key única: api-nova-001
+3. Todos os campos preenchidos
+4. Resultado: Empresa criada com sucesso
+```
 
-### RLS (Row Level Security)
-A tabela `super_admins` tem RLS habilitado:
-- Super admins podem ler todos os registros
-- Super admins podem inserir novos super admins
-- Super admins podem deletar super admins
+### Teste 4: Não Super Admin
+```
+1. Login com usuário comum
+2. Tente criar empresa
+3. Resultado: "Você não está cadastrado como super admin"
+```
 
-### Edge Functions
-Todas as Edge Functions de gerenciamento verificam:
-1. Token JWT válido
-2. Usuário autenticado existe
-3. Usuário está na tabela `super_admins`
+## STATUS FINAL
 
-## Troubleshooting
+✅ Edge Function corrigida e deployada
+✅ Ordem de validação corrigida
+✅ Não cria mais usuários órfãos
+✅ Mensagens de erro claras
+✅ Build concluído com sucesso
 
-### Erro: "Access denied"
-**Causa:** Usuário não está cadastrado como super admin
+## RESUMO
 
-**Solução:**
-1. Verifique se está logado com o usuário correto
-2. Execute o SQL para adicionar o usuário à tabela `super_admins`
-3. Faça logout e login novamente
+**O que estava errado:**
+- Validação de email duplicado DEPOIS de criar usuário
 
-### Erro: "Missing authorization header"
-**Causa:** Token não está sendo enviado
+**O que foi corrigido:**
+- Validação de email duplicado ANTES de criar usuário
 
-**Solução:**
-1. Faça logout
-2. Limpe o cache do navegador
-3. Faça login novamente
-
-### Erro: "Invalid token"
-**Causa:** Token expirou ou é inválido
-
-**Solução:**
-1. Faça logout
-2. Faça login novamente
-
-## Verificações Implementadas
-
-- ✅ Super admin verificado pela tabela `super_admins` (não pelo campo `is_super_admin`)
-- ✅ Validação no frontend antes de chamar Edge Function
-- ✅ Validação na Edge Function para segurança
-- ✅ Mensagens de erro claras
-- ✅ Logs detalhados para debug
-- ✅ Script SQL para gerenciamento fácil
+**Resultado:**
+- Sistema limpo, sem usuários órfãos
+- Mensagens de erro claras
+- Processo mais eficiente
