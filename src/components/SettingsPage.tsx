@@ -120,10 +120,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleResetBackground = () => {
-    updateFormData({ backgroundColor: '#f8fafc' });
-  };
-
   const handleResetSentBubble = () => {
     updateFormData({
       messageBubbleSentColor: '#3b82f6',
@@ -159,15 +155,6 @@ export default function SettingsPage() {
       }
     }
   };
-
-  const backgroundPresets = [
-    { name: 'Cinza Claro', value: '#f8fafc' },
-    { name: 'Branco', value: '#ffffff' },
-    { name: 'Azul Claro', value: '#eff6ff' },
-    { name: 'Verde Claro', value: '#f0fdf4' },
-    { name: 'Rosa Claro', value: '#fdf2f8' },
-    { name: 'Amarelo Claro', value: '#fefce8' },
-  ];
 
   const messageColorPresets = [
     { name: 'Azul', value: '#3b82f6' },
@@ -260,72 +247,6 @@ export default function SettingsPage() {
                     className="hidden"
                   />
                 </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 animate-slideUp">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center">
-                  <Palette className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">Cor de Fundo do Chat</h2>
-                  <p className="text-sm text-slate-600">Escolha a cor de fundo da área de mensagens</p>
-                </div>
-              </div>
-              <button
-                onClick={handleResetBackground}
-                className="px-3 py-2 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Resetar
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Cores Predefinidas
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
-                  {backgroundPresets.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => updateFormData({ backgroundColor: preset.value })}
-                      className="relative group"
-                    >
-                      <div
-                        className={`w-full aspect-square rounded-lg transition-all duration-200 border-2 ${
-                          formData.backgroundColor === preset.value
-                            ? 'border-blue-500 scale-95'
-                            : 'border-slate-300 hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: preset.value }}
-                      />
-                      <p className="text-xs font-medium text-slate-700 mt-1 text-center">
-                        {preset.name}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={formData.backgroundColor}
-                    onChange={(e) => updateFormData({ backgroundColor: e.target.value })}
-                    className="w-16 h-10 rounded-lg cursor-pointer border-2 border-slate-300"
-                  />
-                  <input
-                    type="text"
-                    value={formData.backgroundColor}
-                    onChange={(e) => handleColorTextChange('backgroundColor', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="#f8fafc"
-                  />
-                </div>
               </div>
             </div>
           </div>

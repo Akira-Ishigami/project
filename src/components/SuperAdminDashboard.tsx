@@ -124,6 +124,7 @@ export default function SuperAdminDashboard() {
     tagsCount: number;
     contactsCount: number;
     messagesCount: number;
+    planName: string;
   } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
@@ -704,14 +705,18 @@ export default function SuperAdminDashboard() {
         { count: sectorsCount },
         { count: tagsCount },
         { count: contactsCount },
-        { count: messagesCount }
+        { count: messagesCount },
+        planResult
       ] = await Promise.all([
         supabase.from('attendants').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
         supabase.from('departments').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
         supabase.from('sectors').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
         supabase.from('tags').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
         supabase.from('contacts').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
-        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('company_id', company.id)
+        supabase.from('messages').select('*', { count: 'exact', head: true }).eq('company_id', company.id),
+        company.plan_id
+          ? supabase.from('plans').select('name').eq('id', company.plan_id).maybeSingle()
+          : Promise.resolve({ data: null, error: null })
       ]);
 
       setCompanyStats({
@@ -720,7 +725,8 @@ export default function SuperAdminDashboard() {
         sectorsCount: sectorsCount || 0,
         tagsCount: tagsCount || 0,
         contactsCount: contactsCount || 0,
-        messagesCount: messagesCount || 0
+        messagesCount: messagesCount || 0,
+        planName: planResult.data?.name || 'Sem plano'
       });
     } catch (err) {
       console.error('Erro ao carregar estatísticas:', err);
@@ -730,7 +736,8 @@ export default function SuperAdminDashboard() {
         sectorsCount: 0,
         tagsCount: 0,
         contactsCount: 0,
-        messagesCount: 0
+        messagesCount: 0,
+        planName: 'Sem plano'
       });
     } finally {
       setLoadingStats(false);
@@ -1671,6 +1678,12 @@ export default function SuperAdminDashboard() {
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                   <div className="text-xs text-gray-500 font-medium mb-1">Max Atendentes</div>
                   <div className="text-sm text-gray-900 font-medium">{selectedCompanyDetails.max_attendants || 'Ilimitado'}</div>
+                </div>
+                <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-xl border border-teal-200">
+                  <div className="text-xs text-teal-600 font-medium mb-1">Plano Atual</div>
+                  <div className="text-sm text-teal-900 font-bold">
+                    {loadingStats ? 'Carregando...' : (companyStats?.planName || 'Sem plano')}
+                  </div>
                 </div>
               </div>
 
