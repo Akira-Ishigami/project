@@ -60,12 +60,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Cliente "do usuário" (usa ANON e o Bearer do request)
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Extract JWT token from Authorization header
+    const jwt = authHeader.replace(/^bearer\s+/i, "").trim();
+    console.log("JWT extracted, length:", jwt.length);
 
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+    // Cliente admin (service role) - usado para todas as operações
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Verificar o JWT usando o service role
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(jwt);
 
     if (userError || !userData?.user) {
       console.error("Failed to get user:", userError);
@@ -83,9 +86,6 @@ Deno.serve(async (req: Request) => {
 
     const callerId = userData.user.id;
     console.log("User authenticated:", callerId);
-
-    // Cliente admin (service role)
-    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     // =========================================================
     // PARTE 3 — Verificação de super admin (tabela super_admins)
