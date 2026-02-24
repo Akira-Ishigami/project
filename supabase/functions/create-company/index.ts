@@ -67,15 +67,23 @@ Deno.serve(async (req: Request) => {
     // Cliente admin (service role) - usado para todas as operações
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Verificar o JWT usando o service role
-    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(jwt);
+    // Decodificar o JWT para extrair o user_id
+    let callerId: string;
+    try {
+      const payload = JSON.parse(atob(jwt.split('.')[1]));
+      callerId = payload.sub;
 
-    if (userError || !userData?.user) {
-      console.error("Failed to get user:", userError);
+      if (!callerId) {
+        throw new Error("No user ID in JWT");
+      }
+
+      console.log("JWT decoded successfully, user ID:", callerId);
+    } catch (decodeError) {
+      console.error("Failed to decode JWT:", decodeError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
-          details: userError?.message || "Invalid token",
+          details: "Invalid token format",
         }),
         {
           status: 401,
@@ -84,7 +92,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const callerId = userData.user.id;
+    // Verificar se o usuário existe
+    const { data: { user: verifiedUser }, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(callerId);
+
+    if (verifyError || !verifiedUser) {
+      console.error("User verification failed:", verifyError);
+      return new Response(
+        JSON.stringify({
+          error: "Unauthorized",
+          details: "Invalid or expired token",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     console.log("User authenticated:", callerId);
 
     // =========================================================
