@@ -67,10 +67,22 @@ Deno.serve(async (req: Request) => {
     // Cliente admin (service role) - usado para todas as operações
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Decodificar o JWT para extrair o user_id
+    // Decodificar o JWT para extrair o user_id usando Deno APIs
     let callerId: string;
     try {
-      const payload = JSON.parse(atob(jwt.split('.')[1]));
+      // Base64 decode usando Deno APIs
+      const parts = jwt.split('.');
+      if (parts.length !== 3) {
+        throw new Error("Invalid JWT structure");
+      }
+
+      // Decodificar a parte do payload (segunda parte do JWT)
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payloadJson = new TextDecoder().decode(
+        Uint8Array.from(atob(payloadBase64), c => c.charCodeAt(0))
+      );
+      const payload = JSON.parse(payloadJson);
+
       callerId = payload.sub;
 
       if (!callerId) {
@@ -92,7 +104,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verificar se o usuário existe
+    // Verificar se o usuário existe usando o service role client
     const { data: { user: verifiedUser }, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(callerId);
 
     if (verifyError || !verifiedUser) {
