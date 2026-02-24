@@ -565,14 +565,21 @@ export default function CompanyDashboard() {
   }, [company]);
 
   const loadMoreMessages = useCallback(async () => {
-    if (!hasMoreMessages || loadingMoreMessages || !selectedContact) return;
+    if (!hasMoreMessages || loadingMoreMessages || !selectedContact || !company) return;
 
     setLoadingMoreMessages(true);
     try {
-      const currentMessages = filteredMessages;
-      const oldestMessage = currentMessages[0];
+      const currentContactMessages = messages.filter(msg => {
+        const contactId = getContactId(msg);
+        return normalizeDbPhone(contactId) === normalizeDbPhone(selectedContact);
+      }).sort((a, b) => getMessageTimestamp(a) - getMessageTimestamp(b));
 
-      if (!oldestMessage) return;
+      const oldestMessage = currentContactMessages[0];
+
+      if (!oldestMessage) {
+        setLoadingMoreMessages(false);
+        return;
+      }
 
       const messagesQuery = company?.id
         ? supabase.from('messages')
@@ -606,6 +613,7 @@ export default function CompanyDashboard() {
 
       if (receivedResult.error || sentResult.error) {
         console.error('Erro ao carregar mais mensagens');
+        setLoadingMoreMessages(false);
         return;
       }
 
@@ -629,7 +637,7 @@ export default function CompanyDashboard() {
     } finally {
       setLoadingMoreMessages(false);
     }
-  }, [hasMoreMessages, loadingMoreMessages, selectedContact, company, filteredMessages]);
+  }, [hasMoreMessages, loadingMoreMessages, selectedContact, company, messages]);
 
   const fetchContacts = async () => {
     if (!company?.id) return;
@@ -1386,7 +1394,7 @@ export default function CompanyDashboard() {
   };
 
   useEffect(() => {
-    fetchMessages(30);
+    fetchMessages();
     fetchContacts();
 
     Promise.all([
@@ -2501,7 +2509,7 @@ export default function CompanyDashboard() {
                 }}
               >
                 <div className="w-full">
-                  {hasMoreMessages && filteredMessages.length >= 30 && (
+                  {hasMoreMessages && currentMessages.length >= 30 && (
                     <div className="flex justify-center mb-4">
                       <button
                         onClick={loadMoreMessages}
