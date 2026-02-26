@@ -67,35 +67,24 @@ Deno.serve(async (req: Request) => {
     // Cliente admin (service role) - usado para todas as operações
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Decodificar o JWT para extrair o user_id usando Deno APIs
-    let callerId: string;
-    try {
-      // Base64 decode usando Deno APIs
-      const parts = jwt.split('.');
-      if (parts.length !== 3) {
-        throw new Error("Invalid JWT structure");
-      }
+    // Criar um client com o JWT do usuário para validação
+    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
 
-      // Decodificar a parte do payload (segunda parte do JWT)
-      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payloadJson = new TextDecoder().decode(
-        Uint8Array.from(atob(payloadBase64), c => c.charCodeAt(0))
-      );
-      const payload = JSON.parse(payloadJson);
+    // Verificar o usuário usando o JWT fornecido
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(jwt);
 
-      callerId = payload.sub;
-
-      if (!callerId) {
-        throw new Error("No user ID in JWT");
-      }
-
-      console.log("JWT decoded successfully, user ID:", callerId);
-    } catch (decodeError) {
-      console.error("Failed to decode JWT:", decodeError);
+    if (userError || !user) {
+      console.error("Failed to verify user from JWT:", userError);
       return new Response(
         JSON.stringify({
           error: "Unauthorized",
-          details: "Invalid token format",
+          details: userError?.message || "Invalid or expired token",
         }),
         {
           status: 401,
@@ -104,23 +93,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verificar se o usuário existe usando o service role client
-    const { data: { user: verifiedUser }, error: verifyError } = await supabaseAdmin.auth.admin.getUserById(callerId);
-
-    if (verifyError || !verifiedUser) {
-      console.error("User verification failed:", verifyError);
-      return new Response(
-        JSON.stringify({
-          error: "Unauthorized",
-          details: "Invalid or expired token",
-        }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
+    const callerId = user.id;
     console.log("User authenticated:", callerId);
 
     // =========================================================
