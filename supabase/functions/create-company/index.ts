@@ -258,6 +258,26 @@ Deno.serve(async (req: Request) => {
 
     console.log("Company inserted successfully with ID:", insertedCompany.id);
 
+    // Garantir que o departamento Recepção existe (trigger pode falhar silenciosamente)
+    const { data: existingReception } = await supabaseAdmin
+      .from("departments")
+      .select("id")
+      .eq("company_id", insertedCompany.id)
+      .maybeSingle();
+
+    if (!existingReception) {
+      console.log("Trigger did not create reception department, creating manually...");
+      await supabaseAdmin
+        .from("departments")
+        .insert({
+          company_id: insertedCompany.id,
+          name: "Recepção",
+          is_default: true,
+          is_reception: true,
+        });
+      console.log("Reception department created manually.");
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,

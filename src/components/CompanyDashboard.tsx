@@ -2216,7 +2216,7 @@ export default function CompanyDashboard() {
       )}
 
       <ProfileDropdown
-        userName={company?.name || 'Empresa'}
+        userName={settings.companyName || company?.name || 'Empresa'}
         onHistoryClick={() => setActiveTab('historico')}
         onSettingsClick={() => setActiveTab('configuracoes')}
         onLogout={signOut}

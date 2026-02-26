@@ -164,6 +164,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (newSettings.messageBubbleReceivedTextColor !== undefined) themeUpdate.message_bubble_received_text_color = newSettings.messageBubbleReceivedTextColor;
       if (newSettings.primaryColor !== undefined) themeUpdate.primary_color = newSettings.primaryColor;
 
+      if (newSettings.companyName !== undefined && newSettings.companyName.trim() !== '') {
+        await supabase
+          .from('companies')
+          .update({ name: newSettings.companyName.trim() })
+          .eq('id', id);
+      }
+
       const { data: existingTheme, error: checkError } = await supabase
         .from('theme_settings')
         .select('id')
