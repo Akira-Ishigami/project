@@ -257,6 +257,8 @@ export default function CompanyDashboard() {
   const [lastViewedMessageTime, setLastViewedMessageTime] = useState<{ [key: string]: number }>({});
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [webhookContacts, setWebhookContacts] = useState<{ name: string; phone: string }[] | null>(null);
+  const [loadingWebhookContacts, setLoadingWebhookContacts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -1571,6 +1573,21 @@ export default function CompanyDashboard() {
     };
   }, [activeTab, company?.api_key, fetchMessages]);
 
+  const fetchWebhookContacts = async () => {
+    setLoadingWebhookContacts(true);
+    setWebhookContacts(null);
+    try {
+      const response = await fetch('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontatolucas');
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : (data.contacts || data.data || []);
+      setWebhookContacts(list);
+    } catch {
+      setWebhookContacts([]);
+    } finally {
+      setLoadingWebhookContacts(false);
+    }
+  };
+
   const formatTime = (msgOrTimestamp: any) => {
 
     if (!msgOrTimestamp) return '';
@@ -2387,6 +2404,50 @@ export default function CompanyDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Botão circular + painel de contatos do webhook */}
+            <div className="relative px-4 pb-4 pt-2 border-t border-slate-200/80 bg-white">
+              {webhookContacts !== null && (
+                <div className="mb-3 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 shadow-inner">
+                  {webhookContacts.length === 0 ? (
+                    <p className="text-xs text-slate-500 text-center py-4">Nenhum contato encontrado</p>
+                  ) : (
+                    webhookContacts.map((wc, idx) => (
+                      <div key={idx} className="flex items-center gap-3 px-3 py-2.5 hover:bg-white transition-colors border-b border-slate-100 last:border-0">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                          {wc.name ? wc.name[0].toUpperCase() : <User className="w-4 h-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{wc.name || 'Sem nome'}</p>
+                          <p className="text-xs text-slate-500 truncate">{wc.phone || ''}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => {
+                    if (webhookContacts !== null) {
+                      setWebhookContacts(null);
+                    } else {
+                      fetchWebhookContacts();
+                    }
+                  }}
+                  title={webhookContacts !== null ? 'Fechar lista' : 'Buscar contatos'}
+                  className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all duration-200 hover:scale-110 active:scale-95"
+                >
+                  {loadingWebhookContacts ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : webhookContacts !== null ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
