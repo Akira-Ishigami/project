@@ -1621,8 +1621,12 @@ export default function CompanyDashboard() {
       const extractArray = (d: any): any[] => {
         if (Array.isArray(d)) return d;
         if (d && typeof d === 'object') {
-          for (const key of Object.keys(d)) {
-            if (Array.isArray(d[key])) return d[key];
+          const values = Object.values(d);
+          if (values.length > 0 && values.every((v) => v && typeof v === 'object' && !Array.isArray(v))) {
+            return values as any[];
+          }
+          for (const val of values) {
+            if (Array.isArray(val)) return val;
           }
         }
         return [];
@@ -1634,14 +1638,14 @@ export default function CompanyDashboard() {
       const list = raw
         .map((c: any) => {
           const phone = String(
-            c.remoteJid || c.phone || c.telefone || c.number || c.whatsapp || ''
+            c.numero || c.remoteJid || c.phone || c.telefone || c.number || c.whatsapp || ''
           ).replace(/\D/g, '');
           const name = String(
-            c.Name || c.name || c.nome || c.pushName || c.pushname || ''
+            c.nome || c.Name || c.name || c.pushName || c.pushname || ''
           ).trim();
           return { name, phone };
         })
-        .filter((c) => c.phone && !c.phone.includes('-') && c.phone.length >= 8)
+        .filter((c) => c.phone && c.phone.length >= 8)
         .slice(0, 30);
 
       console.log('[webhook-contatos] lista processada:', list.length);
