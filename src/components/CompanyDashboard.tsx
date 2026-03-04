@@ -1607,7 +1607,13 @@ export default function CompanyDashboard() {
         setWebhookContacts([]);
         return;
       }
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = [];
+      }
       const raw: any[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
       const list = raw
         .filter((c) => c.remoteJid && !String(c.remoteJid).includes('-'))

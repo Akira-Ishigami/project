@@ -33,11 +33,23 @@ Deno.serve(async (req: Request) => {
 
     const data = await response.text();
 
-    return new Response(data, {
+    let contentType = response.headers.get("Content-Type") || "application/json";
+    let body = data;
+    if (!contentType.includes("application/json")) {
+      try {
+        JSON.parse(data);
+        contentType = "application/json";
+      } catch {
+        body = JSON.stringify({ text: data });
+        contentType = "application/json";
+      }
+    }
+
+    return new Response(body, {
       status: response.status,
       headers: {
         ...corsHeaders,
-        "Content-Type": response.headers.get("Content-Type") || "application/json",
+        "Content-Type": contentType,
       },
     });
   } catch (err) {
