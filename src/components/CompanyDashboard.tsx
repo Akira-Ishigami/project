@@ -258,6 +258,7 @@ export default function CompanyDashboard() {
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [webhookContacts, setWebhookContacts] = useState<{ name: string; phone: string }[] | null>(null);
+  const [webhookContactsSearch, setWebhookContactsSearch] = useState('');
   const [loadingWebhookContacts, setLoadingWebhookContacts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1607,7 +1608,15 @@ export default function CompanyDashboard() {
         return;
       }
       const data = await response.json();
-      const list = Array.isArray(data) ? data : (data.contacts || data.data || []);
+      const raw: any[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
+      const list = raw
+        .filter((c) => c.remoteJid && !String(c.remoteJid).includes('-'))
+        .map((c) => ({
+          name: c.Name || c.name || '',
+          phone: String(c.remoteJid || c.phone || ''),
+        }))
+        .filter((c) => c.name || c.phone);
+      setWebhookContactsSearch('');
       setWebhookContacts(list);
     } catch (err) {
       console.error('Erro ao chamar webhook de contatos:', err);
@@ -2435,49 +2444,89 @@ export default function CompanyDashboard() {
               )}
             </div>
 
-            {/* Botão circular + painel de contatos do webhook */}
-            <div className="relative px-4 pb-4 pt-2 border-t border-slate-200/80 bg-white">
-              {webhookContacts !== null && (
-                <div className="mb-3 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 shadow-inner">
-                  {webhookContacts.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-4">Nenhum contato encontrado</p>
-                  ) : (
-                    webhookContacts.map((wc, idx) => (
-                      <div key={idx} className="flex items-center gap-3 px-3 py-2.5 hover:bg-white transition-colors border-b border-slate-100 last:border-0">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-                          {wc.name ? wc.name[0].toUpperCase() : <User className="w-4 h-4" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">{wc.name || 'Sem nome'}</p>
-                          <p className="text-xs text-slate-500 truncate">{wc.phone || ''}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-              <div className="flex justify-center">
-                <button
-                  onClick={() => {
-                    if (webhookContacts !== null) {
-                      setWebhookContacts(null);
-                    } else {
-                      fetchWebhookContacts();
-                    }
-                  }}
-                  title={webhookContacts !== null ? 'Fechar lista' : 'Buscar contatos'}
-                  className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all duration-200 hover:scale-110 active:scale-95"
-                >
-                  {loadingWebhookContacts ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : webhookContacts !== null ? (
-                    <X className="w-5 h-5" />
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
+            {/* Botão buscar contatos */}
+            <div className="px-4 pb-4 pt-2 border-t border-slate-200/80 bg-white flex justify-center">
+              <button
+                onClick={fetchWebhookContacts}
+                title="Buscar contatos"
+                className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 transition-all duration-200 hover:scale-110 active:scale-95"
+              >
+                {loadingWebhookContacts ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </button>
             </div>
+
+            {/* Modal de contatos do webhook */}
+            {webhookContacts !== null && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setWebhookContacts(null)}>
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '80vh' }} onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">Contatos</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">{webhookContacts.length} contato{webhookContacts.length !== 1 ? 's' : ''} encontrado{webhookContacts.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <button onClick={() => setWebhookContacts(null)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        value={webhookContactsSearch}
+                        onChange={(e) => setWebhookContactsSearch(e.target.value)}
+                        placeholder="Buscar por nome ou telefone..."
+                        className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-slate-50"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto">
+                    {(() => {
+                      const filtered = webhookContactsSearch.trim()
+                        ? webhookContacts.filter((wc) =>
+                            (wc.name || '').toLowerCase().includes(webhookContactsSearch.toLowerCase()) ||
+                            (wc.phone || '').includes(webhookContactsSearch)
+                          )
+                        : webhookContacts;
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                            <User className="w-10 h-10 mb-3 opacity-40" />
+                            <p className="text-sm font-medium">Nenhum contato encontrado</p>
+                            <p className="text-xs mt-1">Tente outro termo de busca</p>
+                          </div>
+                        );
+                      }
+
+                      return filtered.map((wc, idx) => {
+                        const initial = (wc.name || wc.phone || '?')[0].toUpperCase();
+                        const colors = ['from-blue-500 to-blue-600', 'from-emerald-500 to-emerald-600', 'from-amber-500 to-amber-600', 'from-rose-500 to-rose-600', 'from-sky-500 to-sky-600'];
+                        const color = colors[initial.charCodeAt(0) % colors.length];
+                        return (
+                          <div key={idx} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-default">
+                            <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-sm`}>
+                              {initial}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-900 truncate">{wc.name || <span className="text-slate-400 font-normal italic">Sem nome</span>}</p>
+                              <p className="text-xs text-slate-500 mt-0.5 font-mono">{wc.phone}</p>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
