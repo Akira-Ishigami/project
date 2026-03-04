@@ -1645,8 +1645,7 @@ export default function CompanyDashboard() {
           ).trim();
           return { name, phone };
         })
-        .filter((c) => c.phone && c.phone.length >= 8)
-        .slice(0, 30);
+        .filter((c) => c.phone && c.phone.length >= 8);
 
       console.log('[webhook-contatos] lista processada:', list.length);
       setWebhookContactsSearch('');
