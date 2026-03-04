@@ -1594,9 +1594,12 @@ export default function CompanyDashboard() {
       const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontato');
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy?url=${target}`;
       const response = await fetch(proxyUrl, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ api_key: company?.api_key }),
       });
       if (!response.ok) {
         console.error('Webhook respondeu com erro:', response.status, response.statusText);
