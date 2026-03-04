@@ -1,4 +1,4 @@
-import { History, Settings, LogOut, MessageSquare, Briefcase, FolderTree, UserCircle2, Tag, CreditCard, Bell, X, CheckCheck, Info, AlertCircle, XCircle, CreditCard as PaymentIcon } from 'lucide-react';
+import { History, Settings, LogOut, MessageSquare, Briefcase, FolderTree, CircleUser as UserCircle2, Tag, CreditCard, Bell, X, CheckCheck, Info, AlertCircle, XCircle, CreditCard as PaymentIcon } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 interface NotificationItem {
