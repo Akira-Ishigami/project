@@ -604,7 +604,7 @@ export default function AttendantDashboard() {
   }, [attendant?.api_key, fetchMessages]);
 
   const getContactId = (msg: Message): string => {
-    return normalizePhone(msg.numero || msg.sender || msg.number || '');
+    return normalizePhone(msg.numero || msg.phone_number || msg.sender || msg.number || '');
   };
 
   const getPhoneNumber = (contactId: string): string => {

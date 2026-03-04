@@ -43,6 +43,7 @@ export interface Message {
   date_time: string | null;
   sender: string | null;
   apikey_instancia: string | null;
+  phone_number: string | null;
   caption: string | null;
   message_type?: 'user' | 'system_transfer' | null;
   contact_id?: string | null;
