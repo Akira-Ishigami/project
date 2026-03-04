@@ -1577,7 +1577,7 @@ export default function CompanyDashboard() {
     setLoadingWebhookContacts(true);
     setWebhookContacts(null);
     try {
-      const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontatolucas');
+      const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontato');
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy?url=${target}`;
       const response = await fetch(proxyUrl, {
         headers: {
