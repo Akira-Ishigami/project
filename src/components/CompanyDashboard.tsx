@@ -1897,6 +1897,7 @@ export default function CompanyDashboard() {
       const rawMessage = messageData.message || '';
       const rawCaption = messageData.caption || null;
 
+      const { phone_number: _ph, ...messageDataClean } = messageData as Message & { phone_number?: string };
       const newMessage = {
         numero: selectedContact,
         sender: null,
@@ -1910,8 +1911,7 @@ export default function CompanyDashboard() {
         department_id: departmentId,
         sector_id: sectorId,
         tag_id: tagId,
-        ...messageData,
-        // garante que o texto/caption salvos fiquem puros (sem prefixo)
+        ...messageDataClean,
         message: rawMessage,
         caption: rawCaption,
       };

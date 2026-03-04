@@ -1297,6 +1297,7 @@ export default function AttendantDashboard() {
       const rawMessage = messageData.message || '';
       const rawCaption = messageData.caption || null;
 
+      const { phone_number: _ph, ...messageDataClean } = messageData as Message & { phone_number?: string };
       const newMessage = {
         numero: selectedContact,
         sender: null,
@@ -1310,7 +1311,7 @@ export default function AttendantDashboard() {
         department_id: departmentId,
         sector_id: sectorId,
         tag_id: tagId,
-        ...messageData,
+        ...messageDataClean,
         message: rawMessage,
         caption: rawCaption,
       };
