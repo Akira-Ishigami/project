@@ -1578,10 +1578,17 @@ export default function CompanyDashboard() {
     setWebhookContacts(null);
     try {
       const response = await fetch('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontatolucas');
+      if (!response.ok) {
+        console.error('Webhook respondeu com erro:', response.status, response.statusText);
+        setWebhookContacts([]);
+        return;
+      }
       const data = await response.json();
+      console.log('Webhook retornou:', data);
       const list = Array.isArray(data) ? data : (data.contacts || data.data || []);
       setWebhookContacts(list);
-    } catch {
+    } catch (err) {
+      console.error('Erro ao chamar webhook de contatos:', err);
       setWebhookContacts([]);
     } finally {
       setLoadingWebhookContacts(false);
