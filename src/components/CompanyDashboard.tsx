@@ -257,7 +257,8 @@ export default function CompanyDashboard() {
   const [lastViewedMessageTime, setLastViewedMessageTime] = useState<{ [key: string]: number }>({});
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [webhookContacts, setWebhookContacts] = useState<{ name: string; phone: string }[] | null>(null);
+  const [webhookContacts, setWebhookContacts] = useState<{ name: string; phone: string }[]>([]);
+  const [showWebhookContactsModal, setShowWebhookContactsModal] = useState(false);
   const [webhookContactsSearch, setWebhookContactsSearch] = useState('');
   const [loadingWebhookContacts, setLoadingWebhookContacts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -1589,8 +1590,9 @@ export default function CompanyDashboard() {
   }, [activeTab, company?.api_key, fetchMessages]);
 
   const fetchWebhookContacts = async () => {
+    setShowWebhookContactsModal(true);
+    if (webhookContacts.length > 0) return;
     setLoadingWebhookContacts(true);
-    setWebhookContacts(null);
     try {
       const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontato');
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy?url=${target}`;
@@ -1604,7 +1606,6 @@ export default function CompanyDashboard() {
       });
       if (!response.ok) {
         console.error('Webhook respondeu com erro:', response.status, response.statusText);
-        setWebhookContacts([]);
         return;
       }
       const text = await response.text();
@@ -1626,7 +1627,6 @@ export default function CompanyDashboard() {
       setWebhookContacts(list);
     } catch (err) {
       console.error('Erro ao chamar webhook de contatos:', err);
-      setWebhookContacts([]);
     } finally {
       setLoadingWebhookContacts(false);
     }
@@ -2466,15 +2466,15 @@ export default function CompanyDashboard() {
             </div>
 
             {/* Modal de contatos do webhook */}
-            {webhookContacts !== null && (
-              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setWebhookContacts(null)}>
+            {showWebhookContactsModal && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowWebhookContactsModal(false)}>
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '80vh' }} onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                     <div>
                       <h3 className="text-lg font-bold text-slate-900">Contatos</h3>
                       <p className="text-xs text-slate-500 mt-0.5">{webhookContacts.length} contato{webhookContacts.length !== 1 ? 's' : ''} encontrado{webhookContacts.length !== 1 ? 's' : ''}</p>
                     </div>
-                    <button onClick={() => setWebhookContacts(null)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                    <button onClick={() => setShowWebhookContactsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
