@@ -764,6 +764,22 @@ export default function CompanyDashboard() {
     }
   };
 
+  const markAllNotificationsAsRead = async () => {
+    if (!company?.id) return;
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('company_id', company.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Erro ao marcar todas notificações como lidas:', error);
+    }
+  };
+
   const handleToggleIaGlobal = async () => {
     if (!company?.id) return;
     try {
@@ -2316,6 +2332,12 @@ export default function CompanyDashboard() {
         activeTab={activeTab}
         isOpen={menuOpen}
         onToggle={() => setMenuOpen(!menuOpen)}
+        notifications={notifications}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onMarkNotificationRead={markNotificationAsRead}
+        onMarkAllNotificationsRead={markAllNotificationsAsRead}
+        showNotificationsPanel={showNotifications}
+        onToggleNotificationsPanel={() => setShowNotifications(!showNotifications)}
       />
 
       {/* Main Content Area */}
