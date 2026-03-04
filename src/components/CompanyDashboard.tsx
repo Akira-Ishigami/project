@@ -14,7 +14,7 @@ import ProfileDropdown from './ProfileDropdown';
 import Toast from './Toast';
 import { EmojiPicker } from './EmojiPicker';
 import { linkifyText } from '../lib/linkifyText';
-import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
+import { useRealtimeMessages, useRealtimeContacts, useRealtimeDepartments, useRealtimeSectors, useAiEnabled } from '../hooks';
 import SystemMessage from './SystemMessage';
 
 interface Contact {
@@ -1518,6 +1518,20 @@ export default function CompanyDashboard() {
       fetchContacts();
     }
   });
+  useRealtimeDepartments({
+    companyId: company?.id,
+    onDepartmentsChange: () => {
+      fetchDepartments();
+    }
+  });
+
+  useRealtimeSectors({
+    companyId: company?.id,
+    onSectorsChange: () => {
+      fetchSectors();
+    }
+  });
+
   // Detecta transferências em tempo real e mostra um aviso no meio do chat
   useEffect(() => {
     if (!company?.id) return;

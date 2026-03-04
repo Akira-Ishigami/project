@@ -8,7 +8,7 @@ import { EmojiPicker } from './EmojiPicker';
 import SystemMessage from './SystemMessage';
 import ProfileDropdown from './ProfileDropdown';
 import TicketHistory from './TicketHistory';
-import { useRealtimeMessages, useRealtimeContacts, useAiEnabled } from '../hooks';
+import { useRealtimeMessages, useRealtimeContacts, useRealtimeDepartments, useRealtimeSectors, useAiEnabled } from '../hooks';
 import { linkifyText } from '../lib/linkifyText';
 
 interface Contact {
@@ -477,7 +477,7 @@ export default function AttendantDashboard() {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     if (!attendant?.company_id) return;
 
     try {
@@ -493,9 +493,9 @@ export default function AttendantDashboard() {
     } catch (error) {
       console.error('Erro ao carregar departamentos:', error);
     }
-  };
+  }, [attendant?.company_id]);
 
-  const fetchSectors = async () => {
+  const fetchSectors = useCallback(async () => {
     if (!attendant?.company_id) return;
     try {
       const { data, error } = await supabase
@@ -510,7 +510,7 @@ export default function AttendantDashboard() {
     } catch (error) {
       console.error('Erro ao carregar setores:', error);
     }
-  };
+  }, [attendant?.company_id]);
 
   const fetchTags = async () => {
     if (!attendant?.company_id) return;
@@ -583,6 +583,20 @@ export default function AttendantDashboard() {
         return prevContacts;
       });
     },
+  });
+
+  useRealtimeDepartments({
+    companyId: attendant?.company_id,
+    onDepartmentsChange: () => {
+      fetchDepartments();
+    }
+  });
+
+  useRealtimeSectors({
+    companyId: attendant?.company_id,
+    onSectorsChange: () => {
+      fetchSectors();
+    }
   });
 
   // Polling
