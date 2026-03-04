@@ -23,29 +23,30 @@ Deno.serve(async (req: Request) => {
     }
 
     const method = req.method;
-    const body = method !== "GET" ? await req.text() : undefined;
+    const requestBody = method !== "GET" ? await req.text() : undefined;
 
     const response = await fetch(target, {
       method,
       headers: { "Content-Type": "application/json" },
-      body,
+      body: requestBody,
     });
 
-    const data = await response.text();
+    const rawData = await response.text();
 
     let contentType = response.headers.get("Content-Type") || "application/json";
-    let body = data;
+    let responseBody = rawData;
+
     if (!contentType.includes("application/json")) {
       try {
-        JSON.parse(data);
+        JSON.parse(rawData);
         contentType = "application/json";
       } catch {
-        body = JSON.stringify({ text: data });
+        responseBody = JSON.stringify({ text: rawData });
         contentType = "application/json";
       }
     }
 
-    return new Response(body, {
+    return new Response(responseBody, {
       status: response.status,
       headers: {
         ...corsHeaders,
