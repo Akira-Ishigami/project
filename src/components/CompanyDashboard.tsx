@@ -1577,14 +1577,19 @@ export default function CompanyDashboard() {
     setLoadingWebhookContacts(true);
     setWebhookContacts(null);
     try {
-      const response = await fetch('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontatolucas');
+      const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/buscacontatolucas');
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy?url=${target}`;
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+      });
       if (!response.ok) {
         console.error('Webhook respondeu com erro:', response.status, response.statusText);
         setWebhookContacts([]);
         return;
       }
       const data = await response.json();
-      console.log('Webhook retornou:', data);
       const list = Array.isArray(data) ? data : (data.contacts || data.data || []);
       setWebhookContacts(list);
     } catch (err) {
