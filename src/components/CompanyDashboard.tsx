@@ -1609,20 +1609,42 @@ export default function CompanyDashboard() {
         return;
       }
       const text = await response.text();
+      console.log('[webhook-contatos] resposta bruta:', text.slice(0, 500));
       let data: any;
       try {
         data = JSON.parse(text);
       } catch {
-        data = [];
+        console.error('[webhook-contatos] JSON inválido');
+        return;
       }
-      const raw: any[] = Array.isArray(data) ? data : (data.contacts || data.data || []);
+
+      const extractArray = (d: any): any[] => {
+        if (Array.isArray(d)) return d;
+        if (d && typeof d === 'object') {
+          for (const key of Object.keys(d)) {
+            if (Array.isArray(d[key])) return d[key];
+          }
+        }
+        return [];
+      };
+
+      const raw = extractArray(data);
+      console.log('[webhook-contatos] total itens brutos:', raw.length, '| primeiro:', raw[0]);
+
       const list = raw
-        .filter((c) => c.remoteJid && !String(c.remoteJid).includes('-'))
-        .map((c) => ({
-          name: c.Name || c.name || '',
-          phone: String(c.remoteJid || c.phone || ''),
-        }))
-        .filter((c) => c.name || c.phone);
+        .map((c: any) => {
+          const phone = String(
+            c.remoteJid || c.phone || c.telefone || c.number || c.whatsapp || ''
+          ).replace(/\D/g, '');
+          const name = String(
+            c.Name || c.name || c.nome || c.pushName || c.pushname || ''
+          ).trim();
+          return { name, phone };
+        })
+        .filter((c) => c.phone && !c.phone.includes('-') && c.phone.length >= 8)
+        .slice(0, 30);
+
+      console.log('[webhook-contatos] lista processada:', list.length);
       setWebhookContactsSearch('');
       setWebhookContacts(list);
     } catch (err) {
@@ -2472,7 +2494,9 @@ export default function CompanyDashboard() {
                   <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                     <div>
                       <h3 className="text-lg font-bold text-slate-900">Contatos</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{webhookContacts.length} contato{webhookContacts.length !== 1 ? 's' : ''} encontrado{webhookContacts.length !== 1 ? 's' : ''}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {loadingWebhookContacts ? 'Carregando...' : `${webhookContacts.length} contato${webhookContacts.length !== 1 ? 's' : ''} encontrado${webhookContacts.length !== 1 ? 's' : ''}`}
+                      </p>
                     </div>
                     <button onClick={() => setShowWebhookContactsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
                       <X className="w-5 h-5" />
@@ -2489,12 +2513,18 @@ export default function CompanyDashboard() {
                         placeholder="Buscar por nome ou telefone..."
                         className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-slate-50"
                         autoFocus
+                        disabled={loadingWebhookContacts}
                       />
                     </div>
                   </div>
 
                   <div className="flex-1 overflow-y-auto">
-                    {(() => {
+                    {loadingWebhookContacts ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                        <Loader2 className="w-8 h-8 animate-spin mb-3 text-blue-500" />
+                        <p className="text-sm font-medium">Buscando contatos...</p>
+                      </div>
+                    ) : (() => {
                       const filtered = webhookContactsSearch.trim()
                         ? webhookContacts.filter((wc) =>
                             (wc.name || '').toLowerCase().includes(webhookContactsSearch.toLowerCase()) ||
@@ -2530,6 +2560,7 @@ export default function CompanyDashboard() {
                       });
                     })()}
                   </div>
+
                 </div>
               </div>
             )}
