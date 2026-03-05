@@ -261,6 +261,7 @@ export default function CompanyDashboard() {
   const [showWebhookContactsModal, setShowWebhookContactsModal] = useState(false);
   const [webhookContactsSearch, setWebhookContactsSearch] = useState('');
   const [loadingWebhookContacts, setLoadingWebhookContacts] = useState(false);
+  const [pendingNewContact, setPendingNewContact] = useState<{ name: string; phone: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -1642,8 +1643,10 @@ export default function CompanyDashboard() {
 
     setShowWebhookContactsModal(false);
     setWebhookContactsSearch('');
+    setPendingNewContact({ name: wc.name, phone: wc.phone });
     setSelectedContact(wc.phone);
     if (window.innerWidth < 768) setSidebarOpen(false);
+    fetchContacts();
   };
 
   const fetchWebhookContacts = async () => {
@@ -2639,7 +2642,11 @@ export default function CompanyDashboard() {
         )}
 
         <div className={`flex-1 flex-col ${activeTab === 'mensagens' && sidebarOpen ? 'hidden md:flex' : 'flex'} bg-white`}>
-          {activeTab === 'mensagens' && selectedContactData ? (
+          {activeTab === 'mensagens' && (selectedContactData || (selectedContact && pendingNewContact)) ? (
+            (() => {
+              const effectiveName = selectedContactData?.name || pendingNewContact?.name || '';
+              const effectivePhone = selectedContactData?.phoneNumber || pendingNewContact?.phone || selectedContact || '';
+              return (
             <>
               <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4">
@@ -2650,29 +2657,29 @@ export default function CompanyDashboard() {
                     <Menu className="w-5 h-5" />
                   </button>
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold shadow-sm">
-                    {selectedContactData.name ? selectedContactData.name[0].toUpperCase() : <User className="w-5 h-5" />}
+                    {effectiveName ? effectiveName[0].toUpperCase() : <User className="w-5 h-5" />}
                   </div>
                   <div>
                     <h2 className="font-semibold text-slate-900">
-                      {selectedContactData.name || getPhoneNumber(selectedContactData.phoneNumber)}
+                      {effectiveName || getPhoneNumber(effectivePhone)}
                     </h2>
                     <p className="text-sm text-slate-500 mt-0.5">
-                      {getPhoneNumber(selectedContactData.phoneNumber)}
+                      {getPhoneNumber(effectivePhone)}
                     </p>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                      {selectedContactData.department_id && (
+                      {selectedContactData?.department_id && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-100 text-sky-700 text-xs rounded-full border border-sky-200">
                           <Briefcase className="w-3 h-3" />
-                          {departments.find(d => d.id === selectedContactData.department_id)?.name || 'Departamento'}
+                          {departments.find(d => d.id === selectedContactData?.department_id)?.name || 'Departamento'}
                         </span>
                       )}
-                      {selectedContactData.sector_id && (
+                      {selectedContactData?.sector_id && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full border border-violet-200">
                           <FolderTree className="w-3 h-3" />
-                          {sectors.find(s => s.id === selectedContactData.sector_id)?.name || 'Setor'}
+                          {sectors.find(s => s.id === selectedContactData?.sector_id)?.name || 'Setor'}
                         </span>
                       )}
-                      {selectedContactData.tag_ids && selectedContactData.tag_ids.length > 0 && (
+                      {selectedContactData?.tag_ids && selectedContactData.tag_ids.length > 0 && (
                         <>
                           {selectedContactData.tag_ids.map((tagId) => {
                             const tag = tags.find(t => t.id === tagId);
@@ -3184,6 +3191,8 @@ export default function CompanyDashboard() {
                 )}
               </div>
             </>
+              );
+            })()
           ) : activeTab === 'mensagens' ? (
             <div className="flex-1 flex items-center justify-center bg-transparent">
               <div className="text-center p-8">
