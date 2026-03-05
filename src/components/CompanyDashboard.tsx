@@ -1605,6 +1605,47 @@ export default function CompanyDashboard() {
     };
   }, [activeTab, company?.api_key, fetchMessages]);
 
+  const startConversationFromContact = async (wc: { name: string; phone: string }) => {
+    if (!company?.id || !wc.phone) return;
+    try {
+      const target = encodeURIComponent('https://n8n.nexladesenvolvimento.com.br/webhook/iniciarconversa');
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy?url=${target}`;
+      await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          numero: wc.phone,
+          name: wc.name || '',
+          api_key: company.api_key,
+        }),
+      });
+    } catch (err) {
+      console.error('[iniciar-conversa] erro ao chamar webhook:', err);
+    }
+
+    try {
+      await supabase.from('contacts').upsert(
+        {
+          company_id: company.id,
+          phone_number: wc.phone,
+          name: wc.name || null,
+          last_message_time: new Date().toISOString(),
+        },
+        { onConflict: 'company_id,phone_number', ignoreDuplicates: false }
+      );
+    } catch (err) {
+      console.error('[iniciar-conversa] erro ao upsert contato:', err);
+    }
+
+    setShowWebhookContactsModal(false);
+    setWebhookContactsSearch('');
+    setSelectedContact(wc.phone);
+    if (window.innerWidth < 768) setSidebarOpen(false);
+  };
+
   const fetchWebhookContacts = async () => {
     setShowWebhookContactsModal(true);
     if (webhookContacts.length > 0) return;
@@ -2572,14 +2613,19 @@ export default function CompanyDashboard() {
                         const colors = ['from-blue-500 to-blue-600', 'from-emerald-500 to-emerald-600', 'from-amber-500 to-amber-600', 'from-rose-500 to-rose-600', 'from-sky-500 to-sky-600'];
                         const color = colors[initial.charCodeAt(0) % colors.length];
                         return (
-                          <div key={idx} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-default">
+                          <div
+                            key={idx}
+                            onClick={() => startConversationFromContact(wc)}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 active:bg-blue-100 transition-colors border-b border-slate-50 last:border-0 cursor-pointer group"
+                          >
                             <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-sm`}>
                               {initial}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-900 truncate">{wc.name || <span className="text-slate-400 font-normal italic">Sem nome</span>}</p>
+                              <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-700 transition-colors">{wc.name || <span className="text-slate-400 font-normal italic">Sem nome</span>}</p>
                               <p className="text-xs text-slate-500 mt-0.5 font-mono">{wc.phone}</p>
                             </div>
+                            <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex-shrink-0">Iniciar</span>
                           </div>
                         );
                       });
